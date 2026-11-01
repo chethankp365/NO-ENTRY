@@ -1,0 +1,13 @@
+title: Kerberoasting Service Ticket Request
+id: rule-100558
+description: Detects Kerberos TGS requests with RC4 encryption (Ticket_Encryption 0x17) characteristic of Kerberoasting (T1558)
+level: critical
+logsource:
+  category: security_event
+  service: active_directory
+detection:
+  selection:
+    event_id: 4769
+    ticket_encryption: "0x17"
+    service_name|endswith: "$n"
+  condition: selection

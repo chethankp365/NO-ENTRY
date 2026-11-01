@@ -1,0 +1,93 @@
+id: ransomware
+name: Ransomware simulation
+technique_id: T1486
+description: phish, pivot, encrypt, isolate
+steps:
+  - stage: Phishing lure opened
+    delay: 1.0
+    event:
+      technique_id: T1566
+      technique_name: Phishing
+      event: phishing mail opened on ws-01
+      source_ip: 185.220.101.4
+      target_host: ws-01
+      state: DETECTED
+      severity: MEDIUM
+      module: Watch
+      breach: false
+    host_update:
+      host: ws-01
+      status: suspicious
+      last_alert: T1566 phishing
+  - stage: Payload execution
+    delay: 2.5
+    event:
+      technique_id: T1059
+      technique_name: Command and Scripting Interpreter
+      event: macro spawns powershell
+      source_ip: 10.0.2.15
+      target_host: ws-01
+      state: ALERT
+      severity: HIGH
+      module: Watch
+      breach: false
+  - stage: Credential harvesting
+    delay: 2.0
+    event:
+      technique_id: T1003
+      technique_name: OS Credential Dumping
+      event: credential dump on ws-01
+      source_ip: 10.0.2.15
+      target_host: ws-01
+      state: ALERT
+      severity: HIGH
+      module: Watch
+      breach: true
+    host_update:
+      host: ws-01
+      status: compromised
+      last_alert: T1003 cred dump
+  - stage: Lateral movement
+    delay: 3.0
+    event:
+      technique_id: T1021
+      technique_name: Remote Services
+      event: smb move to ws-02
+      source_ip: 10.0.2.15
+      target_host: ws-02
+      state: ALERT
+      severity: CRITICAL
+      module: Watch
+      breach: true
+    host_update:
+      host: ws-02
+      status: compromised
+      last_alert: T1021 smb lateral move
+  - stage: Encryption triggered
+    delay: 3.0
+    event:
+      technique_id: T1486
+      technique_name: Data Encrypted for Impact
+      event: ransomware encryption active on ws-02
+      source_ip: 10.0.2.16
+      target_host: ws-02
+      state: ALERT
+      severity: CRITICAL
+      module: Watch
+      breach: true
+  - stage: Automated response
+    delay: 2.5
+    event:
+      technique_id: T1486
+      technique_name: Data Encrypted for Impact
+      event: host isolated by reflex
+      source_ip: 10.0.2.16
+      target_host: ws-02
+      state: ISOLATED
+      severity: HIGH
+      module: Reflex
+      breach: false
+    host_update:
+      host: ws-02
+      status: isolated
+      last_alert: T1486 host isolated

@@ -1,0 +1,17 @@
+title: SQL Injection Detection Pattern
+id: rule-100190
+description: Detects SQL injection exploitation attempts against public web applications (T1190)
+level: high
+logsource:
+  category: webserver
+  service: http
+detection:
+  selection:
+    uri|contains:
+      - "union select"
+      - "' or '1'='1"
+      - "admin'--"
+      - "order by"
+      - "information_schema"
+      - "sleep("
+  condition: selection

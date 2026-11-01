@@ -1,0 +1,57 @@
+id: insider
+name: Insider threat
+technique_id: T1078
+description: a honeytoken catches the abuse
+steps:
+  - stage: Unauthorized internal enumeration
+    delay: 1.0
+    event:
+      technique_id: T1087
+      technique_name: Account Discovery
+      event: net user /domain query executed from ws-01
+      source_ip: 10.0.2.15
+      target_host: ad01
+      state: DETECTED
+      severity: LOW
+      module: Watch
+      breach: false
+  - stage: Honeytoken account access
+    delay: 2.0
+    event:
+      technique_id: T1078
+      technique_name: Valid Accounts
+      event: svc_backup (fake AD account) TRIGGERED
+      source_ip: 10.0.2.15
+      target_host: ad01
+      state: ALERT
+      severity: HIGH
+      module: Trap
+      breach: false
+  - stage: Decoy file exfiltration attempt
+    delay: 2.5
+    event:
+      technique_id: T1552
+      technique_name: Unsecured Credentials
+      event: passwords.xlsx (decoy file) opened by op-insider
+      source_ip: 10.0.2.15
+      target_host: ws-01
+      state: ALERT
+      severity: CRITICAL
+      module: Trap
+      breach: false
+  - stage: Account lockdown
+    delay: 2.0
+    event:
+      technique_id: T1078
+      technique_name: Valid Accounts
+      event: "AD: account svc_backup disabled"
+      source_ip: 10.0.2.10
+      target_host: ad01
+      state: BLOCKED
+      severity: HIGH
+      module: Reflex
+      breach: false
+    host_update:
+      host: ws-01
+      status: suspicious
+      last_alert: T1078 honeytoken hit

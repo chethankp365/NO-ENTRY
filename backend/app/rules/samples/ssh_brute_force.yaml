@@ -1,0 +1,18 @@
+title: SSH Automated Brute Force Attack
+id: rule-100231
+description: Detects rapid failed SSH logins and automated password spraying (T1110)
+level: high
+logsource:
+  category: authentication
+  service: ssh
+detection:
+  selection:
+    event.action: logon_failed
+    service: ssh
+    message|contains:
+      - "failed password"
+      - "invalid user"
+      - "authentication failure"
+  filter:
+    source_ip|startswith: "10.0.3."
+  condition: selection and not filter

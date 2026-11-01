@@ -1,0 +1,73 @@
+id: web-breach
+name: Web app breach
+technique_id: T1190
+description: sqli to web shell to pivot
+steps:
+  - stage: Port reconnaissance
+    delay: 1.0
+    event:
+      technique_id: T1595
+      technique_name: Active Scanning
+      event: "nmap -sV 10.0.1.10 target: web01"
+      source_ip: 185.220.101.4
+      target_host: web01
+      state: DETECTED
+      severity: LOW
+      module: Watch
+      breach: false
+  - stage: SQL injection probing
+    delay: 2.0
+    event:
+      technique_id: T1190
+      technique_name: Exploit Public-Facing Application
+      event: sqli on web01 from 45.9.148.22
+      source_ip: 45.9.148.22
+      target_host: web01
+      state: DETECTED
+      severity: HIGH
+      module: Watch
+      breach: false
+    host_update:
+      host: web01
+      status: suspicious
+      last_alert: T1190 sqli
+  - stage: Web shell upload
+    delay: 2.5
+    event:
+      technique_id: T1505
+      technique_name: Server Software Component
+      event: uploading web shell to /var/www/uploads/c99.php
+      source_ip: 45.9.148.22
+      target_host: web01
+      state: ALERT
+      severity: CRITICAL
+      module: Watch
+      breach: true
+    host_update:
+      host: web01
+      status: compromised
+      last_alert: T1190 web shell
+  - stage: WAF intervention
+    delay: 2.0
+    event:
+      technique_id: T1190
+      technique_name: Exploit Public-Facing Application
+      event: blocked by ModSecurity rule 949110
+      source_ip: 45.9.148.22
+      target_host: web01
+      state: BLOCKED
+      severity: HIGH
+      module: Shield
+      breach: false
+  - stage: Pivot containment
+    delay: 2.0
+    event:
+      technique_id: T1021
+      technique_name: Remote Services
+      event: pivoting to 10.0.2.0/24 blocked at pfSense
+      source_ip: 10.0.1.10
+      target_host: pfsense
+      state: BLOCKED
+      severity: HIGH
+      module: Reflex
+      breach: false
