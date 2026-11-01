@@ -34,6 +34,24 @@ def test_access_page_load(client):
 def test_command_center_page_load(client):
     response = client.get("/command-center")
     assert response.status_code == 200
+    assert "COMMAND CENTER" in response.text
+    assert "statThreatLevel" in response.text
+    assert "ccGlobeContainer" in response.text
+    assert "liveAlertsTbody" in response.text
+
+def test_lab_map_page_load(client):
+    response = client.get("/lab-map")
+    assert response.status_code == 200
+    assert "LAB MAP" in response.text
+    assert "lab3DCanvasContainer" in response.text
+    assert "runAttackBtn" in response.text
+    assert "isolateHostBtn" in response.text
+
+def test_app_screen_fallback(client):
+    response = client.get("/watch")
+    assert response.status_code == 200
+    assert "WATCH // SIEM" in response.text
+
 
 def test_api_state(client):
     response = client.get("/api/state")

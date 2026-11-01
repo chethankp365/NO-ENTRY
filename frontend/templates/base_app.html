@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{% block title %}NO ENTRY{% endblock %}</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+  <link rel="stylesheet" href="/static/css/app_shell.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/static/vendor/three/three.module.js",
+      "three/addons/": "/static/vendor/three/addons/",
+      "gsap": "/static/vendor/gsap/gsap.js"
+    }
+  }
+  </script>
+
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="app-shell-body bg-grid">
+  <!-- Corner Brackets on Screen -->
+  <div class="corner-brackets--full"></div>
+
+  <!-- Background Matrix Rain Layer -->
+  <canvas id="appRainCanvas"></canvas>
+
+  <div class="app-layout">
+    <!-- 15-Item Left Sidebar (Matching Reference Screens) -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <ne-logo size="32" pulse></ne-logo>
+        <span class="sidebar-brand-title">NO ENTRY</span>
+      </div>
+
+      <ul class="sidebar-nav">
+        <li class="nav-item" data-nav="command_center">
+          <a href="/command-center">Command center</a>
+        </li>
+        <li class="nav-item" data-nav="lab_map">
+          <a href="/lab-map">Lab map</a>
+        </li>
+        <li class="nav-item" data-nav="red">
+          <a href="/red">Red</a>
+        </li>
+        <li class="nav-item" data-nav="watch">
+          <a href="/watch">Watch</a>
+        </li>
+        <li class="nav-item" data-nav="shield">
+          <a href="/shield">Shield</a>
+        </li>
+        <li class="nav-item" data-nav="trap">
+          <a href="/trap">Trap</a>
+        </li>
+        <li class="nav-item" data-nav="reflex">
+          <a href="/reflex">Reflex</a>
+        </li>
+        <li class="nav-item" data-nav="intel">
+          <a href="/intel">Intel</a>
+        </li>
+        <li class="nav-item" data-nav="forensics">
+          <a href="/forensics">Forensics</a>
+        </li>
+        <li class="nav-item" data-nav="missions">
+          <a href="/missions">Missions</a>
+        </li>
+        <li class="nav-item" data-nav="attack">
+          <a href="/attack">ATT&amp;CK</a>
+        </li>
+        <li class="nav-item" data-nav="reports">
+          <a href="/reports">Reports</a>
+        </li>
+        <li class="nav-item" data-nav="learn">
+          <a href="/learn">Learn</a>
+        </li>
+        <li class="nav-item" data-nav="purple_team">
+          <a href="/purple-team">Purple team</a>
+        </li>
+        <li class="nav-item" data-nav="docs">
+          <a href="/docs">Docs</a>
+        </li>
+      </ul>
+
+      <div class="sidebar-footer">
+        <span>PRESS [/] COMMANDS</span>
+        <span style="color:var(--color-green);">&bull; ONLINE</span>
+      </div>
+    </aside>
+
+    <!-- Main Viewport -->
+    <div class="main-viewport">
+      <!-- Top HUD Header -->
+      <header class="top-hud">
+        <div class="page-title-wrap">
+          <h1 class="page-title-main">{% block page_title %}{{ screen_title or "COMMAND CENTER" }}{% endblock %}</h1>
+          <span class="page-title-sub">{% block page_subtitle %}{{ screen_subtitle or "live view of the lab under attack" }}{% endblock %}</span>
+        </div>
+
+        <div class="top-hud-controls">
+          <span id="shellThreatChip" class="threat-chip">THREAT: ELEVATED</span>
+          <span id="shellOperatorChip" class="operator-chip">op-0x7f3a</span>
+          <button onclick="document.dispatchEvent(new KeyboardEvent('keydown', {key: '/'}))" class="btn btn-outline" style="padding: 4px 10px; font-size: 11px;">
+            PALETTE [/]
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Area framed with corner brackets -->
+      <main class="content-area">
+        {% block content %}{% endblock %}
+      </main>
+
+      <!-- Bottom Status Line (Matches Reference Screens) -->
+      <footer class="bottom-status-bar">
+        <div class="status-prompt">
+          <span>&gt; lab armed. 5 sensors online. waiting for operator</span>
+          <span class="status-cursor"></span>
+        </div>
+        <div>
+          <span>Lab is isolated. Attacks stay inside the range.</span>
+        </div>
+      </footer>
+    </div>
+  </div>
+
+  <!-- Tactical Command Palette Modal -->
+  <div id="commandPalette">
+    <div class="palette-box corner-brackets">
+      <div class="palette-input-wrap">
+        <span class="palette-prompt-symbol">&gt;</span>
+        <input type="text" id="paletteInput" class="palette-input" placeholder="Type command or jump to screen... (ESC to exit)" autocomplete="off" spellcheck="false">
+      </div>
+      <ul id="paletteList" class="palette-results">
+        <!-- Rendered dynamically -->
+      </ul>
+    </div>
+  </div>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

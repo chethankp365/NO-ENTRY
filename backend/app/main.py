@@ -80,12 +80,23 @@ def access_page(request: Request):
 
 @app.get("/command-center", response_class=HTMLResponse)
 def command_center_page(request: Request):
-    """Command Center landing after login (redirects or displays preliminary view)."""
+    """Screen 4: Command Center."""
     return templates.TemplateResponse(
         request=request,
-        name="debug.html", # debug console acts as command center in early prompts
+        name="command_center.html",
         context={"app_name": settings.APP_NAME}
     )
+
+@app.get("/lab-map", response_class=HTMLResponse)
+def lab_map_page(request: Request):
+    """Screen 5: 3D Hero Lab Map."""
+    return templates.TemplateResponse(
+        request=request,
+        name="lab_map.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+
 
 @app.get("/debug", response_class=HTMLResponse)
 def debug_page(request: Request):
@@ -156,3 +167,37 @@ async def websocket_events_endpoint(websocket: WebSocket):
         print(f"WebSocket client error: {e}")
     finally:
         sim_engine.unsubscribe(queue)
+
+
+# Placeholder routes for remaining sidebar items to prevent 404s
+@app.get("/{screen_path:path}", response_class=HTMLResponse)
+def app_screen_fallback(request: Request, screen_path: str):
+    valid_screens = {
+        "red": ("RED TEAM OPS", "automated adversarial simulation"),
+        "watch": ("WATCH // SIEM", "real-time rule matching & event logs"),
+        "shield": ("SHIELD // DEFENSE", "automated perimeter & firewall rules"),
+        "trap": ("TRAP // HONEYPOTS", "deception technology & decoys"),
+        "reflex": ("REFLEX // SOAR", "automated response playbooks"),
+        "intel": ("INTEL // THREAT ENRICHMENT", "live IP reputation & IOC feeds"),
+        "forensics": ("FORENSICS", "packet analysis & artifact timeline"),
+        "missions": ("MISSIONS // SCENARIOS", "curated cyber defense challenges"),
+        "attack": ("MITRE ATT&CK MATRIX", "tactics, techniques & procedures"),
+        "reports": ("EXECUTIVE REPORTS", "incident timelines & compliance metrics"),
+        "learn": ("CYBER LAB ACADEMY", "interactive threat simulation tutorials"),
+        "purple-team": ("PURPLE TEAM WORKSPACE", "collaborative attack-defense exercises"),
+        "docs": ("DOCUMENTATION", "cyber range architecture & developer guide")
+    }
+    clean_path = screen_path.strip("/")
+    if clean_path in valid_screens:
+        title, subtitle = valid_screens[clean_path]
+        return templates.TemplateResponse(
+            request=request,
+            name="base_app.html",
+            context={
+                "app_name": settings.APP_NAME,
+                "screen_title": title,
+                "screen_subtitle": subtitle,
+                "active_nav": clean_path.replace("-", "_")
+            }
+        )
+    raise HTTPException(status_code=404, detail="Page not found")

@@ -1,0 +1,415 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // COMMAND CENTER{% endblock %}
+{% block page_title %}COMMAND CENTER{% endblock %}
+{% block page_subtitle %}live view of the lab under attack{% endblock %}
+
+{% block extra_head %}
+<style>
+  .cc-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+  }
+
+  /* 4 StatCards Grid */
+  .stats-grid-4 {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+  }
+
+  .stat-card-cc {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 12px 18px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    position: relative;
+    border-radius: 0;
+  }
+
+  .stat-title-cc {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-top: 2px;
+  }
+
+  .stat-val-cc {
+    font-family: var(--font-display);
+    font-size: 26px;
+    font-weight: 800;
+    line-height: 1.2;
+    margin-bottom: 2px;
+  }
+
+  .stat-val-red {
+    color: var(--color-red);
+    text-shadow: 0 0 12px rgba(255, 31, 61, 0.6);
+  }
+
+  .stat-val-white {
+    color: var(--color-text);
+  }
+
+  .stat-val-cyan {
+    color: var(--color-cyan);
+    text-shadow: 0 0 12px rgba(0, 229, 255, 0.4);
+  }
+
+  .stat-val-green {
+    color: var(--color-green);
+    text-shadow: 0 0 12px rgba(0, 255, 106, 0.4);
+  }
+
+  /* Middle Split: Attack Map (Globe) & Live Alerts */
+  .mid-split-grid {
+    display: grid;
+    grid-template-columns: 1.1fr 1.3fr;
+    gap: 16px;
+    flex: 1;
+    min-height: 380px;
+  }
+
+  .attack-map-panel {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .panel-top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--color-border);
+    background: rgba(4, 6, 10, 0.6);
+  }
+
+  .panel-header-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--color-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  #ccGlobeContainer {
+    flex: 1;
+    width: 100%;
+    min-height: 300px;
+    position: relative;
+  }
+
+  /* Radar Sweep Ring Overlay in Attack Map */
+  .radar-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 240px;
+    height: 240px;
+    transform: translate(-50%, -50%);
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  .radar-sweep-hand {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 120px;
+    height: 120px;
+    transform-origin: top left;
+    background: conic-gradient(from 0deg, rgba(0, 229, 255, 0.25) 0deg, transparent 60deg);
+    border-radius: 50%;
+    animation: radarSpin 4s linear infinite;
+    pointer-events: none;
+    z-index: 2;
+  }
+
+  @keyframes radarSpin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+  }
+
+  .map-hud-overlay {
+    position: absolute;
+    bottom: 12px;
+    left: 14px;
+    right: 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  .sparkline-canvas {
+    width: 120px;
+    height: 28px;
+    border: 1px solid rgba(26, 31, 41, 0.7);
+    background: rgba(4, 6, 10, 0.6);
+    pointer-events: auto;
+  }
+
+  /* Live Alerts Panel */
+  .alerts-table-panel {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .alerts-table-scroll {
+    flex: 1;
+    overflow-y: auto;
+    max-height: 380px;
+  }
+
+  .alert-row-clickable {
+    cursor: pointer;
+    transition: background 0.15s ease;
+  }
+
+  .alert-row-clickable:hover {
+    background: rgba(255, 31, 61, 0.08) !important;
+  }
+
+  /* Bottom Row: Alerts by Module */
+  .bottom-modules-panel {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 14px 18px;
+    position: relative;
+  }
+
+  .module-bars-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+
+  .mod-bar-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .mod-bar-name {
+    width: 60px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-text);
+  }
+
+  .mod-bar-track {
+    flex: 1;
+    height: 6px;
+    background: #0D121A;
+    border: 1px solid var(--color-border);
+    position: relative;
+  }
+
+  .mod-bar-fill {
+    height: 100%;
+    transition: width 0.8s ease;
+  }
+
+  .mod-bar-val {
+    width: 36px;
+    text-align: right;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+
+  /* Event Details Modal */
+  #eventDetailModal {
+    position: fixed;
+    inset: 0;
+    background: rgba(4, 6, 10, 0.85);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: none;
+    justify-content: center;
+    align-items: center;
+  }
+
+  #eventDetailModal.active {
+    display: flex;
+  }
+
+  .event-modal-card {
+    background: #080B10;
+    border: 1px solid var(--color-cyan);
+    width: 640px;
+    max-width: 90vw;
+    padding: 24px;
+    box-shadow: 0 0 30px rgba(0, 229, 255, 0.3);
+    position: relative;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="cc-grid">
+  <!-- 4 StatCards (Matching Reference Screenshot 4) -->
+  <section class="stats-grid-4">
+    <div class="stat-card-cc corner-brackets">
+      <div id="statThreatLevel" class="stat-val-cc stat-val-red">ELEVATED</div>
+      <div class="stat-title-cc">THREAT LEVEL</div>
+    </div>
+
+    <div class="stat-card-cc corner-brackets">
+      <div id="statAlertsToday" class="stat-val-cc stat-val-white">128</div>
+      <div class="stat-title-cc">ALERTS TODAY</div>
+    </div>
+
+    <div class="stat-card-cc corner-brackets">
+      <div id="statMttd" class="stat-val-cc stat-val-cyan">3.2 s</div>
+      <div class="stat-title-cc">MEAN TIME TO DETECT</div>
+    </div>
+
+    <div class="stat-card-cc corner-brackets">
+      <div id="statMttr" class="stat-val-cc stat-val-green">8.4 s</div>
+      <div class="stat-title-cc">MEAN TIME TO RESPOND</div>
+    </div>
+  </section>
+
+  <!-- Middle Row: Attack Map & Live Alerts Table -->
+  <section class="mid-split-grid">
+    <!-- ATTACK MAP -->
+    <div class="attack-map-panel corner-brackets">
+      <div class="panel-top-bar">
+        <span class="panel-header-title">ATTACK MAP</span>
+        <span id="activeArcCount" style="font-family:var(--font-mono); font-size:10px; color:var(--color-cyan);">LIVE SENSORS LINKED</span>
+      </div>
+
+      <div id="ccGlobeContainer">
+        <div class="radar-ring"></div>
+        <div class="radar-sweep-hand"></div>
+      </div>
+
+      <div class="map-hud-overlay">
+        <div>
+          <span style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted);">ACTIVITY PULSE</span>
+          <canvas id="sparklineCanvas" class="sparkline-canvas"></canvas>
+        </div>
+        <div style="text-align:right;">
+          <span style="font-family:var(--font-mono); font-size:10px; color:var(--color-red);">RED = ATTACK</span> &bull;
+          <span style="font-family:var(--font-mono); font-size:10px; color:var(--color-green);">GREEN = BLOCKED</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- LIVE ALERTS -->
+    <div class="alerts-table-panel corner-brackets">
+      <div class="panel-top-bar">
+        <span class="panel-header-title">LIVE ALERTS</span>
+        <span style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted);">CLICK ROW FOR RAW LOG &amp; INTEL</span>
+      </div>
+
+      <div class="alerts-table-scroll">
+        <table class="table-mono">
+          <thead>
+            <tr>
+              <th style="width: 75px;">TIME</th>
+              <th style="width: 85px;">TECHNIQUE</th>
+              <th>EVENT</th>
+              <th style="width: 90px;">STATE</th>
+            </tr>
+          </thead>
+          <tbody id="liveAlertsTbody">
+            <!-- Populated live from WebSocket and API snapshot -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom Row: Alerts By Module (Matching Screenshot 4) -->
+  <section class="bottom-modules-panel corner-brackets">
+    <div class="panel-header-title">ALERTS BY MODULE</div>
+    <div class="module-bars-grid">
+      <div class="mod-bar-row">
+        <span class="mod-bar-name">Watch</span>
+        <div class="mod-bar-track">
+          <div id="barWatch" class="mod-bar-fill" style="width: 78%; background: var(--color-cyan); box-shadow: 0 0 8px var(--color-cyan);"></div>
+        </div>
+        <span id="valWatch" class="mod-bar-val">78%</span>
+      </div>
+
+      <div class="mod-bar-row">
+        <span class="mod-bar-name">Trap</span>
+        <div class="mod-bar-track">
+          <div id="barTrap" class="mod-bar-fill" style="width: 42%; background: var(--color-red); box-shadow: 0 0 8px var(--color-red);"></div>
+        </div>
+        <span id="valTrap" class="mod-bar-val">42%</span>
+      </div>
+
+      <div class="mod-bar-row">
+        <span class="mod-bar-name">Reflex</span>
+        <div class="mod-bar-track">
+          <div id="barReflex" class="mod-bar-fill" style="width: 64%; background: var(--color-green); box-shadow: 0 0 8px var(--color-green);"></div>
+        </div>
+        <span id="valReflex" class="mod-bar-val">64%</span>
+      </div>
+
+      <div class="mod-bar-row">
+        <span class="mod-bar-name">Intel</span>
+        <div class="mod-bar-track">
+          <div id="barIntel" class="mod-bar-fill" style="width: 35%; background: #00B0FF; box-shadow: 0 0 8px #00B0FF;"></div>
+        </div>
+        <span id="valIntel" class="mod-bar-val">35%</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- Event Detail Modal -->
+<div id="eventDetailModal">
+  <div class="event-modal-card corner-brackets">
+    <div style="display: flex; justify-content: space-between; align-items: baseline; border-bottom: 1px solid var(--color-border); padding-bottom: 8px; margin-bottom: 14px;">
+      <h3 id="modalEventTitle" style="font-family: var(--font-display); font-size: 16px; color: var(--color-text);">EVENT TELEMETRY</h3>
+      <button id="modalCloseBtn" class="btn btn-outline" style="padding: 2px 8px; font-size: 10px;">ESC / CLOSE</button>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 14px;">
+      <div style="background: #04060A; padding: 10px; border: 1px solid var(--color-border); font-family: var(--font-mono); font-size: 11px;">
+        <div style="color: var(--color-muted); margin-bottom: 4px;">MITRE ATT&amp;CK TECHNIQUE</div>
+        <div id="modalMitreName" style="color: var(--color-cyan); font-weight: 700;">-</div>
+        <div id="modalMitreDesc" style="color: var(--color-text-dim); margin-top: 4px; font-size: 10px; line-height: 1.4;">-</div>
+      </div>
+
+      <div style="background: #04060A; padding: 10px; border: 1px solid var(--color-border); font-family: var(--font-mono); font-size: 11px;">
+        <div style="color: var(--color-muted); margin-bottom: 4px;">THREAT INTELLIGENCE (AbuseIPDB)</div>
+        <div id="modalIntelScore" style="color: var(--color-red); font-weight: 700; font-size: 16px;">-</div>
+        <div id="modalIntelDetails" style="color: var(--color-text-dim); margin-top: 4px; font-size: 10px;">-</div>
+      </div>
+    </div>
+
+    <div style="background: #04060A; padding: 10px; border: 1px solid var(--color-border);">
+      <div style="font-family: var(--font-mono); font-size: 10px; color: var(--color-muted); margin-bottom: 4px;">RAW LOG JSON</div>
+      <pre id="modalRawJson" style="font-family: var(--font-mono); font-size: 11px; color: #9ab; max-height: 140px; overflow-y: auto; white-space: pre-wrap;"></pre>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/commandCenter.js"></script>
+{% endblock %}
