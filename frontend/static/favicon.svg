@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128" width="128" height="128">
+  <!-- Dark Background -->
+  <rect width="128" height="128" rx="16" fill="#04060A"/>
+
+  <!-- Subtle glow / border -->
+  <rect x="2" y="2" width="124" height="124" rx="14" fill="none" stroke="#1A1F29" stroke-width="2"/>
+
+  <!-- 'N' in Pure White -->
+  <path d="M 24 96 L 24 32 L 40 32 L 68 76 L 68 32 L 80 32 L 80 96 L 64 96 L 36 52 L 36 96 Z" fill="#FFFFFF"/>
+
+  <!-- 'E' in Neon Red #FF1F3D interlocking -->
+  <!-- Top bar of E -->
+  <rect x="74" y="32" width="30" height="12" fill="#FF1F3D" filter="drop-shadow(0 0 4px #FF1F3D)"/>
+  <!-- Middle bar connecting through N -->
+  <rect x="52" y="58" width="52" height="12" fill="#FF1F3D" filter="drop-shadow(0 0 6px #FF1F3D)"/>
+  <!-- Bottom bar of E -->
+  <rect x="74" y="84" width="30" height="12" fill="#FF1F3D" filter="drop-shadow(0 0 4px #FF1F3D)"/>
+</svg>

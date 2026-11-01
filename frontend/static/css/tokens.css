@@ -1,0 +1,84 @@
+/* ==========================================================================
+   NO ENTRY - Design System Tokens
+   Palette, typography, spacing, shadows, and neon glow variables
+   ========================================================================== */
+
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700;800&family=Orbitron:wght@600;700;800;900&family=Rajdhani:wght@500;600;700&display=swap');
+
+:root {
+  /* Core Backgrounds & Surfaces */
+  --color-bg: #04060A;
+  --color-surface: #080B10;
+  --color-surface-hover: #0E141E;
+  --color-surface-active: #141C2B;
+  --color-border: #1A1F29;
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-border-glow: rgba(255, 31, 61, 0.4);
+
+  /* Typography Colors */
+  --color-text: #E6E9EF;
+  --color-text-dim: #C5CBD6;
+  --color-muted: #8A93A3;
+  --color-faint: #4E5666;
+
+  /* Cyber Accents */
+  --color-red: #FF1F3D;         /* Attack, danger, primary action, breach */
+  --color-red-dim: rgba(255, 31, 61, 0.15);
+  --color-red-glow: rgba(255, 31, 61, 0.5);
+
+  --color-cyan: #00E5FF;        /* Detection, info, primary HUD data */
+  --color-cyan-dim: rgba(0, 229, 255, 0.15);
+  --color-cyan-glow: rgba(0, 229, 255, 0.5);
+
+  --color-green: #00FF6A;       /* Blocked, healthy, fortified, pass */
+  --color-green-dim: rgba(0, 255, 106, 0.15);
+  --color-green-glow: rgba(0, 255, 106, 0.5);
+
+  --color-yellow: #FFD600;      /* Warning, suspicious, elevated alert */
+  --color-yellow-dim: rgba(255, 214, 0, 0.15);
+  --color-yellow-glow: rgba(255, 214, 0, 0.5);
+
+  /* Fonts */
+  --font-display: 'Orbitron', -apple-system, sans-serif;
+  --font-ui: 'Rajdhani', -apple-system, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Courier New', monospace;
+
+  /* Font Weights */
+  --weight-regular: 400;
+  --weight-medium: 500;
+  --weight-semibold: 600;
+  --weight-bold: 700;
+  --weight-heavy: 800;
+
+  /* Spacing */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Glow Filters & Shadows */
+  --glow-red: 0 0 12px var(--color-red-glow);
+  --glow-red-strong: 0 0 24px var(--color-red);
+  --glow-cyan: 0 0 12px var(--color-cyan-glow);
+  --glow-green: 0 0 12px var(--color-green-glow);
+  --glow-box: 0 0 15px rgba(0, 0, 0, 0.8), inset 0 0 15px rgba(0, 0, 0, 0.5);
+
+  /* Transitions */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Z-indices */
+  --z-bg: 0;
+  --z-3d: 1;
+  --z-canvas-rain: 2;
+  --z-content: 10;
+  --z-hud: 20;
+  --z-overlay: 50;
+  --z-glitch: 90;
+  --z-cursor: 100;
+  --z-toast: 110;
+}

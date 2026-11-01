@@ -6,6 +6,13 @@ def test_debug_page_load(client):
     assert "NO ENTRY" in response.text
     assert "terminalFeed" in response.text
 
+def test_playground_page_load(client):
+    response = client.get("/playground")
+    assert response.status_code == 200
+    assert "NO ENTRY" in response.text
+    assert "ne-logo" in response.text
+    assert "rainCanvas" in response.text
+
 def test_api_state(client):
     response = client.get("/api/state")
     assert response.status_code == 200

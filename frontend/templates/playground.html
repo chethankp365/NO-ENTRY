@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NO ENTRY // Design System & FX Playground</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/static/vendor/three/three.module.js",
+      "three/addons/": "/static/vendor/three/addons/",
+      "gsap": "/static/vendor/gsap/gsap.js",
+      "gsap/ScrollTrigger": "/static/vendor/gsap/ScrollTrigger.js"
+    }
+  }
+  </script>
+
+  <style>
+    body {
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #rainCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: var(--z-canvas-rain);
+      pointer-events: none;
+    }
+
+    #webglContainer {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: var(--z-3d);
+    }
+
+    .hud-layer {
+      position: relative;
+      z-index: var(--z-content);
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      padding: var(--space-4);
+      pointer-events: none;
+    }
+
+    .hud-layer > * {
+      pointer-events: auto;
+    }
+
+    header.hud-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: var(--space-3);
+      border-bottom: 1px solid var(--color-border);
+      background: rgba(4, 6, 10, 0.7);
+      backdrop-filter: blur(8px);
+    }
+
+    .brand-section {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      letter-spacing: 2px;
+      color: var(--color-text);
+      display: flex;
+      align-items: baseline;
+      gap: 8px;
+    }
+
+    .brand-tagline {
+      font-size: 11px;
+      color: var(--color-muted);
+      font-family: var(--font-mono);
+      letter-spacing: 1px;
+    }
+
+    .header-chips {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .chip {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 4px 10px;
+      border: 1px solid var(--color-border);
+      background: var(--color-surface);
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .chip--danger {
+      border-color: rgba(255, 31, 61, 0.5);
+      color: var(--color-red);
+      box-shadow: 0 0 10px rgba(255, 31, 61, 0.2);
+    }
+
+    .main-workspace {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 380px 1fr 380px;
+      gap: var(--space-4);
+      margin-top: var(--space-4);
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .scroll-col {
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-4);
+      padding-right: 4px;
+    }
+
+    .center-stage {
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    .center-logo-hero {
+      margin: auto 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      pointer-events: auto;
+      filter: drop-shadow(0 0 30px rgba(0, 0, 0, 0.9));
+    }
+
+    .demo-btn-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+    }
+
+    footer.hud-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-top: var(--space-2);
+      border-top: 1px solid var(--color-border);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-muted);
+      background: rgba(4, 6, 10, 0.7);
+      backdrop-filter: blur(8px);
+    }
+  </style>
+</head>
+<body class="bg-grid">
+  <!-- Red Corner Brackets on Full-Screen View -->
+  <div class="corner-brackets--full"></div>
+
+  <!-- Background Layer 1: Matrix Rain Canvas -->
+  <canvas id="rainCanvas"></canvas>
+
+  <!-- Background Layer 2: Three.js 3D Viewport -->
+  <div id="webglContainer"></div>
+
+  <!-- Interactive HUD Layer -->
+  <div class="hud-layer">
+    <!-- Top HUD Header -->
+    <header class="hud-header">
+      <div class="brand-section">
+        <ne-logo id="heroLogo" pulse size="42"></ne-logo>
+        <div>
+          <h1 class="brand-title">NO ENTRY <span class="brand-tagline">// DESIGN SYSTEM &amp; FX PLAYGROUND</span></h1>
+        </div>
+      </div>
+
+      <div class="header-chips">
+        <span id="threatChip" class="chip chip--danger">THREAT: ELEVATED</span>
+        <span class="chip">OPERATOR: op-0x7f3a</span>
+        <button id="audioToggleBtn" class="btn btn-outline" style="font-size: 11px; padding: 4px 10px;">ENABLE AUDIO</button>
+        <button id="perfToggleBtn" class="btn btn-outline" style="font-size: 11px; padding: 4px 10px;">PERF: NORMAL</button>
+        <button id="motionToggleBtn" class="btn btn-outline" style="font-size: 11px; padding: 4px 10px;">MOTION: ON</button>
+      </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="main-workspace">
+      <!-- Left Column: FX Controls & Sound Synthesizer -->
+      <section class="scroll-col">
+        <!-- Sound FX Trigger Board -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">1. WebAudio Synthesizer (Zero Audio Files)</span>
+          </div>
+          <div class="demo-btn-grid">
+            <button class="btn btn-outline" onclick="playSfx('keyClick')">Key Click</button>
+            <button class="btn btn-outline" onclick="playSfx('bootHum')">Boot Hum</button>
+            <button class="btn btn-outline" onclick="playSfx('alertBlip')">Alert Blip</button>
+            <button class="btn btn-outline-red" onclick="playSfx('accessDenied')">Access Denied</button>
+            <button class="btn btn-outline" style="border-color:var(--color-green); color:var(--color-green);" onclick="playSfx('accessGranted')">Access Granted</button>
+            <button class="btn btn-outline" onclick="playSfx('glitchCrackle')">Glitch Crackle</button>
+            <button class="btn btn-outline" onclick="playSfx('whoosh')">Whoosh Sweep</button>
+            <button class="btn btn-red" onclick="triggerFullBreachAlert()">Full Breach Alert</button>
+          </div>
+        </div>
+
+        <!-- Visual FX Controller -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">2. Screen &amp; Text FX Triggers</span>
+          </div>
+          <div class="demo-btn-grid" style="margin-bottom: 12px;">
+            <button class="btn btn-outline-red" onclick="runScreenGlitch()">Glitch Screen</button>
+            <button class="btn btn-outline-red" onclick="runScreenShake()">Screen Shake</button>
+            <button class="btn btn-outline" onclick="runTextGlitch()">Glitch Title</button>
+            <button class="btn btn-outline" onclick="runTextDecrypt()">Decrypt Text</button>
+          </div>
+
+          <div style="margin-bottom: 12px;">
+            <div style="font-size: 10px; color: var(--color-muted); text-transform: uppercase; margin-bottom: 4px;">Decrypt Target:</div>
+            <div id="decryptTarget" class="font-display" style="font-size: 14px; color: var(--color-cyan); min-height: 22px;">
+              CLASSIFIED THREAT INTELLIGENCE FEED
+            </div>
+          </div>
+
+          <div>
+            <div style="font-size: 10px; color: var(--color-muted); text-transform: uppercase; margin-bottom: 4px;">Typewriter Terminal:</div>
+            <div style="background: var(--color-bg); padding: 8px; border: 1px solid var(--color-border);">
+              <span id="typewriterTarget" class="font-mono" style="font-size: 12px; color: var(--color-text);"></span>
+              <span class="cursor-blink"></span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Logo Customization -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">3. &lt;ne-logo&gt; Web Component Controls</span>
+          </div>
+          <div class="demo-btn-grid">
+            <button class="btn btn-outline" onclick="toggleLogoPulse()">Toggle Pulse</button>
+            <button class="btn btn-outline-red" onclick="toggleLogoGlitch()">Toggle Glitch</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- Center Column: 3D Scene Viewport / Overlay Banner -->
+      <section class="center-stage">
+        <div></div> <!-- Spacer -->
+
+        <div class="center-logo-hero">
+          <ne-logo pulse size="96" id="centerHeroLogo"></ne-logo>
+          <h2 id="centerHeadline" class="font-display" style="font-size: 28px; margin-top: 14px; letter-spacing: 3px;">
+            WE BREAK IN, SO NO ONE ELSE CAN.
+          </h2>
+          <p class="font-mono" style="font-size: 12px; color: var(--color-muted); margin-top: 6px;">
+            Open-source attack simulation and automated threat detection.
+          </p>
+          <div style="display: flex; gap: 12px; margin-top: 18px;">
+            <button class="btn btn-red" onclick="trigger3DAttackPulse()">Launch Attack Arc</button>
+            <button class="btn btn-outline" onclick="toast('Sample security notification', 'info')">Trigger Toast</button>
+          </div>
+        </div>
+
+        <div></div> <!-- Spacer -->
+      </section>
+
+      <!-- Right Column: Component System & Telemetry Demo -->
+      <section class="scroll-col">
+        <!-- HUD Stat Cards -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">4. Tactical Stat Cards (.stat-card)</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+            <div class="stat-card">
+              <span class="stat-label">Alerts Today</span>
+              <span id="statAlerts" class="stat-value">128</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">Threat Level</span>
+              <span id="statThreat" class="stat-value stat-value--danger">ELEVATED</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">MTTD</span>
+              <span id="statMttd" class="stat-value">3.2 s</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-label">MTTR</span>
+              <span id="statMttr" class="stat-value stat-value--success">8.4 s</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Sensor Coverage Progress Bars -->
+        <div class="panel">
+          <div class="panel-header">
+            <span class="panel-title">5. Dynamic Progress Bars (.bar)</span>
+          </div>
+          <div style="display: flex; flex-direction: column; gap: 10px;">
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+                <span>Watch Sensor (SIEM)</span>
+                <span style="color:var(--color-cyan);">78%</span>
+              </div>
+              <div class="bar-container">
+                <div class="bar" style="width: 78%;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+                <span>Reflex Playbooks</span>
+                <span style="color:var(--color-green);">64%</span>
+              </div>
+              <div class="bar-container">
+                <div class="bar bar--green" style="width: 64%;"></div>
+              </div>
+            </div>
+            <div>
+              <div style="display: flex; justify-content: space-between; font-size: 11px; margin-bottom: 3px;">
+                <span>Trap Decoys</span>
+                <span style="color:var(--color-red);">42%</span>
+              </div>
+              <div class="bar-container">
+                <div class="bar bar--red" style="width: 42%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Monospace Animated Table Demo -->
+        <div class="panel" style="flex: 1;">
+          <div class="panel-header">
+            <span class="panel-title">6. Animated Monospace Table (.table-mono)</span>
+            <button class="btn btn-outline" style="padding: 2px 6px; font-size: 9px;" onclick="addFakeEventRow()">+ Add Row</button>
+          </div>
+          <table class="table-mono">
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Technique</th>
+                <th>State</th>
+              </tr>
+            </thead>
+            <tbody id="demoTableBody">
+              <tr class="new-row">
+                <td style="color:var(--color-muted);">12:04:11</td>
+                <td>T1110 brute force</td>
+                <td><span class="tag tag--blocked">BLOCKED</span></td>
+              </tr>
+              <tr>
+                <td style="color:var(--color-muted);">12:03:52</td>
+                <td>T1190 sqli on web01</td>
+                <td><span class="tag tag--detected">DETECTED</span></td>
+              </tr>
+              <tr class="breach-row">
+                <td style="color:var(--color-muted);">12:03:20</td>
+                <td>T1558 kerberoast</td>
+                <td><span class="tag tag--alert">ALERT</span></td>
+              </tr>
+              <tr>
+                <td style="color:var(--color-muted);">12:02:47</td>
+                <td>T1021 smb lateral</td>
+                <td><span class="tag tag--isolated">ISOLATED</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Status Line -->
+    <footer class="hud-footer">
+      <div>
+        <span>&gt; lab armed. 5 sensors online. waiting for operator</span><span class="cursor-blink"></span>
+      </div>
+      <div>
+        <span>Lab is isolated. Attacks stay inside the range.</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- Playground Interactive Controller Script -->
+  <script type="module" src="/static/js/playground.js"></script>
+</body>
+</html>

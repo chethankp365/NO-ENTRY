@@ -63,6 +63,15 @@ def debug_page(request: Request):
         context={"app_name": settings.APP_NAME}
     )
 
+@app.get("/playground", response_class=HTMLResponse)
+def playground_page(request: Request):
+    """Interactive Design System & WebGL FX Playground."""
+    return templates.TemplateResponse(
+        request=request,
+        name="playground.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
 @app.websocket("/ws/events")
 async def websocket_events_endpoint(websocket: WebSocket):
     """

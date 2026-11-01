@@ -1,0 +1,461 @@
+/* ==========================================================================
+   NO ENTRY - Cyber Component Library
+   Panels, tactical buttons, HUD stat cards, tags, tables, and corner brackets
+   ========================================================================== */
+
+@import url('tokens.css');
+
+/* ==========================================================================
+   1. Corner Brackets (Framing views in hacker movie style)
+   ========================================================================== */
+.corner-brackets {
+  position: relative;
+}
+
+.corner-brackets::before,
+.corner-brackets::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+.corner-brackets::before {
+  top: 0;
+  left: 0;
+  border-top: 2px solid var(--color-red);
+  border-left: 2px solid var(--color-red);
+}
+
+.corner-brackets::after {
+  bottom: 0;
+  right: 0;
+  border-bottom: 2px solid var(--color-red);
+  border-right: 2px solid var(--color-red);
+}
+
+.corner-brackets--full {
+  position: fixed;
+  inset: 12px;
+  pointer-events: none;
+  z-index: var(--z-hud);
+}
+
+.corner-brackets--full::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 24px;
+  height: 24px;
+  border-top: 2px solid var(--color-red);
+  border-left: 2px solid var(--color-red);
+}
+
+.corner-brackets--full::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 24px;
+  height: 24px;
+  border-bottom: 2px solid var(--color-red);
+  border-right: 2px solid var(--color-red);
+}
+
+/* ==========================================================================
+   2. Tactical Panels (.panel)
+   ========================================================================== */
+.panel {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  position: relative;
+  padding: var(--space-4);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
+  border-radius: 0; /* Sharp corners: no rounded cards */
+}
+
+/* Corner ticks on panel */
+.panel::before {
+  content: '';
+  position: absolute;
+  top: -1px;
+  left: -1px;
+  width: 6px;
+  height: 6px;
+  border-top: 2px solid var(--color-red);
+  border-left: 2px solid var(--color-red);
+  pointer-events: none;
+}
+
+.panel::after {
+  content: '';
+  position: absolute;
+  bottom: -1px;
+  right: -1px;
+  width: 6px;
+  height: 6px;
+  border-bottom: 2px solid var(--color-red);
+  border-right: 2px solid var(--color-red);
+  pointer-events: none;
+}
+
+.panel-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: var(--space-2);
+  margin-bottom: var(--space-3);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.panel-title {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+/* ==========================================================================
+   3. Tactical Buttons (.btn-red, .btn-outline)
+   ========================================================================== */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  font-family: var(--font-ui);
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 18px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  background: transparent;
+  border-radius: 0; /* Sharp corners */
+  outline: none;
+  position: relative;
+  user-select: none;
+}
+
+.btn:active {
+  transform: translateY(1px);
+}
+
+/* Primary Red Button */
+.btn-red {
+  background: var(--color-red);
+  color: #FFFFFF;
+  border-color: var(--color-red);
+  box-shadow: 0 0 10px rgba(255, 31, 61, 0.4);
+}
+
+.btn-red:hover {
+  background: #FF3853;
+  border-color: #FF3853;
+  box-shadow: 0 0 20px rgba(255, 31, 61, 0.7);
+}
+
+.btn-red:active {
+  box-shadow: 0 0 8px rgba(255, 31, 61, 0.6);
+}
+
+/* Outline Button */
+.btn-outline {
+  background: rgba(8, 11, 16, 0.8);
+  color: var(--color-text);
+  border-color: var(--color-border);
+}
+
+.btn-outline:hover {
+  border-color: var(--color-cyan);
+  color: var(--color-cyan);
+  box-shadow: 0 0 12px var(--color-cyan-dim);
+}
+
+/* Danger / Stop Button */
+.btn-outline-red {
+  background: rgba(8, 11, 16, 0.8);
+  color: var(--color-red);
+  border-color: rgba(255, 31, 61, 0.4);
+}
+
+.btn-outline-red:hover {
+  border-color: var(--color-red);
+  background: var(--color-red-dim);
+  box-shadow: 0 0 14px var(--color-red-dim);
+}
+
+/* ==========================================================================
+   4. Stat Card (.stat-card)
+   ========================================================================== */
+.stat-card {
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: var(--space-3) var(--space-4);
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.stat-label {
+  font-family: var(--font-mono);
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--color-muted);
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+
+.stat-value {
+  font-family: var(--font-display);
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--color-cyan);
+  line-height: 1.2;
+  margin-top: 4px;
+}
+
+.stat-value--danger {
+  color: var(--color-red);
+  text-shadow: 0 0 12px rgba(255, 31, 61, 0.5);
+}
+
+.stat-value--success {
+  color: var(--color-green);
+  text-shadow: 0 0 12px rgba(0, 255, 106, 0.5);
+}
+
+.stat-value--warn {
+  color: var(--color-yellow);
+}
+
+/* ==========================================================================
+   5. Security Tags (.tag)
+   ========================================================================== */
+.tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 2px 7px;
+  border: 1px solid transparent;
+  line-height: 1.3;
+}
+
+.tag--blocked {
+  color: var(--color-green);
+  background: rgba(0, 255, 106, 0.08);
+  border-color: rgba(0, 255, 106, 0.4);
+}
+
+.tag--detected {
+  color: var(--color-cyan);
+  background: rgba(0, 229, 255, 0.08);
+  border-color: rgba(0, 229, 255, 0.4);
+}
+
+.tag--alert {
+  color: var(--color-yellow);
+  background: rgba(255, 214, 0, 0.08);
+  border-color: rgba(255, 214, 0, 0.4);
+}
+
+.tag--isolated {
+  color: var(--color-red);
+  background: rgba(255, 31, 61, 0.12);
+  border-color: rgba(255, 31, 61, 0.6);
+  box-shadow: 0 0 8px rgba(255, 31, 61, 0.2);
+}
+
+/* ==========================================================================
+   6. Monospace Animated Tables (.table-mono)
+   ========================================================================== */
+.table-mono {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+
+.table-mono th {
+  text-align: left;
+  padding: 8px 12px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  color: var(--color-muted);
+  letter-spacing: 1.5px;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.table-mono td {
+  padding: 6px 12px;
+  color: var(--color-text);
+  border-bottom: 1px solid rgba(26, 31, 41, 0.6);
+  vertical-align: middle;
+}
+
+.table-mono tr:hover td {
+  background: rgba(13, 18, 26, 0.6);
+}
+
+/* Row-enter animation & flash on new record */
+@keyframes rowEnter {
+  0% {
+    opacity: 0;
+    transform: translateX(-8px);
+    background: rgba(0, 229, 255, 0.2);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+    background: transparent;
+  }
+}
+
+.table-mono tr.new-row {
+  animation: rowEnter 0.4s ease-out;
+}
+
+.table-mono tr.breach-row {
+  background: rgba(255, 31, 61, 0.15) !important;
+  border-left: 3px solid var(--color-red);
+}
+
+/* ==========================================================================
+   7. Progress Bars (.bar)
+   ========================================================================== */
+.bar-container {
+  width: 100%;
+  height: 6px;
+  background: #0D121A;
+  border: 1px solid var(--color-border);
+  position: relative;
+  overflow: hidden;
+}
+
+.bar {
+  height: 100%;
+  background: var(--color-cyan);
+  box-shadow: 0 0 8px var(--color-cyan);
+  transition: width 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.bar--red {
+  background: var(--color-red);
+  box-shadow: 0 0 8px var(--color-red);
+}
+
+.bar--green {
+  background: var(--color-green);
+  box-shadow: 0 0 8px var(--color-green);
+}
+
+/* ==========================================================================
+   8. Badge (.badge)
+   ========================================================================== */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--color-border);
+  font-family: var(--font-mono);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  background: var(--color-surface);
+  color: var(--color-text);
+}
+
+.badge--unlocked {
+  border-color: rgba(0, 255, 106, 0.4);
+  color: var(--color-green);
+  box-shadow: 0 0 8px rgba(0, 255, 106, 0.15);
+}
+
+.badge--locked {
+  border-color: var(--color-border);
+  color: var(--color-muted);
+  opacity: 0.6;
+}
+
+/* ==========================================================================
+   9. Terminal Line & Cursor (.term-line, .cursor-blink)
+   ========================================================================== */
+.term-line {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--color-text);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.cursor-blink {
+  display: inline-block;
+  width: 8px;
+  height: 14px;
+  background: var(--color-red);
+  box-shadow: 0 0 6px var(--color-red);
+  vertical-align: middle;
+  animation: cursorBlink 0.9s infinite step-end;
+}
+
+@keyframes cursorBlink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+/* Toast Notification */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: var(--z-toast);
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: auto;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  padding: 10px 16px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--color-text);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  animation: toastIn 0.25s ease-out;
+}
+
+.toast.toast--danger {
+  border-color: var(--color-red);
+  box-shadow: 0 0 16px rgba(255, 31, 61, 0.3);
+}
+
+.toast.toast--success {
+  border-color: var(--color-green);
+}
+
+@keyframes toastIn {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}

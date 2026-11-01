@@ -1,0 +1,127 @@
+/* ==========================================================================
+   NO ENTRY - Base & Typography Styles
+   Cyber aesthetics, grid backdrop, and global resets
+   ========================================================================== */
+
+@import url('tokens.css');
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.4;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Faint Grid Background */
+body.bg-grid, .bg-grid {
+  background-color: var(--color-bg);
+  background-image:
+    linear-gradient(to right, rgba(26, 31, 41, 0.35) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(26, 31, 41, 0.35) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: center center;
+}
+
+/* Typography Hierarchy */
+h1, h2, h3, h4, .font-display {
+  font-family: var(--font-display);
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--color-text);
+}
+
+h1 { font-size: 26px; font-weight: 800; line-height: 1.2; }
+h2 { font-size: 20px; font-weight: 700; line-height: 1.25; }
+h3 { font-size: 15px; font-weight: 700; letter-spacing: 1.5px; }
+h4 { font-size: 13px; font-weight: 600; letter-spacing: 1.2px; }
+
+p, span, label, div {
+  font-family: var(--font-ui);
+  letter-spacing: 0.5px;
+}
+
+code, pre, .font-mono, .log-line, .tech-tag, .tag {
+  font-family: var(--font-mono);
+  letter-spacing: 0;
+}
+
+/* Selection */
+::selection {
+  background: var(--color-red);
+  color: #FFFFFF;
+}
+
+/* Cyber Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-border);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 0;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-red);
+  box-shadow: 0 0 8px var(--color-red);
+}
+
+/* Links */
+a {
+  color: var(--color-cyan);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: #FFFFFF;
+  text-shadow: 0 0 8px var(--color-cyan);
+}
+
+/* Utility Containers */
+.container {
+  width: 100%;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 0 var(--space-4);
+}
+
+.flex { display: flex; }
+.flex-col { display: flex; flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.gap-2 { gap: var(--space-2); }
+.gap-3 { gap: var(--space-3); }
+.gap-4 { gap: var(--space-4); }
+
+/* Reduced Motion Override */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+body.reduce-motion *, body.reduce-motion *::before, body.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+}
