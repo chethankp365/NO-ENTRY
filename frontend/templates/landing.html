@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NO ENTRY // Open-source Cyber Range & Threat Simulation</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/static/vendor/three/three.module.js",
+      "three/addons/": "/static/vendor/three/addons/",
+      "gsap": "/static/vendor/gsap/gsap.js",
+      "gsap/ScrollTrigger": "/static/vendor/gsap/ScrollTrigger.js"
+    }
+  }
+  </script>
+
+  <style>
+    body {
+      background-color: var(--color-bg);
+      color: var(--color-text);
+      overflow-x: hidden;
+    }
+
+    #rainCanvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    #globeBackground {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 2;
+      pointer-events: none;
+    }
+
+    /* Sticky Glass Navigation */
+    .glass-nav {
+      position: sticky;
+      top: 0;
+      z-index: var(--z-hud);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 36px;
+      background: rgba(4, 6, 10, 0.75);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .nav-brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .nav-brand h2 {
+      font-size: 16px;
+      letter-spacing: 2px;
+      font-weight: 700;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      font-weight: 600;
+      letter-spacing: 1.5px;
+      text-transform: uppercase;
+      color: var(--color-text-dim);
+      transition: all var(--transition-fast);
+    }
+
+    .nav-links a:hover {
+      color: var(--color-cyan);
+      text-shadow: 0 0 8px var(--color-cyan);
+    }
+
+    /* Hero Section (Screen 2 matching reference) */
+    .hero-section {
+      min-height: calc(100vh - 72px);
+      display: grid;
+      grid-template-columns: 1.1fr 1fr;
+      align-items: center;
+      padding: 40px 60px 20px 60px;
+      position: relative;
+      z-index: 10;
+    }
+
+    .hero-left {
+      max-width: 640px;
+    }
+
+    .hero-subtag {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-cyan);
+      letter-spacing: 1.5px;
+      margin-bottom: 24px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .hero-headline {
+      font-family: var(--font-display);
+      font-size: 54px;
+      font-weight: 900;
+      line-height: 1.15;
+      letter-spacing: 2px;
+      margin-bottom: 24px;
+      text-transform: none;
+    }
+
+    .hero-headline .line-3 {
+      color: var(--color-red);
+      text-shadow: 0 0 20px rgba(255, 31, 61, 0.6);
+    }
+
+    .hero-desc {
+      font-size: 16px;
+      color: var(--color-text-dim);
+      line-height: 1.6;
+      margin-bottom: 36px;
+      font-family: var(--font-ui);
+      max-width: 540px;
+    }
+
+    .hero-ctas {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .hero-right {
+      position: relative;
+      height: 540px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    /* Floating Terminal Alert Card pinned to globe */
+    .hero-terminal-card {
+      position: absolute;
+      bottom: 40px;
+      right: 20px;
+      background: rgba(8, 11, 16, 0.85);
+      backdrop-filter: blur(8px);
+      border: 1px solid var(--color-border);
+      padding: 14px 18px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      min-width: 320px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.8);
+      z-index: 15;
+      pointer-events: auto;
+    }
+
+    .card-line-1 { color: var(--color-red); margin-bottom: 4px; font-weight: 600; }
+    .card-line-2 { color: var(--color-cyan); margin-bottom: 4px; }
+    .card-line-3 { color: var(--color-green); font-weight: 600; }
+
+    /* Module Strip at bottom of hero */
+    .module-strip {
+      display: flex;
+      justify-content: space-between;
+      padding: 14px 60px;
+      background: rgba(8, 11, 16, 0.9);
+      border-top: 1px solid var(--color-border);
+      border-bottom: 1px solid var(--color-border);
+      position: relative;
+      z-index: 10;
+    }
+
+    .module-chip {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 1px;
+      color: var(--color-muted);
+      cursor: pointer;
+      position: relative;
+      padding: 4px 8px;
+      transition: all var(--transition-fast);
+    }
+
+    .module-chip span.mod-name {
+      color: var(--color-text);
+      font-weight: 700;
+    }
+
+    .module-chip:hover {
+      color: var(--color-cyan);
+      text-shadow: 0 0 10px var(--color-cyan);
+    }
+
+    .module-chip .tooltip {
+      position: absolute;
+      bottom: 120%;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #080B10;
+      border: 1px solid var(--color-cyan);
+      color: var(--color-text);
+      font-size: 11px;
+      white-space: nowrap;
+      padding: 4px 8px;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.3);
+    }
+
+    .module-chip:hover .tooltip {
+      opacity: 1;
+    }
+
+    /* Scroll Sections */
+    .section-wrap {
+      padding: 100px 60px;
+      position: relative;
+      z-index: 10;
+      max-width: 1360px;
+      margin: 0 auto;
+    }
+
+    .section-eyebrow {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-cyan);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .section-title {
+      font-size: 32px;
+      font-weight: 800;
+      margin-bottom: 40px;
+    }
+
+    /* The Loop: Attack > Detect > Fix > Verify */
+    .loop-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+      position: relative;
+    }
+
+    .loop-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      padding: 28px 20px;
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .loop-card:hover {
+      border-color: var(--color-cyan);
+      box-shadow: 0 0 20px rgba(0, 229, 255, 0.2);
+      transform: translateY(-4px);
+    }
+
+    .loop-card.loop-card--attack:hover {
+      border-color: var(--color-red);
+      box-shadow: 0 0 20px rgba(255, 31, 61, 0.3);
+    }
+
+    .loop-step-num {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-muted);
+      margin-bottom: 12px;
+    }
+
+    .loop-card h3 {
+      font-size: 18px;
+      margin-bottom: 8px;
+    }
+
+    .loop-card p {
+      font-size: 13px;
+      color: var(--color-muted);
+      line-height: 1.5;
+    }
+
+    /* Seven Module Tilt Cards */
+    .modules-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 20px;
+    }
+
+    .tilt-card {
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      padding: 24px;
+      min-height: 160px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      cursor: pointer;
+      transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+      perspective: 1000px;
+    }
+
+    .tilt-card:hover {
+      border-color: var(--color-cyan);
+      box-shadow: 0 0 16px rgba(0, 229, 255, 0.25);
+    }
+
+    .tilt-card-badge {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-cyan);
+      letter-spacing: 1px;
+    }
+
+    .tilt-card h3 {
+      font-size: 17px;
+      margin-top: 8px;
+      margin-bottom: 6px;
+    }
+
+    .tilt-card p {
+      font-size: 12px;
+      color: var(--color-muted);
+      line-height: 1.4;
+    }
+
+    /* First Mission Section */
+    .mission-showcase {
+      display: grid;
+      grid-template-columns: 1fr 1.2fr;
+      gap: 32px;
+      align-items: center;
+      background: var(--color-surface);
+      border: 1px solid var(--color-border);
+      padding: 40px;
+      position: relative;
+    }
+
+    .mission-term-mock {
+      background: #04060A;
+      border: 1px solid var(--color-border);
+      padding: 18px;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      line-height: 1.8;
+      box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.9);
+    }
+
+    /* Stats Section */
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 24px;
+    }
+
+    /* Modal for Watch a Live Attack */
+    #watchModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(4, 6, 10, 0.85);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+      display: none;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #watchModal.active {
+      display: flex;
+    }
+
+    .modal-box {
+      background: var(--color-surface);
+      border: 1px solid var(--color-red);
+      padding: 32px;
+      max-width: 640px;
+      width: 90%;
+      box-shadow: 0 0 40px rgba(255, 31, 61, 0.3);
+      position: relative;
+    }
+
+    /* Footer */
+    footer.landing-footer {
+      border-top: 1px solid var(--color-border);
+      padding: 40px 60px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-muted);
+      background: #04060A;
+      position: relative;
+      z-index: 10;
+    }
+  </style>
+</head>
+<body class="bg-grid">
+  <!-- Red Corner Brackets on Screen -->
+  <div class="corner-brackets--full"></div>
+
+  <!-- Background Layer 1: Matrix Rain Canvas -->
+  <canvas id="rainCanvas"></canvas>
+
+  <!-- Background Layer 2: 3D HoloGlobe Viewport -->
+  <div id="globeBackground"></div>
+
+  <!-- Sticky Glass Navigation -->
+  <nav class="glass-nav">
+    <div class="nav-brand">
+      <ne-logo size="32" pulse></ne-logo>
+      <h2>NO ENTRY</h2>
+    </div>
+
+    <ul class="nav-links">
+      <li><a href="#missions">Missions</a></li>
+      <li><a href="#modules">Modules</a></li>
+      <li><a href="#loop">Learn</a></li>
+      <li><a href="/playground">Docs</a></li>
+    </ul>
+
+    <a href="/access" class="btn btn-outline" style="padding: 6px 14px; font-size: 12px;">ENTER THE RANGE</a>
+  </nav>
+
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-left">
+      <div class="hero-subtag">
+        <span style="color:var(--color-cyan);">&bull;</span>
+        <span>5 missions. 6 modules. 1 isolated lab.</span>
+      </div>
+
+      <h1 class="hero-headline">
+        <div id="hlLine1">Break in.</div>
+        <div id="hlLine2">Watch it happen.</div>
+        <div id="hlLine3" class="line-3">Shut it down.</div>
+      </h1>
+
+      <p class="hero-desc">
+        Run real attacks against a virtual company, see your defenses catch them live, and let automation lock the door. Every move is mapped to MITRE ATT&CK.
+      </p>
+
+      <div class="hero-ctas">
+        <a href="/access" class="btn btn-red">START FIRST MISSION</a>
+        <button id="btnWatchAttack" class="btn btn-outline">WATCH A LIVE ATTACK</button>
+      </div>
+    </div>
+
+    <div class="hero-right">
+      <!-- Floating Terminal Card Pinned to HoloGlobe -->
+      <div class="hero-terminal-card corner-brackets">
+        <div id="cardLine1" class="card-line-1">T1110 brute force from 185.220.101.4</div>
+        <div id="cardLine2" class="card-line-2">rule 100231 fired in 3.2s</div>
+        <div id="cardLine3" class="card-line-3">ip blocked at firewall</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Bottom Modules Strip (matching Reference Screen 2) -->
+  <div class="module-strip">
+    <div class="module-chip" data-tip="Attack launcher and offensive scenario console">
+      <span class="mod-name">Red:</span> attack
+      <div class="tooltip">Simulated offensive tooling, hydra, and web exploits</div>
+    </div>
+    <div class="module-chip" data-tip="SIEM telemetry and threat hunting logs">
+      <span class="mod-name">Watch:</span> detect
+      <div class="tooltip">Real-time alert correlation and MITRE detection rules</div>
+    </div>
+    <div class="module-chip" data-tip="Hardening checklist and posture score">
+      <span class="mod-name">Shield:</span> harden
+      <div class="tooltip">Host baselining, LAPS, ModSecurity WAF enforcement</div>
+    </div>
+    <div class="module-chip" data-tip="Honeypots and decoy honeytokens">
+      <span class="mod-name">Trap:</span> deceive
+      <div class="tooltip">Cowrie SSH honeypots and canary file baiting</div>
+    </div>
+    <div class="module-chip" data-tip="Automated incident response playbooks">
+      <span class="mod-name">Reflex:</span> respond
+      <div class="tooltip">Sub-second firewall blocks and automated host quarantine</div>
+    </div>
+    <div class="module-chip" data-tip="Threat intelligence and IOC scoring">
+      <span class="mod-name">Intel:</span> enrich
+      <div class="tooltip">AbuseIPDB, OTX, and MISP deterministic reputation feeds</div>
+    </div>
+  </div>
+
+  <!-- Section 1: The Loop (Attack > Detect > Fix > Verify) -->
+  <section id="loop" class="section-wrap">
+    <div class="section-eyebrow">// CORE LEARNING WORKFLOW</div>
+    <h2 class="section-title">THE CYBER RANGE LOOP</h2>
+
+    <div class="loop-grid">
+      <div class="loop-card loop-card--attack corner-brackets">
+        <div class="loop-step-num">STAGE 01</div>
+        <h3 style="color:var(--color-red);">ATTACK</h3>
+        <p>Execute safe simulated offensive payloads, port sweeps, and credential spray against the isolated network.</p>
+      </div>
+
+      <div class="loop-card corner-brackets">
+        <div class="loop-step-num">STAGE 02</div>
+        <h3 style="color:var(--color-cyan);">DETECT</h3>
+        <p>Watch SIEM sensors pick up indicators, inspect raw telemetry, and observe mean time to detect.</p>
+      </div>
+
+      <div class="loop-card corner-brackets">
+        <div class="loop-step-num">STAGE 03</div>
+        <h3 style="color:var(--color-yellow);">FIX</h3>
+        <p>Craft Sigma detection rules, tighten firewall policies, and deploy automated Reflex response playbooks.</p>
+      </div>
+
+      <div class="loop-card corner-brackets">
+        <div class="loop-step-num">STAGE 04</div>
+        <h3 style="color:var(--color-green);">VERIFY</h3>
+        <p>Re-trigger the attack to verify the threat is blocked at the perimeter and earn XP and badges.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 2: Seven Modules -->
+  <section id="modules" class="section-wrap">
+    <div class="section-eyebrow">// ARCHITECTURE</div>
+    <h2 class="section-title">SEVEN SPECIALIZED MODULES</h2>
+
+    <div class="modules-grid">
+      <div class="tilt-card" onclick="window.location.href='/access'">
+        <div>
+          <span class="tilt-card-badge">MODULE 01</span>
+          <h3 style="color:var(--color-red);">RED</h3>
+          <p>Scenario launcher console simulating ransomware, web exploits, and insider threats.</p>
+        </div>
+        <span class="tag tag--isolated" style="align-self: flex-start;">OFFENSIVE</span>
+      </div>
+
+      <div class="tilt-card" onclick="window.location.href='/access'">
+        <div>
+          <span class="tilt-card-badge">MODULE 02</span>
+          <h3 style="color:var(--color-cyan);">WATCH</h3>
+          <p>Real-time SIEM alert stream, threat hunting query bar, and technique analysis.</p>
+        </div>
+        <span class="tag tag--detected" style="align-self: flex-start;">DEFENSIVE</span>
+      </div>
+
+      <div class="tilt-card" onclick="window.location.href='/access'">
+        <div>
+          <span class="tilt-card-badge">MODULE 03</span>
+          <h3 style="color:var(--color-green);">SHIELD</h3>
+          <p>Hardening checklist, active posture scoring, and security baseline controls.</p>
+        </div>
+        <span class="tag tag--blocked" style="align-self: flex-start;">HARDENING</span>
+      </div>
+
+      <div class="tilt-card" onclick="window.location.href='/access'">
+        <div>
+          <span class="tilt-card-badge">MODULE 04</span>
+          <h3 style="color:var(--color-yellow);">TRAP</h3>
+          <p>Active honeypots, fake AD accounts, and canary honeytokens.</p>
+        </div>
+        <span class="tag tag--alert" style="align-self: flex-start;">DECEPTION</span>
+      </div>
+
+      <div class="tilt-card" onclick="window.location.href='/access'">
+        <div>
+          <span class="tilt-card-badge">MODULE 05</span>
+          <h3 style="color:var(--color-green);">REFLEX</h3>
+          <p>Automated SOAR playbooks: IP bans, endpoint isolation, and account suspension.</p>
+        </div>
+        <span class="tag tag--blocked" style="align-self: flex-start;">AUTOMATION</span>
+      </div>
+
+      <div class="tilt-card" onclick="window.location.href='/access'">
+        <div>
+          <span class="tilt-card-badge">MODULE 06</span>
+          <h3 style="color:var(--color-cyan);">INTEL</h3>
+          <p>Deterministic threat intelligence scoring from AbuseIPDB, AlienVault OTX, and MISP.</p>
+        </div>
+        <span class="tag tag--detected" style="align-self: flex-start;">THREAT INTEL</span>
+      </div>
+
+      <div class="tilt-card" onclick="window.location.href='/access'">
+        <div>
+          <span class="tilt-card-badge">MODULE 07</span>
+          <h3 style="color:var(--color-text);">FORENSICS</h3>
+          <p>Artifact analysis, memory timeline reconstruction, and chain-of-custody logging.</p>
+        </div>
+        <span class="tag" style="border-color:var(--color-border); color:var(--color-muted); align-self:flex-start;">EVIDENCE</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 3: First Mission Showcase -->
+  <section id="missions" class="section-wrap">
+    <div class="section-eyebrow">// FEATURED SCENARIO</div>
+    <h2 class="section-title">YOUR FIRST MISSION: THE HACKED SHOP</h2>
+
+    <div class="mission-showcase corner-brackets">
+      <div>
+        <h3 style="font-size: 22px; color: var(--color-red); margin-bottom: 12px;">MISSION 02: WEB APP BREACH</h3>
+        <p style="color: var(--color-text-dim); line-height: 1.6; margin-bottom: 20px;">
+          An attacker targets the DMZ web server (web01) with SQL injection, attempts to extract credentials, and drops a web shell. Write a Sigma detection rule, enforce ModSecurity, and sever the pivot into the corporate network.
+        </p>
+        <div style="display: flex; gap: 8px; margin-bottom: 24px;">
+          <span class="tag tag--detected">T1190 SQLI</span>
+          <span class="tag tag--alert">T1505 WEB SHELL</span>
+          <span class="tag tag--blocked">T1021 PIVOT</span>
+        </div>
+        <a href="/access" class="btn btn-red">INITIALIZE MISSION</a>
+      </div>
+
+      <div class="mission-term-mock">
+        <div style="color: var(--color-muted); margin-bottom: 8px;">// SIEM Sensor Live Telemetry</div>
+        <div><span style="color:var(--color-cyan);">12:03:52</span> <span style="color:var(--color-red);">T1190</span> sqli on web01 from 45.9.148.22</div>
+        <div><span style="color:var(--color-muted);">[+] injectable parameter: user</span></div>
+        <div><span style="color:var(--color-cyan);">12:03:55</span> <span style="color:var(--color-yellow);">RULE 100190</span> fired in 3.1s: UNION SELECT detected</div>
+        <div><span style="color:var(--color-cyan);">12:03:56</span> <span style="color:var(--color-green);">REFLEX</span> firewall drop rule added for 45.9.148.22</div>
+        <div><span style="color:var(--color-green);">&gt; attack contained. 0 records exfiltrated.</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section 4: Telemetry Stats Count-up -->
+  <section class="section-wrap">
+    <div class="section-eyebrow">// RANGE BENCHMARKS</div>
+    <h2 class="section-title">OPERATIONAL METRICS</h2>
+
+    <div class="stats-row">
+      <div class="stat-card corner-brackets">
+        <span class="stat-label">TECHNIQUES DETECTED</span>
+        <span id="statTechniques" class="stat-value">38 / 50</span>
+      </div>
+      <div class="stat-card corner-brackets">
+        <span class="stat-label">MEAN TIME TO DETECT</span>
+        <span id="statMttd" class="stat-value">3.2 s</span>
+      </div>
+      <div class="stat-card corner-brackets">
+        <span class="stat-label">MEAN TIME TO RESPOND</span>
+        <span id="statMttr" class="stat-value stat-value--success">8.4 s</span>
+      </div>
+      <div class="stat-card corner-brackets">
+        <span class="stat-label">ATTACK GAPS MAPPED</span>
+        <span id="statGaps" class="stat-value stat-value--warn">12 GAPS</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- Modal for Watch Attack -->
+  <div id="watchModal">
+    <div class="modal-box corner-brackets">
+      <h3 style="color: var(--color-red); margin-bottom: 12px; font-size: 20px;">SIMULATED ATTACK REPLAY</h3>
+      <p style="color: var(--color-text-dim); line-height: 1.6; margin-bottom: 20px;">
+        You are watching a pre-recorded automated simulation of <strong>T1110 SSH Brute Force</strong> against pfSense. Telemetry is being streamed from the isolated lab network. Full interactive cinematic playback unlocks in Prompt 9.
+      </p>
+      <div style="background: #04060A; padding: 14px; border: 1px solid var(--color-border); font-family: var(--font-mono); font-size: 11px; margin-bottom: 20px;">
+        <div>[*] hydra -l admin ssh://10.0.1.10</div>
+        <div>[+] 214 attempts logged</div>
+        <div style="color:var(--color-green);">[!] firewall: block 185.220.101.4</div>
+      </div>
+      <div style="display: flex; justify-content: flex-end; gap: 12px;">
+        <button id="closeModalBtn" class="btn btn-outline">CLOSE</button>
+        <a href="/access" class="btn btn-red">JOIN THE FIGHT</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer class="landing-footer">
+    <div>
+      <span style="color: var(--color-red); font-weight: 700;">NO ENTRY</span> &mdash;
+      <span>We break in, so no one else can.</span>
+    </div>
+    <div>
+      <span>Ethics &amp; Safety: Lab is isolated. Harmless simulated payloads only.</span>
+    </div>
+    <div>
+      <a href="/access" style="color: var(--color-cyan);">Operator Terminal &rarr;</a>
+    </div>
+  </footer>
+
+  <!-- Landing Controller Script -->
+  <script type="module" src="/static/js/screens/landing.js"></script>
+</body>
+</html>

@@ -13,6 +13,28 @@ def test_playground_page_load(client):
     assert "ne-logo" in response.text
     assert "rainCanvas" in response.text
 
+def test_landing_page_load(client):
+    response = client.get("/")
+    assert response.status_code == 200
+    assert "Break in." in response.text
+    assert "ENTER THE RANGE" in response.text
+
+def test_boot_page_load(client):
+    response = client.get("/boot")
+    assert response.status_code == 200
+    assert "BOOT SEQUENCE" in response.text
+    assert "audioGate" in response.text
+
+def test_access_page_load(client):
+    response = client.get("/access")
+    assert response.status_code == 200
+    assert "ACCESS TERMINAL" in response.text
+    assert "REQUEST ACCESS" in response.text
+
+def test_command_center_page_load(client):
+    response = client.get("/command-center")
+    assert response.status_code == 200
+
 def test_api_state(client):
     response = client.get("/api/state")
     assert response.status_code == 200

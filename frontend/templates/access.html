@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NO ENTRY // ACCESS TERMINAL</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/static/vendor/three/three.module.js",
+      "three/addons/": "/static/vendor/three/addons/"
+    }
+  }
+  </script>
+
+  <style>
+    body {
+      background: var(--color-bg);
+      color: var(--color-text);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    #accessWebgl {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+
+    .access-container {
+      position: relative;
+      z-index: 10;
+      width: 100%;
+      max-width: 480px;
+      padding: 20px;
+    }
+
+    /* Screen 3 Centered Panel */
+    .access-card {
+      background: #080B10;
+      border: 1px solid var(--color-border);
+      padding: 40px 36px 32px 36px;
+      text-align: center;
+      box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
+      position: relative;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .access-card.denied-shake {
+      border-color: var(--color-red) !important;
+      box-shadow: 0 0 30px rgba(255, 31, 61, 0.6) !important;
+    }
+
+    .access-card.granted-flash {
+      border-color: var(--color-green) !important;
+      box-shadow: 0 0 30px rgba(0, 255, 106, 0.6) !important;
+    }
+
+    .access-logo-wrap {
+      margin-bottom: 20px;
+      filter: drop-shadow(0 0 14px rgba(255, 31, 61, 0.5));
+    }
+
+    .access-title {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 800;
+      letter-spacing: 3px;
+      color: var(--color-text);
+      margin-bottom: 6px;
+    }
+
+    .access-subtitle {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      color: var(--color-muted);
+      letter-spacing: 1px;
+      margin-bottom: 28px;
+    }
+
+    .form-group {
+      text-align: left;
+      margin-bottom: 20px;
+    }
+
+    .form-label {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--color-muted);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .form-input {
+      width: 100%;
+      background: #04060A;
+      border: 1px solid var(--color-border);
+      color: var(--color-text);
+      font-family: var(--font-mono);
+      font-size: 13px;
+      padding: 12px 14px;
+      outline: none;
+      transition: all var(--transition-fast);
+      box-sizing: border-box;
+      border-radius: 0;
+    }
+
+    .form-input:focus {
+      border-color: var(--color-cyan);
+      box-shadow: 0 0 12px rgba(0, 229, 255, 0.25);
+    }
+
+    .form-input::placeholder {
+      color: #3A4354;
+    }
+
+    /* Request Access Button with Scanning State */
+    .btn-submit-access {
+      width: 100%;
+      padding: 14px;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-top: 8px;
+      margin-bottom: 20px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-submit-access.scanning {
+      background: #111722;
+      border-color: var(--color-cyan);
+      color: var(--color-cyan);
+      pointer-events: none;
+    }
+
+    .btn-submit-access.scanning::after {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(0, 229, 255, 0.5), transparent);
+      animation: scanSweep 1s infinite linear;
+    }
+
+    @keyframes scanSweep {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    /* Handshake Status Feed */
+    .handshake-status {
+      min-height: 20px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-cyan);
+      letter-spacing: 1px;
+      margin-bottom: 16px;
+    }
+
+    /* Footer lines matching reference */
+    .access-card-footer {
+      border-top: 1px solid var(--color-border);
+      padding-top: 18px;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-muted);
+      line-height: 1.6;
+    }
+
+    .network-sealed {
+      color: var(--color-green);
+      font-weight: 600;
+      display: block;
+      margin-top: 4px;
+      letter-spacing: 1px;
+    }
+
+    .guest-link-wrap {
+      margin-top: 16px;
+    }
+
+    .guest-link {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-muted);
+      text-decoration: underline;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: color 0.15s ease;
+    }
+
+    .guest-link:hover {
+      color: var(--color-cyan);
+    }
+
+    /* Octagon Stamp on Failure */
+    #accessStopStamp {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.6);
+      width: 200px;
+      height: 200px;
+      pointer-events: none;
+      z-index: 90;
+      opacity: 0;
+      transition: opacity 0.1s ease, transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    #accessStopStamp.stamp-active {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.0);
+    }
+  </style>
+</head>
+<body class="bg-grid">
+  <!-- Red Corner Brackets on Screen -->
+  <div class="corner-brackets--full"></div>
+
+  <!-- Background 3D Viewport: Slow grid floor, floating particles, rotating ring -->
+  <div id="accessWebgl"></div>
+
+  <!-- Main Centered Terminal Panel (Screen 3) -->
+  <main class="access-container">
+    <div id="accessCard" class="access-card corner-brackets">
+      <!-- Emblem -->
+      <div class="access-logo-wrap">
+        <ne-logo id="accessLogo" size="68" pulse></ne-logo>
+      </div>
+
+      <!-- Header -->
+      <h1 class="access-title">ACCESS TERMINAL</h1>
+      <p class="access-subtitle">Identify yourself, operator.</p>
+
+      <!-- Login Form -->
+      <form id="accessForm" autocomplete="off">
+        <div class="form-group">
+          <label for="operatorId" class="form-label">OPERATOR ID</label>
+          <input
+            type="text"
+            id="operatorId"
+            name="operator_id"
+            class="form-input"
+            placeholder="op-0x7f3a"
+            required
+            spellcheck="false"
+          >
+        </div>
+
+        <div class="form-group">
+          <label for="passphrase" class="form-label">PASSPHRASE</label>
+          <input
+            type="password"
+            id="passphrase"
+            name="passphrase"
+            class="form-input"
+            placeholder="passphrase"
+            required
+          >
+        </div>
+
+        <!-- Handshake / Status Line -->
+        <div id="handshakeStatus" class="handshake-status"></div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="btnRequestAccess" class="btn btn-red btn-submit-access">
+          REQUEST ACCESS
+        </button>
+      </form>
+
+      <!-- Footer matching reference screenshot 3 -->
+      <div class="access-card-footer">
+        <div>Lab is isolated. Attacks stay inside the range.</div>
+        <span class="network-sealed">network: sealed</span>
+
+        <div class="guest-link-wrap">
+          <span id="btnGuestAccess" class="guest-link">Continue as guest operator &rarr;</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Octagon ACCESS DENIED Stamp -->
+  <div id="accessStopStamp">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="30,5 70,5 95,30 95,70 70,95 30,95 5,70 5,30" fill="#FF1F3D" stroke="#FFFFFF" stroke-width="3" filter="drop-shadow(0 0 20px rgba(255, 31, 61, 0.95))"/>
+      <rect x="18" y="44" width="64" height="12" fill="#FFFFFF" rx="2" />
+    </svg>
+  </div>
+
+  <!-- Access Terminal Script -->
+  <script type="module" src="/static/js/screens/access.js"></script>
+</body>
+</html>

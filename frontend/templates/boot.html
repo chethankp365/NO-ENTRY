@@ -1,0 +1,331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NO ENTRY // BOOT SEQUENCE</title>
+  <link rel="icon" type="image/svg+xml" href="/static/favicon.svg">
+  <link rel="stylesheet" href="/static/css/tokens.css">
+  <link rel="stylesheet" href="/static/css/base.css">
+  <link rel="stylesheet" href="/static/css/components.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "/static/vendor/three/three.module.js",
+      "three/addons/": "/static/vendor/three/addons/",
+      "gsap": "/static/vendor/gsap/gsap.js"
+    }
+  }
+  </script>
+
+  <style>
+    body {
+      background: #000000;
+      color: var(--color-text);
+      overflow: hidden;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+    }
+
+    #bootWebgl {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* Initial Audio Activation Gate */
+    #audioGate {
+      position: fixed;
+      inset: 0;
+      background: #000000;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .gate-card {
+      border: 1px solid var(--color-border);
+      padding: 36px 48px;
+      background: var(--color-surface);
+      text-align: center;
+      position: relative;
+      box-shadow: 0 0 30px rgba(0, 0, 0, 0.9);
+      transition: all 0.2s ease;
+    }
+
+    .gate-card:hover {
+      border-color: var(--color-red);
+      box-shadow: 0 0 25px rgba(255, 31, 61, 0.3);
+    }
+
+    .gate-prompt {
+      font-family: var(--font-display);
+      font-size: 15px;
+      font-weight: 700;
+      letter-spacing: 2px;
+      color: var(--color-text);
+      margin-top: 16px;
+    }
+
+    .gate-sub {
+      font-family: var(--font-mono);
+      font-size: 11px;
+      color: var(--color-muted);
+      margin-top: 8px;
+      letter-spacing: 1px;
+    }
+
+    /* Main Boot Stage Content */
+    #bootStage {
+      position: relative;
+      z-index: 10;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      width: 100%;
+      max-width: 600px;
+      padding: 20px;
+      opacity: 0;
+      transition: opacity 0.5s ease;
+    }
+
+    .boot-logo-wrap {
+      margin-bottom: 24px;
+      filter: drop-shadow(0 0 20px rgba(255, 31, 61, 0.6));
+    }
+
+    .boot-title {
+      font-family: var(--font-display);
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: 4px;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .boot-title .white-part { color: #FFFFFF; }
+    .boot-title .red-part {
+      color: var(--color-red);
+      text-shadow: 0 0 16px rgba(255, 31, 61, 0.7);
+    }
+
+    .boot-tagline {
+      font-family: var(--font-ui);
+      font-size: 14px;
+      color: var(--color-muted);
+      letter-spacing: 1px;
+      min-height: 22px;
+      margin-bottom: 28px;
+    }
+
+    /* Monospace Terminal Box matching screenshot 1 */
+    .boot-term-box {
+      width: 100%;
+      max-width: 520px;
+      background: #080B10;
+      border: 1px solid var(--color-border);
+      padding: 16px 20px;
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 13px;
+      min-height: 160px;
+      position: relative;
+      box-shadow: 0 4px 30px rgba(0, 0, 0, 0.8);
+      margin-bottom: 24px;
+    }
+
+    .term-row {
+      line-height: 1.8;
+      opacity: 0;
+      transform: translateY(4px);
+      transition: opacity 0.15s ease, transform 0.15s ease;
+    }
+
+    .term-row.visible {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .term-row .ok-tag {
+      color: var(--color-green);
+      font-weight: 700;
+      margin-right: 8px;
+    }
+
+    .term-row .denied-tag {
+      color: var(--color-red);
+      font-weight: 700;
+      margin-right: 8px;
+      text-shadow: 0 0 8px rgba(255, 31, 61, 0.6);
+    }
+
+    .term-row.denied-line {
+      color: var(--color-red);
+    }
+
+    .term-row.granted-line {
+      color: var(--color-green);
+    }
+
+    /* Red Progress Bar */
+    .boot-progress-wrap {
+      width: 100%;
+      max-width: 520px;
+      height: 3px;
+      background: #111622;
+      position: relative;
+      margin-bottom: 16px;
+      overflow: hidden;
+    }
+
+    .boot-progress-bar {
+      height: 100%;
+      width: 0%;
+      background: var(--color-red);
+      box-shadow: 0 0 10px var(--color-red);
+      transition: width 0.1s linear;
+    }
+
+    /* LAB STATUS: ARMED */
+    .lab-status-line {
+      font-family: var(--font-mono);
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--color-muted);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .lab-status-line.armed {
+      opacity: 1;
+      color: var(--color-text);
+    }
+
+    /* Octagonal Access Denied Stamp */
+    #stopStamp {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%) scale(0.6);
+      width: 220px;
+      height: 220px;
+      pointer-events: none;
+      z-index: 80;
+      opacity: 0;
+      transition: opacity 0.1s ease, transform 0.2s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    }
+
+    #stopStamp.stamp-active {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.0);
+    }
+
+    /* Skip link bottom right */
+    .skip-link {
+      position: fixed;
+      bottom: 24px;
+      right: 32px;
+      z-index: 95;
+      font-family: var(--font-mono);
+      font-size: 11px;
+      letter-spacing: 1.5px;
+      color: var(--color-muted);
+      text-transform: uppercase;
+      text-decoration: none;
+      border: 1px solid var(--color-border);
+      padding: 6px 14px;
+      background: rgba(8, 11, 16, 0.8);
+      transition: all 0.2s ease;
+    }
+
+    .skip-link:hover {
+      color: var(--color-red);
+      border-color: var(--color-red);
+      box-shadow: 0 0 10px rgba(255, 31, 61, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <!-- Corner Brackets in all 4 corners -->
+  <div class="corner-brackets--full"></div>
+
+  <!-- Background 3D Code Warp Canvas -->
+  <div id="bootWebgl"></div>
+
+  <!-- Browser Audio Policy Gate -->
+  <div id="audioGate">
+    <div class="gate-card corner-brackets">
+      <ne-logo size="64" pulse></ne-logo>
+      <div class="gate-prompt">CLICK TO ENABLE AUDIO + ENTER</div>
+      <div class="gate-sub">INITIALIZING CYBER RANGE SUBSYSTEMS</div>
+    </div>
+  </div>
+
+  <!-- Central Boot Content (Page 1 reference design) -->
+  <div id="bootStage">
+    <!-- Emblem -->
+    <div class="boot-logo-wrap">
+      <ne-logo id="bootLogo" size="92" pulse></ne-logo>
+    </div>
+
+    <!-- Title: NO (white) ENTRY (red) -->
+    <div class="boot-title">
+      <span id="bootTitleNo" class="white-part">NO</span>
+      <span id="bootTitleEntry" class="red-part">ENTRY</span>
+    </div>
+
+    <!-- Tagline -->
+    <div id="bootTagline" class="boot-tagline">
+      Open-source attack simulation and automated threat detection.
+    </div>
+
+    <!-- Terminal Box -->
+    <div class="boot-term-box">
+      <div id="termLine1" class="term-row"><span class="ok-tag">[ok]</span>mounting isolated lab network</div>
+      <div id="termLine2" class="term-row"><span class="ok-tag">[ok]</span>loading detection rules</div>
+      <div id="termLine3" class="term-row"><span class="ok-tag">[ok]</span>arming automated response</div>
+      <div id="termLine4" class="term-row denied-line"><span class="denied-tag">[!!]</span>ACCESS DENIED: unknown operator</div>
+      <div id="termLine5" class="term-row granted-line"><span class="ok-tag">[ok]</span>ACCESS GRANTED: welcome, operator</div>
+    </div>
+
+    <!-- Progress Bar -->
+    <div class="boot-progress-wrap">
+      <div id="bootProgress" class="boot-progress-bar"></div>
+    </div>
+
+    <!-- Status Line -->
+    <div id="labStatusLine" class="lab-status-line">
+      LAB STATUS: ARMED
+    </div>
+  </div>
+
+  <!-- Flashing Octagon STOP Stamp -->
+  <div id="stopStamp">
+    <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <polygon points="30,5 70,5 95,30 95,70 70,95 30,95 5,70 5,30" fill="#FF1F3D" stroke="#FFFFFF" stroke-width="3" filter="drop-shadow(0 0 15px rgba(255, 31, 61, 0.9))"/>
+      <rect x="20" y="44" width="60" height="12" fill="#FFFFFF" rx="2" />
+    </svg>
+  </div>
+
+  <!-- Skip link -->
+  <a href="/" id="skipBtn" class="skip-link">SKIP [ESC] &rarr;</a>
+
+  <!-- Boot Orchestrator Script -->
+  <script type="module" src="/static/js/screens/boot.js"></script>
+</body>
+</html>

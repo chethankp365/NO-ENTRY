@@ -15,6 +15,7 @@ from backend.app.config import settings
 from backend.app.db.database import init_db
 from backend.app.sim.engine import sim_engine
 from backend.app.api.routes import api_router
+from backend.app.api.auth import auth_router
 
 # Lifespan event handler for startup and shutdown
 @asynccontextmanager
@@ -41,6 +42,7 @@ app = FastAPI(
 
 # Include REST API routes (no CORS middleware needed - same origin)
 app.include_router(api_router)
+app.include_router(auth_router)
 
 # Mount static files and templates
 settings.STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -50,9 +52,40 @@ app.mount("/static", StaticFiles(directory=str(settings.STATIC_DIR)), name="stat
 templates = Jinja2Templates(directory=str(settings.TEMPLATES_DIR))
 
 @app.get("/", response_class=HTMLResponse)
-def index_redirect():
-    """Redirect root to /debug in development core phase."""
-    return RedirectResponse(url="/debug")
+def landing_page(request: Request):
+    """Screen 2: Landing page."""
+    return templates.TemplateResponse(
+        request=request,
+        name="landing.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/boot", response_class=HTMLResponse)
+def boot_page(request: Request):
+    """Screen 1: Boot sequence page."""
+    return templates.TemplateResponse(
+        request=request,
+        name="boot.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/access", response_class=HTMLResponse)
+def access_page(request: Request):
+    """Screen 3: Access terminal login page."""
+    return templates.TemplateResponse(
+        request=request,
+        name="access.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/command-center", response_class=HTMLResponse)
+def command_center_page(request: Request):
+    """Command Center landing after login (redirects or displays preliminary view)."""
+    return templates.TemplateResponse(
+        request=request,
+        name="debug.html", # debug console acts as command center in early prompts
+        context={"app_name": settings.APP_NAME}
+    )
 
 @app.get("/debug", response_class=HTMLResponse)
 def debug_page(request: Request):
