@@ -9,6 +9,7 @@ import { initAppShell } from '../core/appShell.js';
 import { wsClient } from '../core/ws.js';
 import { api } from '../core/api.js';
 import { sound } from '../core/sound.js';
+import { toast } from '../core/ui.js';
 
 class WatchController {
   constructor() {
@@ -313,10 +314,15 @@ class WatchController {
       blockBtn.addEventListener('click', async () => {
         const evt = this.eventsCache.get(this.activeDrawerEventId);
         if (evt && evt.source_ip) {
-          sound.threatAlert();
-          await api.post('/block-ip', { ip: evt.source_ip, reason: 'Manual Watch drawer ban' });
-          blockBtn.innerText = `BLOCKED: ${evt.source_ip}`;
-          blockBtn.disabled = true;
+          try {
+            sound.threatAlert();
+            await api.post('/block-ip', { ip: evt.source_ip, reason: 'Manual Watch drawer ban' });
+            blockBtn.innerText = `BLOCKED: ${evt.source_ip}`;
+            blockBtn.disabled = true;
+            toast(`Perimeter firewall rule deployed: ${evt.source_ip} blocked`, 'danger');
+          } catch (err) {
+            toast(`Failed to block IP ${evt.source_ip}: ${err.message}`, 'danger');
+          }
         }
       });
     }
@@ -325,10 +331,15 @@ class WatchController {
       isolateBtn.addEventListener('click', async () => {
         const evt = this.eventsCache.get(this.activeDrawerEventId);
         if (evt && evt.target_host) {
-          sound.threatAlert();
-          await api.post(`/hosts/${evt.target_host}/isolate`);
-          isolateBtn.innerText = `ISOLATED: ${evt.target_host}`;
-          isolateBtn.disabled = true;
+          try {
+            sound.threatAlert();
+            await api.post(`/hosts/${evt.target_host}/isolate`);
+            isolateBtn.innerText = `ISOLATED: ${evt.target_host}`;
+            isolateBtn.disabled = true;
+            toast(`Quarantine active: Host ${evt.target_host} isolated`, 'danger');
+          } catch (err) {
+            toast(`Failed to isolate ${evt.target_host}: ${err.message}`, 'danger');
+          }
         }
       });
     }
@@ -374,6 +385,7 @@ class WatchController {
         document.getElementById('drawerRawJson').innerText = JSON.stringify(data.raw_log || evt, null, 2);
       }
     } catch (err) {
+      console.warn('Event detail query fallback:', err);
       const cached = this.eventsCache.get(eventId);
       if (cached) {
         document.getElementById('drawerMitreTitle').innerText = `${cached.technique_id} : ${cached.technique_name}`;
@@ -381,6 +393,8 @@ class WatchController {
         document.getElementById('drawerIntelScore').innerText = 'MALICIOUS DETECTED';
         document.getElementById('drawerIntelCountry').innerText = cached.source_ip;
         document.getElementById('drawerRawJson').innerText = JSON.stringify(cached, null, 2);
+      } else {
+        toast(`Could not load details for event ${eventId}: ${err.message}`, 'warning');
       }
     }
   }
@@ -411,8 +425,14 @@ class WatchController {
     const hitsText = document.getElementById('huntHitsText');
     const hypText = document.getElementById('huntHypothesisText');
 
+    const cleanQuery = (queryStr || '').trim();
+    if (!cleanQuery) {
+      toast('Please enter a query or select a preset to hunt telemetry', 'info');
+      return;
+    }
+
     try {
-      const res = await api.post('/hunt', { query: queryStr });
+      const res = await api.post('/hunt', { query: cleanQuery });
       if (res && resultBox) {
         resultBox.classList.add('active');
         if (hitsText) hitsText.innerText = `HITS: ${res.hits} in ${res.timeframe}`;
@@ -422,6 +442,12 @@ class WatchController {
       }
     } catch (err) {
       console.error('Hunt execution error:', err);
+      toast(`Hunt evaluation failed: ${err.message}`, 'danger');
+      if (resultBox) {
+        resultBox.classList.add('active');
+        if (hitsText) hitsText.innerText = 'HITS: 0 (Error)';
+        if (hypText) hypText.innerText = `Query Error: ${err.message}`;
+      }
     }
   }
 
@@ -450,7 +476,13 @@ class WatchController {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function startWatchController() {
   const watch = new WatchController();
   watch.init();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startWatchController);
+} else {
+  startWatchController();
+}

@@ -4,11 +4,13 @@
  */
 
 import { store } from './store.js';
+import { toast } from './ui.js';
 
 class WebSocketClient {
   constructor() {
     this.ws = null;
     this.handlers = new Map(); // topic -> Set(callbacks)
+    this.messageListeners = new Set();
     this.status = 'DISCONNECTED';
     this.reconnectAttempts = 0;
     this.maxReconnectDelay = 5000;
@@ -30,20 +32,37 @@ class WebSocketClient {
       this.ws = new WebSocket(url);
     } catch (err) {
       console.error('[NO ENTRY WS] Creation failed:', err);
+      toast('Failed to initialize /ws/events WebSocket connection', 'danger');
       this._scheduleReconnect();
       return;
     }
 
     this.ws.onopen = () => {
+      const wasReconnecting = this.reconnectAttempts > 0;
       this._setStatus('CONNECTED');
       this.reconnectAttempts = 0;
       this._startPing();
+      this._dispatch('_open', null);
+      if (wasReconnecting) {
+        toast('WebSocket /ws/events telemetry uplink restored', 'success', 2500);
+      }
       console.log('[NO ENTRY WS] Uplink established.');
     };
 
     this.ws.onmessage = (event) => {
       try {
         const msg = JSON.parse(event.data);
+
+        // Dispatch raw message { type, data } to .on('message', ...) subscribers
+        this.messageListeners.forEach(fn => {
+          try {
+            fn(msg);
+          } catch (err) {
+            console.error('[NO ENTRY WS] Error in message listener:', err);
+          }
+        });
+
+        // Dispatch topic to .subscribe(topic, ...) handlers
         this._dispatch(msg.type, msg.data);
 
         // Auto-update core store
@@ -66,16 +85,48 @@ class WebSocketClient {
       }
     };
 
-    this.ws.onclose = () => {
+    this.ws.onclose = (ev) => {
       this._setStatus('DISCONNECTED');
       this._stopPing();
+      this._dispatch('_close', ev);
       this._scheduleReconnect();
     };
 
     this.ws.onerror = (err) => {
       console.error('[NO ENTRY WS] Connection error:', err);
+      this._dispatch('_error', err);
+      if (this.reconnectAttempts === 0) {
+        toast('Telemetry WebSocket disconnected. Reconnecting...', 'warning', 3000);
+      }
       this.ws?.close();
     };
+  }
+
+  on(event, callback) {
+    if (typeof callback !== 'function') return () => {};
+
+    if (event === 'message') {
+      this.messageListeners.add(callback);
+      return () => this.messageListeners.delete(callback);
+    }
+
+    if (event === 'open') {
+      if (this.status === 'CONNECTED') {
+        try { callback(); } catch (e) { console.error(e); }
+      }
+      return this.subscribe('_open', callback);
+    }
+
+    if (event === 'close') {
+      return this.subscribe('_close', callback);
+    }
+
+    if (event === 'error') {
+      return this.subscribe('_error', callback);
+    }
+
+    // Otherwise treat as topic subscription (e.g. 'status', 'event', 'metrics')
+    return this.subscribe(event, callback);
   }
 
   subscribe(topic, callback) {

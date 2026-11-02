@@ -8,6 +8,7 @@ import { initAppShell } from '../core/appShell.js';
 import { api } from '../core/api.js';
 import { sound } from '../core/sound.js';
 import { screenShake } from '../fx/screenShake.js';
+import { toast } from '../core/ui.js';
 
 class PurpleTeamController {
   constructor() {
@@ -16,12 +17,19 @@ class PurpleTeamController {
     this.currentStep = 0;
     this.autoRunInterval = null;
     this.paths = [];
+    this.isLoading = false;
   }
 
   async init() {
     initAppShell('purple_team');
 
     this.initControls();
+
+    const atkScroll = document.getElementById('attackerLinesScroll');
+    const defScroll = document.getElementById('defenderLinesScroll');
+    if (atkScroll) atkScroll.addEventListener('scroll', () => this.redrawConnectors());
+    if (defScroll) defScroll.addEventListener('scroll', () => this.redrawConnectors());
+
     await this.loadScenario(this.currentScenario);
 
     // Window resize handler to reposition SVG connectors
@@ -36,7 +44,7 @@ class PurpleTeamController {
         pills.forEach(p => p.classList.remove('active'));
         pill.classList.add('active');
         this.currentScenario = pill.dataset.scenario;
-        sound.keyClick();
+        try { sound.keyClick(); } catch (_) {}
         await this.loadScenario(this.currentScenario);
       });
     });
@@ -44,18 +52,24 @@ class PurpleTeamController {
     // Auto Run
     const startBtn = document.getElementById('startAutoRunBtn');
     if (startBtn) {
-      startBtn.addEventListener('click', () => {
-        sound.keyClick();
-        this.startAutoRun();
+      startBtn.addEventListener('click', async () => {
+        try { sound.keyClick(); } catch (_) {}
+        if (this.autoRunInterval) {
+          this.stopAutoRun();
+          startBtn.innerText = 'START RUN';
+        } else {
+          await this.startAutoRun();
+        }
       });
     }
 
     // Step Run
     const stepBtn = document.getElementById('stepRunBtn');
     if (stepBtn) {
-      stepBtn.addEventListener('click', () => {
-        sound.keyClick();
-        this.step();
+      stepBtn.addEventListener('click', async () => {
+        try { sound.keyClick(); } catch (_) {}
+        this.stopAutoRun();
+        await this.step();
       });
     }
 
@@ -63,7 +77,7 @@ class PurpleTeamController {
     const replayBtn = document.getElementById('replayBtn');
     if (replayBtn) {
       replayBtn.addEventListener('click', () => {
-        sound.keyClick();
+        try { sound.keyClick(); } catch (_) {}
         this.replay();
       });
     }
@@ -72,6 +86,7 @@ class PurpleTeamController {
   async loadScenario(scenarioId) {
     this.stopAutoRun();
     this.currentStep = 0;
+    this.isLoading = true;
 
     try {
       const res = await api.post('/purple/run', { scenario: scenarioId });
@@ -79,6 +94,11 @@ class PurpleTeamController {
       this.renderPairs();
     } catch (err) {
       console.error('Failed to load purple scenario:', err);
+      toast(`Failed to load purple scenario '${scenarioId}': ${err.message}`, 'danger');
+    } finally {
+      this.isLoading = false;
+      const startBtn = document.getElementById('startAutoRunBtn');
+      if (startBtn) startBtn.innerText = 'START RUN';
     }
   }
 
@@ -92,10 +112,11 @@ class PurpleTeamController {
     atkContainer.innerHTML = '';
     defContainer.innerHTML = '';
 
-    // Clear SVG paths (keep defs)
-    const defs = svg.querySelector('defs');
-    svg.innerHTML = '';
-    if (defs) svg.appendChild(defs);
+    // Clear existing connector path elements cleanly while preserving <defs>
+    if (svg) {
+      const oldPaths = svg.querySelectorAll('.connector-path');
+      oldPaths.forEach(p => p.remove());
+    }
     this.paths = [];
 
     const pairs = this.scenarioData.pairs || [];
@@ -134,15 +155,24 @@ class PurpleTeamController {
     });
   }
 
-  startAutoRun() {
+  async startAutoRun() {
     this.stopAutoRun();
+
+    if (!this.scenarioData) {
+      await this.loadScenario(this.currentScenario);
+    }
+
     this.replay();
+
+    const startBtn = document.getElementById('startAutoRunBtn');
+    if (startBtn) startBtn.innerText = 'PAUSE';
 
     this.step();
     this.autoRunInterval = setInterval(() => {
       const more = this.step();
       if (!more) {
         this.stopAutoRun();
+        if (startBtn) startBtn.innerText = 'START RUN';
       }
     }, 1800);
   }
@@ -152,12 +182,16 @@ class PurpleTeamController {
       clearInterval(this.autoRunInterval);
       this.autoRunInterval = null;
     }
+    const startBtn = document.getElementById('startAutoRunBtn');
+    if (startBtn) startBtn.innerText = 'START RUN';
   }
 
   replay() {
     this.stopAutoRun();
     this.currentStep = 0;
     this.renderPairs();
+    const startBtn = document.getElementById('startAutoRunBtn');
+    if (startBtn) startBtn.innerText = 'START RUN';
   }
 
   step() {
@@ -165,7 +199,7 @@ class PurpleTeamController {
     const pairs = this.scenarioData.pairs;
 
     if (this.currentStep >= pairs.length) {
-      return false;
+      this.replay();
     }
 
     const idx = this.currentStep;
@@ -178,7 +212,7 @@ class PurpleTeamController {
     if (defCard) defCard.classList.add('active');
 
     // Audio cue
-    sound.blip(750 + idx * 90, 0.08);
+    try { sound.blip(750 + idx * 90, 0.08); } catch (_) {}
 
     // Draw connecting bezier curve
     if (atkCard && defCard) {
@@ -196,9 +230,11 @@ class PurpleTeamController {
         const atkPanel = document.getElementById('attackerPanel');
         if (atkPanel) atkPanel.classList.add('glitch-active');
 
-        sound.screenShake();
-        sound.threatAlert();
-        screenShake(8, 450);
+        try {
+          sound.screenShake();
+          sound.threatAlert();
+          screenShake(8, 450);
+        } catch (_) {}
 
         setTimeout(() => {
           if (atkPanel) atkPanel.classList.remove('glitch-active');
@@ -266,7 +302,13 @@ class PurpleTeamController {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function startPurpleController() {
   const purple = new PurpleTeamController();
   purple.init();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startPurpleController);
+} else {
+  startPurpleController();
+}

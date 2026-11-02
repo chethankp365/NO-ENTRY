@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import { initAppShell } from '../core/appShell.js';
 import { sound } from '../core/sound.js';
 import { screenShake } from '../fx/screenShake.js';
+import { toast } from '../core/ui.js';
 
 class RedTeamController {
   constructor() {
@@ -15,6 +16,7 @@ class RedTeamController {
     this.ws = null;
     this.currentInput = '';
     this.activeScenario = null;
+    this.pendingScenario = null;
     this.victimHost = 'web01';
   }
 
@@ -103,11 +105,38 @@ class RedTeamController {
     });
   }
 
+  updateWsStatus(text, color = 'var(--color-cyan)') {
+    const el = document.getElementById('terminalWsStatus');
+    if (el) {
+      el.innerHTML = `WS: /ws/terminal &bull; <span style="color:${color};">${text}</span>`;
+    }
+  }
+
   initWebSocket() {
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/terminal`;
 
-    this.ws = new WebSocket(wsUrl);
+    this.updateWsStatus('CONNECTING...', '#FFB800');
+
+    try {
+      this.ws = new WebSocket(wsUrl);
+    } catch (err) {
+      console.error('[RED WS] Connection attempt failed:', err);
+      this.updateWsStatus('FAILED', 'var(--color-red)');
+      toast('Failed to connect to /ws/terminal', 'danger');
+      setTimeout(() => this.initWebSocket(), 3000);
+      return;
+    }
+
+    this.ws.onopen = () => {
+      this.updateWsStatus('ACTIVE', 'var(--color-cyan)');
+      // If a scenario was requested while connecting, run it immediately now
+      if (this.pendingScenario) {
+        const sc = this.pendingScenario;
+        this.pendingScenario = null;
+        this.startScenario(sc);
+      }
+    };
 
     this.ws.onmessage = (event) => {
       try {
@@ -118,7 +147,14 @@ class RedTeamController {
       }
     };
 
+    this.ws.onerror = (err) => {
+      console.error('[RED WS] WebSocket error:', err);
+      this.updateWsStatus('ERROR', 'var(--color-red)');
+      toast('Terminal WebSocket connection error', 'danger');
+    };
+
     this.ws.onclose = () => {
+      this.updateWsStatus('DISCONNECTED (RECONNECTING)', 'var(--color-red)');
       if (this.term) {
         this.term.write('\r\n\033[38;2;255;31;61m[!] Disconnected from /ws/terminal. Reconnecting in 3s...\033[0m\r\n');
       }
@@ -164,7 +200,10 @@ class RedTeamController {
   }
 
   startScenario(scenarioId) {
-    sound.threatAlert();
+    try {
+      sound.threatAlert();
+    } catch (_) {}
+
     this.activeScenario = scenarioId;
 
     // Send start to terminal WebSocket
@@ -173,6 +212,15 @@ class RedTeamController {
         type: 'run_scenario',
         scenario_id: scenarioId
       }));
+    } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
+      this.pendingScenario = scenarioId;
+      if (this.term) {
+        this.term.write(`\r\n\033[38;2;0;229;255m[*] Connecting terminal uplink... Starting ${scenarioId} momentarily.\033[0m\r\n`);
+      }
+    } else {
+      this.pendingScenario = scenarioId;
+      this.initWebSocket();
+      toast('Establishing terminal connection for scenario...', 'info');
     }
 
     // UI state
@@ -380,7 +428,13 @@ class RedTeamController {
   }
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+function startRedController() {
   const red = new RedTeamController();
   red.init();
-});
+}
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', startRedController);
+} else {
+  startRedController();
+}
