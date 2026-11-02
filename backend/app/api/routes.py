@@ -183,3 +183,22 @@ def toggle_autopilot(req: AutopilotToggleRequest):
     """Toggle background autopilot simulation loop."""
     sim_engine.autopilot_enabled = req.enabled
     return {"autopilot_enabled": sim_engine.autopilot_enabled}
+
+from backend.app.api.hunt import evaluate_hunt_query, HuntQueryRequest, PRESET_QUERIES
+from backend.app.api.purple import get_purple_scenario, PurpleRunRequest
+
+@api_router.post("/hunt")
+def run_threat_hunt(req: HuntQueryRequest):
+    """Evaluate threat hunting query over simulated event corpus."""
+    return evaluate_hunt_query(req.query, req.timeframe_minutes)
+
+@api_router.get("/hunt/presets")
+def get_hunt_presets():
+    """Retrieve curated threat hunting preset queries."""
+    return PRESET_QUERIES
+
+@api_router.post("/purple/run")
+def run_purple_scenario(req: PurpleRunRequest):
+    """Execute paired purple team scenario returning synchronized attacker and defender actions."""
+    return get_purple_scenario(req.scenario)
+

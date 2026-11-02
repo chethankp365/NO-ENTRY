@@ -47,10 +47,33 @@ def test_lab_map_page_load(client):
     assert "runAttackBtn" in response.text
     assert "isolateHostBtn" in response.text
 
-def test_app_screen_fallback(client):
+def test_red_page_load(client):
+    response = client.get("/red")
+    assert response.status_code == 200
+    assert "RED TEAM OPS" in response.text
+    assert "terminalContainer" in response.text
+    assert "web-breach" in response.text
+
+def test_watch_page_load(client):
     response = client.get("/watch")
     assert response.status_code == 200
     assert "WATCH // SIEM" in response.text
+    assert "epsWaveformCanvas" in response.text
+    assert "watchAlertsTbody" in response.text
+
+def test_purple_page_load(client):
+    response = client.get("/purple")
+    assert response.status_code == 200
+    assert "PURPLE TEAM" in response.text
+    assert "attackerPanel" in response.text
+    assert "connectorSvg" in response.text
+
+def test_app_screen_fallback(client):
+    response = client.get("/shield")
+    assert response.status_code == 200
+    assert "SHIELD // DEFENSE" in response.text
+
+
 
 
 def test_api_state(client):

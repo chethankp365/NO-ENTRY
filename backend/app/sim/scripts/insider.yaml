@@ -1,0 +1,109 @@
+id: insider
+name: Insider threat
+technique_id: T1078
+target_host: ws-01
+target_ip: 10.0.2.15
+description: Valid account abuse, Active Directory discovery, and sensitive pre-earnings data staging
+lines:
+  - text: "[*] target: ws-01 10.0.2.15 (Finance Workstation)"
+    type: info
+    delay: 0.6
+    kill_chain_stage: Recon
+  - text: "[*] authenticating with compromised credentials: j.doe:Autumn2024!"
+    type: info
+    delay: 0.8
+    kill_chain_stage: Initial access
+    event:
+      technique_id: T1078
+      technique_name: Valid Accounts
+      event: "after-hours logon with valid credentials for j.doe on ws-01"
+      source_ip: 10.0.2.15
+      target_host: ws-01
+      state: DETECTED
+      severity: MEDIUM
+      module: Watch
+      breach: false
+  - text: "[+] session established on ws-01 via RDP port 3389"
+    type: success
+    delay: 0.7
+    kill_chain_stage: Initial access
+  - text: "[*] querying Active Directory: net user /domain"
+    type: info
+    delay: 1.0
+    kill_chain_stage: Execution
+    event:
+      technique_id: T1087
+      technique_name: Account Discovery
+      event: "domain user enumeration query from ws-01"
+      source_ip: 10.0.2.15
+      target_host: ad01
+      state: DETECTED
+      severity: LOW
+      module: Watch
+      breach: false
+  - text: "[+] discovered 42 domain users, 4 domain admins, 1 service account svc_backup"
+    type: success
+    delay: 0.8
+    kill_chain_stage: Execution
+  - text: "[*] searching local filesystem: dir /s /b *password* *confidential* *audit*"
+    type: info
+    delay: 1.1
+    kill_chain_stage: Priv esc
+    event:
+      technique_id: T1083
+      technique_name: File and Directory Discovery
+      event: "sensitive keyword search query executed on ws-01"
+      source_ip: 10.0.2.15
+      target_host: ws-01
+      state: DETECTED
+      severity: LOW
+      module: Watch
+      breach: false
+  - text: "[+] located confidential file: C:\\Finance\\Q4_PreEarnings_Audit.xlsx"
+    type: success
+    delay: 0.8
+    kill_chain_stage: Priv esc
+  - text: "[*] staging archive: tar -czf C:\\Users\\Public\\audit_pkg.tar.gz Q4_PreEarnings_Audit.xlsx"
+    type: info
+    delay: 0.9
+    kill_chain_stage: Lateral
+    event:
+      technique_id: T1074
+      technique_name: Data Staged
+      event: "compressed archive staging detected in public directory"
+      source_ip: 10.0.2.15
+      target_host: ws-01
+      state: ALERT
+      severity: HIGH
+      module: Watch
+      breach: true
+    host_update:
+      host: ws-01
+      status: suspicious
+      last_alert: "T1074 data staged"
+  - text: "[!] Alert: UEBA Anomaly score 88 (abnormal data collection outside work hours)"
+    type: alert
+    delay: 0.9
+    kill_chain_stage: Lateral
+  - text: "[!] Suricata: sensitive file staging flagged on internal workstation ws-01"
+    type: alert
+    delay: 0.8
+    kill_chain_stage: Impact
+  - text: "[+] Reflex SOAR: revoked Kerberos TGT ticket for user j.doe & locked account"
+    type: success
+    delay: 1.0
+    kill_chain_stage: Impact
+    event:
+      technique_id: T1078
+      technique_name: Valid Accounts
+      event: "Reflex SOAR: account j.doe locked out by automated policy"
+      source_ip: 10.0.2.15
+      target_host: ad01
+      state: BLOCKED
+      severity: HIGH
+      module: Reflex
+      breach: false
+  - text: "[*] access denied: account disabled by Domain Controller policy"
+    type: info
+    delay: 0.6
+    kill_chain_stage: Impact

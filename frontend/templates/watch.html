@@ -1,0 +1,457 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // WATCH // SIEM &amp; THREAT HUNTING{% endblock %}
+{% block page_title %}WATCH // SIEM{% endblock %}
+{% block page_subtitle %}real-time correlation, rule matching &amp; threat hunting{% endblock %}
+
+{% block extra_head %}
+<style>
+  .watch-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    height: 100%;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Top EPS Waveform Bar */
+  .waveform-panel {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 10px 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .eps-metrics-group {
+    display: flex;
+    gap: 20px;
+  }
+
+  .eps-stat {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .eps-stat-val {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--color-cyan);
+    text-shadow: 0 0 10px rgba(0, 229, 255, 0.4);
+  }
+
+  .eps-stat-label {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    color: var(--color-muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .waveform-canvas {
+    flex: 1;
+    max-width: 480px;
+    height: 38px;
+    background: rgba(4, 6, 10, 0.7);
+    border: 1px solid var(--color-border);
+  }
+
+  /* Threat Hunt Query Section */
+  .hunt-panel {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .hunt-input-row {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .hunt-input {
+    flex: 1;
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    padding: 9px 14px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: var(--color-text);
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  .hunt-input:focus {
+    border-color: var(--color-cyan);
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.2);
+  }
+
+  .hunt-presets-bar {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    flex-wrap: wrap;
+  }
+
+  .preset-btn {
+    background: #0D121A;
+    border: 1px solid var(--color-border);
+    padding: 3px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .preset-btn:hover {
+    border-color: var(--color-cyan);
+    color: var(--color-cyan);
+  }
+
+  /* Hunt Results Box */
+  .hunt-results-box {
+    display: none;
+    background: #04060A;
+    border: 1px solid rgba(0, 229, 255, 0.4);
+    padding: 10px 14px;
+    justify-content: space-between;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .hunt-results-box.active {
+    display: flex;
+  }
+
+  .histogram-canvas {
+    width: 140px;
+    height: 32px;
+  }
+
+  /* Lower Grid: Alert Stream & Top Techniques */
+  .watch-lower-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+  }
+
+  /* Alert Stream Table */
+  .stream-panel {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  .stream-top-bar {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--color-border);
+    background: rgba(4, 6, 10, 0.6);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .filter-chips {
+    display: flex;
+    gap: 6px;
+  }
+
+  .filter-chip {
+    padding: 2px 8px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    background: #0D121A;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .filter-chip.active {
+    border-color: var(--color-cyan);
+    color: var(--color-cyan);
+    background: rgba(0, 229, 255, 0.1);
+  }
+
+  .stream-table-scroll {
+    flex: 1;
+    overflow-y: auto;
+  }
+
+  .stream-row {
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+
+  .stream-row:hover {
+    background: rgba(0, 229, 255, 0.08) !important;
+  }
+
+  /* Top Techniques Bars */
+  .techniques-panel {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .tech-bar-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    flex: 1;
+  }
+
+  .tech-bar-row {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    transition: transform 0.4s ease;
+  }
+
+  .tech-bar-label {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-text);
+  }
+
+  .tech-bar-track {
+    height: 7px;
+    background: #0D121A;
+    border: 1px solid var(--color-border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .tech-bar-fill {
+    height: 100%;
+    background: var(--color-cyan);
+    box-shadow: 0 0 8px var(--color-cyan);
+    transition: width 0.8s ease;
+  }
+
+  /* Slide-in Drawer */
+  .slide-drawer {
+    position: absolute;
+    top: 0;
+    right: -480px;
+    width: 460px;
+    height: 100%;
+    background: #080B10;
+    border-left: 1px solid var(--color-cyan);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 50;
+  }
+
+  .slide-drawer.open {
+    right: 0;
+  }
+
+  .drawer-header {
+    padding: 14px 18px;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #04060A;
+  }
+
+  .drawer-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .drawer-actions {
+    padding: 14px 18px;
+    border-top: 1px solid var(--color-border);
+    background: #04060A;
+    display: flex;
+    gap: 10px;
+  }
+
+  .json-highlight {
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    padding: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #8be9fd;
+    max-height: 160px;
+    overflow-y: auto;
+    white-space: pre-wrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="watch-layout">
+  <!-- Top EPS Waveform Bar -->
+  <div class="waveform-panel corner-brackets">
+    <div class="eps-metrics-group">
+      <div class="eps-stat">
+        <span id="epsRateVal" class="eps-stat-val">1.2</span>
+        <span class="eps-stat-label">EVENTS / SEC</span>
+      </div>
+      <div class="eps-stat">
+        <span id="totalEventsVal" class="eps-stat-val" style="color:var(--color-text);">1,428</span>
+        <span class="eps-stat-label">EVENTS PROCESSED</span>
+      </div>
+      <div class="eps-stat">
+        <span class="eps-stat-val" style="color:var(--color-green);">5/5</span>
+        <span class="eps-stat-label">SENSORS ONLINE</span>
+      </div>
+    </div>
+
+    <!-- Live EPS Waveform Canvas -->
+    <canvas id="epsWaveformCanvas" class="waveform-canvas"></canvas>
+
+    <div style="font-family:var(--font-mono); font-size:11px; color:var(--color-cyan); text-align:right;">
+      CORRELATION: SIGMA ACTIVE<br>
+      <span style="color:var(--color-muted); font-size:10px;">LATENCY: 0.28 ms</span>
+    </div>
+  </div>
+
+  <!-- Threat Hunt Query Panel -->
+  <div class="hunt-panel corner-brackets">
+    <div class="hunt-input-row">
+      <span style="font-family:var(--font-mono); font-size:12px; color:var(--color-cyan); font-weight:700;">HUNT:</span>
+      <input id="huntQueryInput" type="text" class="hunt-input" value="source.ip: 10.0.2.15 AND event.action: logon_failed" placeholder="Search telemetry (e.g. source.ip: 10.0.2.15 AND event.action: logon_failed)">
+      <button id="runHuntBtn" class="btn btn-red" style="padding:8px 16px; font-size:11px;">RUN HUNT</button>
+    </div>
+
+    <div class="hunt-presets-bar">
+      <span style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted);">PRESETS:</span>
+      <button class="preset-btn" data-query="source.ip: 10.0.2.15 AND event.action: logon_failed">Logon Failures (10.0.2.15)</button>
+      <button class="preset-btn" data-query="target.host: web01 AND event: sqli">SQLi Probing (web01)</button>
+      <button class="preset-btn" data-query="technique: T1558 AND event.action: ticket_request">Kerberoast (T1558)</button>
+      <button class="preset-btn" data-query="state: ISOLATED AND event: ransomware">Ransomware (ISOLATED)</button>
+    </div>
+
+    <!-- Hunt Result Box -->
+    <div id="huntResultBox" class="hunt-results-box">
+      <div>
+        <div style="font-family:var(--font-mono); font-size:12px; color:var(--color-cyan); font-weight:700;">
+          <span id="huntHitsText">HITS: 214 in last 10 min</span>
+        </div>
+        <div id="huntHypothesisText" style="font-family:var(--font-mono); font-size:11px; color:var(--color-text-dim); margin-top:2px;">
+          Hypothesis: Password spraying or credential brute-force originating from internal workstation.
+        </div>
+      </div>
+      <div>
+        <canvas id="histogramCanvas" class="histogram-canvas"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lower Grid: Alert Stream & Top Techniques -->
+  <div class="watch-lower-grid">
+    <!-- Left Alert Stream Table -->
+    <div class="stream-panel corner-brackets">
+      <div class="stream-top-bar">
+        <span class="sidebar-brand-title" style="font-size:12px;">ALERT STREAM</span>
+        <div class="filter-chips">
+          <button class="filter-chip active" data-filter="ALL">ALL</button>
+          <button class="filter-chip" data-filter="BLOCKED">BLOCKED</button>
+          <button class="filter-chip" data-filter="DETECTED">DETECTED</button>
+          <button class="filter-chip" data-filter="ALERT">ALERT</button>
+          <button class="filter-chip" data-filter="ISOLATED">ISOLATED</button>
+        </div>
+      </div>
+
+      <div class="stream-table-scroll">
+        <table class="table-mono">
+          <thead>
+            <tr>
+              <th style="width: 75px;">TIME</th>
+              <th style="width: 85px;">TECHNIQUE</th>
+              <th>EVENT</th>
+              <th style="width: 110px;">SOURCE</th>
+              <th style="width: 90px;">STATE</th>
+            </tr>
+          </thead>
+          <tbody id="watchAlertsTbody">
+            <!-- Dynamic rows from WebSocket -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Right Top Techniques Progress Bars -->
+    <div class="techniques-panel corner-brackets">
+      <div style="display:flex; justify-content:space-between; align-items:baseline;">
+        <span class="sidebar-brand-title" style="font-size:12px;">TOP TECHNIQUES</span>
+        <span style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted);">LIVE RE-SORT</span>
+      </div>
+
+      <div id="techBarsContainer" class="tech-bar-container">
+        <!-- Re-sorted dynamically via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Slide-In Drawer for Event Details -->
+  <div id="slideDrawer" class="slide-drawer">
+    <div class="drawer-header">
+      <span id="drawerTitle" style="font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--color-cyan);">EVENT DETAILS</span>
+      <button id="closeDrawerBtn" class="btn btn-outline" style="font-size:10px; padding:2px 8px;">ESC / CLOSE</button>
+    </div>
+
+    <div class="drawer-content">
+      <!-- MITRE Technique Card -->
+      <div style="background:#04060A; border:1px solid var(--color-border); padding:12px;">
+        <div style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted); margin-bottom:4px;">MITRE ATT&amp;CK TECHNIQUE</div>
+        <div id="drawerMitreTitle" style="font-family:var(--font-mono); font-size:12px; font-weight:700; color:var(--color-cyan);">-</div>
+        <div id="drawerMitreDesc" style="font-family:var(--font-mono); font-size:11px; color:var(--color-text-dim); margin-top:4px; line-height:1.4;">-</div>
+      </div>
+
+      <!-- AbuseIPDB Enrichment -->
+      <div style="background:#04060A; border:1px solid var(--color-border); padding:12px;">
+        <div style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted); margin-bottom:4px;">THREAT INTELLIGENCE (AbuseIPDB)</div>
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+          <span id="drawerIntelScore" style="font-family:var(--font-display); font-size:18px; font-weight:700; color:var(--color-red);">-</span>
+          <span id="drawerIntelCountry" style="font-family:var(--font-mono); font-size:11px; color:var(--color-text);">-</span>
+        </div>
+        <div id="drawerIntelIsp" style="font-family:var(--font-mono); font-size:10px; color:var(--color-text-dim); margin-top:4px;">-</div>
+      </div>
+
+      <!-- Raw Log JSON Syntax Colored -->
+      <div>
+        <div style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted); margin-bottom:4px;">RAW LOG JSON</div>
+        <pre id="drawerRawJson" class="json-highlight"></pre>
+      </div>
+    </div>
+
+    <div class="drawer-actions">
+      <button id="drawerBlockIpBtn" class="btn btn-red" style="flex:1; font-size:11px;">BLOCK IP</button>
+      <button id="drawerIsolateHostBtn" class="btn btn-outline" style="flex:1; font-size:11px;">ISOLATE HOST</button>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/watch.js"></script>
+{% endblock %}

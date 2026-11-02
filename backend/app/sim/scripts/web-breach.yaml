@@ -1,0 +1,123 @@
+id: web-breach
+name: Web app breach
+technique_id: T1190
+target_host: web01
+target_ip: 10.0.1.10
+description: SQL injection into public web portal, web shell upload, and pivoting attempt
+lines:
+  - text: "[*] target: web01 10.0.1.10 (Public Nginx Gateway)"
+    type: info
+    delay: 0.6
+    kill_chain_stage: Recon
+  - text: "[*] nmap -sV -p 80,443,22 10.0.1.10"
+    type: info
+    delay: 1.0
+    kill_chain_stage: Recon
+    event:
+      technique_id: T1595
+      technique_name: Active Scanning
+      event: "nmap -sV 10.0.1.10 target: web01"
+      source_ip: 45.9.148.22
+      target_host: web01
+      state: DETECTED
+      severity: LOW
+      module: Watch
+      breach: false
+  - text: "[+] 80/tcp open http (nginx/1.18.0), 22/tcp open ssh"
+    type: success
+    delay: 0.8
+    kill_chain_stage: Recon
+  - text: "[*] sqlmap --batch -u \"http://10.0.1.10/api/v1/search?q=test\""
+    type: info
+    delay: 1.2
+    kill_chain_stage: Initial access
+    event:
+      technique_id: T1190
+      technique_name: Exploit Public-Facing Application
+      event: "sqli probing on web01 from 45.9.148.22"
+      source_ip: 45.9.148.22
+      target_host: web01
+      state: DETECTED
+      severity: HIGH
+      module: Watch
+      breach: false
+    host_update:
+      host: web01
+      status: suspicious
+      last_alert: "T1190 sqli"
+  - text: "[+] injectable parameter: q (UNION query / Error-based detected)"
+    type: success
+    delay: 0.8
+    kill_chain_stage: Initial access
+  - text: "[+] database extracted: corp_crm [14 tables: users, sessions, api_tokens]"
+    type: success
+    delay: 1.0
+    kill_chain_stage: Execution
+  - text: "[*] uploading PHP web shell to /var/www/uploads/c99.php"
+    type: info
+    delay: 1.2
+    kill_chain_stage: Execution
+    event:
+      technique_id: T1505
+      technique_name: Server Software Component
+      event: "uploading web shell to /var/www/uploads/c99.php"
+      source_ip: 45.9.148.22
+      target_host: web01
+      state: ALERT
+      severity: CRITICAL
+      module: Watch
+      breach: true
+    host_update:
+      host: web01
+      status: compromised
+      last_alert: "T1190 web shell"
+  - text: "[!] Alert: ModSecurity WAF rule 949110 anomaly score exceeded (15/5)"
+    type: alert
+    delay: 0.9
+    kill_chain_stage: Priv esc
+    event:
+      technique_id: T1190
+      technique_name: Exploit Public-Facing Application
+      event: "blocked by ModSecurity rule 949110"
+      source_ip: 45.9.148.22
+      target_host: web01
+      state: BLOCKED
+      severity: HIGH
+      module: Shield
+      breach: false
+  - text: "[+] executing whoami: www-data (uid=33) on web01"
+    type: success
+    delay: 0.8
+    kill_chain_stage: Priv esc
+  - text: "[*] pivoting to internal subnet 10.0.2.0/24 via SSH tunnel"
+    type: info
+    delay: 1.1
+    kill_chain_stage: Lateral
+    event:
+      technique_id: T1021
+      technique_name: Remote Services
+      event: "lateral pivot attempt from web01 to 10.0.2.0/24"
+      source_ip: 10.0.1.10
+      target_host: switch
+      state: ALERT
+      severity: CRITICAL
+      module: Watch
+      breach: true
+  - text: "[!] Reflex SOAR: auto-quarantine triggered (pfSense firewall block 45.9.148.22)"
+    type: alert
+    delay: 0.9
+    kill_chain_stage: Impact
+    event:
+      technique_id: T1190
+      technique_name: Exploit Public-Facing Application
+      event: "Reflex auto-quarantine executed: drop 45.9.148.22"
+      source_ip: 45.9.148.22
+      target_host: pfsense
+      state: BLOCKED
+      severity: HIGH
+      module: Reflex
+      breach: false
+  - text: "[*] connection reset by peer: attack path severed by automated defense"
+    type: info
+    delay: 0.7
+    kill_chain_stage: Impact

@@ -96,6 +96,35 @@ def lab_map_page(request: Request):
         context={"app_name": settings.APP_NAME}
     )
 
+@app.get("/red", response_class=HTMLResponse)
+def red_page(request: Request):
+    """Screen 6: Red Team attack launcher and scenario console."""
+    return templates.TemplateResponse(
+        request=request,
+        name="red.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/watch", response_class=HTMLResponse)
+def watch_page(request: Request):
+    """Screen 7: Watch SIEM alerts and threat hunting."""
+    return templates.TemplateResponse(
+        request=request,
+        name="watch.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/purple", response_class=HTMLResponse)
+@app.get("/purple-team", response_class=HTMLResponse)
+def purple_page(request: Request):
+    """Screen 18: Purple Team correlation view."""
+    return templates.TemplateResponse(
+        request=request,
+        name="purple.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+
 
 
 @app.get("/debug", response_class=HTMLResponse)
@@ -167,6 +196,16 @@ async def websocket_events_endpoint(websocket: WebSocket):
         print(f"WebSocket client error: {e}")
     finally:
         sim_engine.unsubscribe(queue)
+
+from backend.app.sim.terminal_service import handle_terminal_ws
+
+@app.websocket("/ws/terminal")
+async def websocket_terminal_endpoint(websocket: WebSocket):
+    """
+    WebSocket endpoint for simulated offensive terminal streaming.
+    Streams interactive command output line-by-line and executes Red scenario scripts.
+    """
+    await handle_terminal_ws(websocket)
 
 
 # Placeholder routes for remaining sidebar items to prevent 404s
