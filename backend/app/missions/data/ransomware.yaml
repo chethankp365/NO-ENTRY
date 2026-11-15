@@ -1,0 +1,63 @@
+id: ransomware
+order: 1
+title: "Operation CryoLock"
+subtitle: "phish, pivot, encrypt, isolate"
+description: "Track a multi-stage ransomware intrusion from weaponized macro phishing to automated SOAR host isolation."
+track: purple
+difficulty: ADVANCED
+mitre_ids:
+  - T1566
+  - T1059
+  - T1003
+  - T1021
+  - T1486
+xp_reward: 300
+playable: false
+target_host: ws-02
+target_ip: 10.0.2.16
+story: "At 03:42 UTC, finance workstation ws-01 opened an invoice attachment laced with an obfuscated VBA macro. Within four minutes the operator dumped LSASS credentials, pivoted over SMB to engineering workstation ws-02, and attempted rapid AES/RSA encryption before Reflex SOAR severed network interfaces."
+scope: "10.0.0.0/16 Virtual Corporate Range (Isolated). Attacks stay inside the range."
+briefing_lines:
+  - "[INTEL BRIEF] Incident #NE-409 // Ransomware outbreak detected on Corp LAN 10.0.2.0/24."
+  - "[PATH] Initial spearphish on ws-01 -> PowerShell loader -> Credential dump -> SMB move -> Encryption on ws-02."
+  - "[MODE] Full cinematic walkthrough demonstrating end-to-end Reflex SOAR containment."
+cinematic_walkthrough:
+  - phase: "1. INITIAL ACCESS"
+    delay: 1.3
+    mitre_id: "T1566"
+    speaker: "ATTACKER"
+    text: "[!] Delivery: Q4_Invoice_Overdue.xlsm opened by j.doe on ws-01 (10.0.2.15)."
+  - phase: "2. EXECUTION"
+    delay: 1.5
+    mitre_id: "T1059"
+    speaker: "EDR"
+    text: "[ALERT] winword.exe spawned powershell.exe -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQ... (AMSI flagged)."
+  - phase: "3. CREDENTIAL ACCESS"
+    delay: 1.5
+    mitre_id: "T1003"
+    speaker: "WAZUH"
+    text: "[CRITICAL] LSASS process memory read detected by unverified binary C:\\Users\\Public\\svchost.exe."
+  - phase: "4. LATERAL MOVEMENT"
+    delay: 1.5
+    mitre_id: "T1021"
+    speaker: "SURICATA"
+    text: "[ALERT] SMB Admin$ remote service creation from 10.0.2.15 -> ws-02 (10.0.2.16)."
+  - phase: "5. IMPACT"
+    delay: 1.5
+    mitre_id: "T1486"
+    speaker: "WAZUH"
+    text: "[BREACH] High-frequency file rename loop (.locked) observed on ws-02: 412 files/sec."
+  - phase: "6. CONTAINMENT"
+    delay: 1.5
+    mitre_id: "T1486"
+    speaker: "REFLEX"
+    text: "[ISOLATED] Reflex playbook isolate_host quarantined ws-02 switch port in 8.4s. Zero domain shares affected."
+debrief:
+  why_it_worked: "Office macros were permitted to spawn child scripting interpreters (PowerShell) and local administrator credentials were reused across ws-01 and ws-02."
+  how_it_was_stopped: "Behavioral entropy heuristics + Sysmon process-tree rules fired on mass file renames, triggering Reflex automatic network quarantine of ws-02 within 8.4 seconds."
+  mitre_summary: "T1566 (Phishing) -> T1059 (PowerShell) -> T1003 (Credential Dumping) -> T1021 (SMB Lateral Movement) -> T1486 (Data Encrypted for Impact)."
+  key_takeaways:
+    - "Block Office child process creation via Attack Surface Reduction rules."
+    - "Enforce unique local administrator passwords (LAPS) so workstation compromise cannot pivot over SMB."
+    - "Automated SOAR host quarantine caps ransomware blast radius within seconds."
+

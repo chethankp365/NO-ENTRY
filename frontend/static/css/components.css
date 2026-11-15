@@ -432,7 +432,7 @@
 }
 
 .toast {
-  pointer-events: auto;
+  pointer-events: none;
   background: var(--color-surface);
   border: 1px solid var(--color-border);
   padding: 10px 16px;

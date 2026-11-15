@@ -1,0 +1,221 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // DIGITAL FORENSICS{% endblock %}
+{% block page_title %}FORENSICS // INCIDENT TIMELINE{% endblock %}
+{% block page_subtitle %}chain of custody, cryptographic evidence integrity &amp; raw byte forensics{% endblock %}
+
+{% block extra_head %}
+<style>
+  .forensics-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .forensics-main-layout {
+    display: grid;
+    grid-template-columns: 1.15fr 1.25fr;
+    gap: 16px;
+  }
+
+  /* Glowing Vertical Timeline */
+  .timeline-container {
+    position: relative;
+    padding-left: 28px;
+    max-height: 560px;
+    overflow-y: auto;
+  }
+
+  .timeline-track-line {
+    position: absolute;
+    left: 10px;
+    top: 6px;
+    bottom: 6px;
+    width: 2px;
+    background: linear-gradient(180deg, var(--color-cyan) 0%, rgba(0, 229, 255, 0.2) 100%);
+    box-shadow: 0 0 10px var(--color-cyan);
+  }
+
+  .timeline-node {
+    position: relative;
+    margin-bottom: 18px;
+    cursor: pointer;
+    transition: transform 0.2s ease;
+  }
+
+  .timeline-node:hover {
+    transform: translateX(4px);
+  }
+
+  .timeline-dot {
+    position: absolute;
+    left: -24px;
+    top: 10px;
+    width: 12px;
+    height: 12px;
+    background: #080B10;
+    border: 2px solid var(--color-cyan);
+    box-shadow: 0 0 8px var(--color-cyan);
+  }
+
+  .timeline-dot.critical {
+    border-color: var(--color-red);
+    box-shadow: 0 0 10px var(--color-red);
+  }
+
+  .timeline-dot.resolved {
+    border-color: var(--color-green);
+    box-shadow: 0 0 10px var(--color-green);
+  }
+
+  .timeline-card {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 12px 14px;
+    transition: all 0.2s ease;
+  }
+
+  .timeline-card.active-selected {
+    border-color: var(--color-cyan);
+    background: #0D121A;
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.15);
+  }
+
+  /* Evidence List */
+  .evidence-card {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    transition: border-color 0.2s ease;
+  }
+
+  .evidence-card.active-hex {
+    border-color: var(--color-cyan);
+  }
+
+  .hash-box {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-muted);
+    background: #030508;
+    padding: 6px 8px;
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    word-break: break-all;
+    margin: 6px 0;
+  }
+
+  /* Hex Dump Viewer */
+  .hex-viewer-panel {
+    background: #020406;
+    border: 1px solid var(--color-border);
+    padding: 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    max-height: 240px;
+    overflow-y: auto;
+  }
+
+  .hex-row {
+    display: flex;
+    gap: 16px;
+    padding: 2px 4px;
+    line-height: 1.4;
+  }
+
+  .hex-row:hover {
+    background: rgba(0, 229, 255, 0.08);
+  }
+
+  .hex-offset {
+    color: var(--color-muted);
+    user-select: none;
+  }
+
+  .hex-bytes {
+    color: var(--color-cyan);
+    white-space: pre;
+  }
+
+  .hex-ascii {
+    color: #FFFFFF;
+    white-space: pre;
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+    padding-left: 12px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="forensics-view-container">
+  <!-- StatCards (Evidence Artifacts, Custody Integrity, Verified Status) -->
+  <div class="forensics-stat-grid">
+    <div class="stat-card" style="border-left: 3px solid var(--color-cyan);">
+      <div class="stat-card-title">EVIDENCE ARTIFACTS</div>
+      <div class="stat-card-value" style="color:var(--color-cyan);">3 SEALED</div>
+      <div class="stat-card-subtitle">RAM, DISK &amp; AUDIT LOGS</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 3px solid var(--color-green);">
+      <div class="stat-card-title">CHAIN OF CUSTODY</div>
+      <div class="stat-card-value" style="color:var(--color-green);">100% AUDITED</div>
+      <div class="stat-card-subtitle">DIGITAL SIGNATURES VALID</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 3px solid #FFB800);">
+      <div class="stat-card-title">INTEGRITY HASH VERIFY</div>
+      <div id="statIntegrityLabel" class="stat-card-value" style="color:#FFB800;">SHA-256 LIVE</div>
+      <div class="stat-card-subtitle">REAL CRYPTOGRAPHIC CHECK</div>
+    </div>
+  </div>
+
+  <div class="forensics-main-layout">
+    <!-- Left Column: Glowing Vertical Incident Timeline -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">// INCIDENT INVESTIGATION TIMELINE</span>
+        <span style="font-family:var(--font-mono); font-size:11px; color:var(--color-muted);">CLICK FOR FORENSIC CONTEXT</span>
+      </div>
+
+      <div class="timeline-container">
+        <div class="timeline-track-line"></div>
+        <div id="timelineNodesContainer">
+          <!-- Dynamically populated from /api/forensics -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Evidence Chain & Hex-Dump Viewer -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- Evidence Artifacts List -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// FORENSIC EVIDENCE ARTIFACTS</span>
+          <span id="verifyStatusBanner" style="font-family:var(--font-mono); font-size:11px; color:var(--color-green);">&bull; EVIDENCE LOCKER SYNCED</span>
+        </div>
+
+        <div id="evidenceListContainer">
+          <!-- Dynamically populated from /api/forensics -->
+        </div>
+      </div>
+
+      <!-- Hex-Dump Inspection Viewer -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// RAW BYTE HEX-DUMP VIEWER: <span id="currentHexFilename" style="color:var(--color-cyan);">memory.dmp</span></span>
+          <span id="hexByteCount" style="font-family:var(--font-mono); font-size:11px; color:var(--color-muted);">533 BYTES</span>
+        </div>
+
+        <div class="hex-viewer-panel" id="hexViewerContainer">
+          <!-- Dynamically rendered hex rows -->
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/forensics.js"></script>
+{% endblock %}

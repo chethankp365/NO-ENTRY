@@ -35,3 +35,5 @@ export function shake(intensity = 8, duration = 350, targetElement = document.bo
 
   requestAnimationFrame(step);
 }
+
+export const screenShake = shake;

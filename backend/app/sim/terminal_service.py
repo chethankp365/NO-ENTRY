@@ -108,17 +108,33 @@ class TerminalSession:
                 "message": f"Scenario {scenario_id} execution completed."
             })
         except asyncio.CancelledError:
-            await self.ws.send_json({
-                "type": "scenario_stopped",
-                "scenario_id": scenario_id
-            })
-            await self.send_line("\033[38;2;255;184;0m[*] Scenario execution stopped by operator.\033[0m")
+            try:
+                await self.ws.send_json({
+                    "type": "scenario_stopped",
+                    "scenario_id": scenario_id
+                })
+                await self.send_line("\033[38;2;255;184;0m[*] Scenario execution stopped by operator.\033[0m")
+            except Exception:
+                pass
 
     def stop_scenario(self):
         """Cancel running scenario task."""
         if self.active_scenario_task and not self.active_scenario_task.done():
             self.active_scenario_task.cancel()
             self.active_scenario_task = None
+
+    async def stop_scenario_and_wait(self):
+        """Cancel running scenario task and await cleanup before starting another."""
+        task = self.active_scenario_task
+        self.active_scenario_task = None
+        if task and not task.done():
+            task.cancel()
+            try:
+                await task
+            except asyncio.CancelledError:
+                pass
+            except Exception:
+                pass
 
 async def handle_terminal_ws(websocket: WebSocket):
     """WebSocket handler for /ws/terminal."""
@@ -152,11 +168,11 @@ async def handle_terminal_ws(websocket: WebSocket):
 
             elif msg_type == "run_scenario":
                 sc_id = payload.get("scenario_id", "web-breach")
-                session.stop_scenario()
+                await session.stop_scenario_and_wait()
                 session.active_scenario_task = asyncio.create_task(session.run_scenario_script(sc_id))
 
             elif msg_type == "stop_scenario":
-                session.stop_scenario()
+                await session.stop_scenario_and_wait()
 
             elif msg_type == "ping":
                 await websocket.send_json({"type": "pong"})

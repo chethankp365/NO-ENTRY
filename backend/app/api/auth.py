@@ -5,7 +5,7 @@ Handles operator registration, bcrypt verification, PyJWT tokens, and httpOnly c
 
 from datetime import datetime, timedelta
 import secrets
-from typing import Optional
+from typing import Optional, Any
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -94,6 +94,48 @@ def get_current_user(
         )
 
     return user
+
+
+def resolve_operator(
+    request: Optional[Any] = None,
+    session: Session = Depends(get_session)
+) -> User:
+    """
+    Resolve the authenticated operator from JWT cookie/header, or fall back to
+    the local default operator ('op-0x7f3a') when browsing unauthenticated.
+    Supports Request, WebSocket, or None.
+    """
+    token = None
+    if request is not None and hasattr(request, "cookies"):
+        token = request.cookies.get(AUTH_COOKIE_NAME)
+        if not token and hasattr(request, "headers") and "Authorization" in request.headers:
+            auth_header = request.headers["Authorization"]
+            if auth_header.startswith("Bearer "):
+                token = auth_header.split(" ", 1)[1]
+
+    if token:
+        try:
+            return get_current_user(request=request, session=session)
+        except Exception:
+            pass
+
+    statement = select(User).where(User.operator_id == "op-0x7f3a")
+    default_user = session.exec(statement).first()
+    if not default_user:
+        default_user = User(
+            username="op-0x7f3a",
+            operator_id="op-0x7f3a",
+            hashed_password=hash_password(secrets.token_urlsafe(16)),
+            role="operator",
+            xp=1240,
+            rank="SCRIPT RUNNER",
+            ethics_accepted=False,
+            streak_days=3,
+        )
+        session.add(default_user)
+        session.commit()
+        session.refresh(default_user)
+    return default_user
 
 @auth_router.post("/login", response_model=OperatorResponse)
 def login(req: LoginRequest, response: Response, session: Session = Depends(get_session)):

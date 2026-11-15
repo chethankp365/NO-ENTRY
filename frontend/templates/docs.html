@@ -1,0 +1,283 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // DOCS, SETTINGS &amp; ETHICS{% endblock %}
+{% block page_title %}DOCS // SETTINGS &amp; ETHICS GATE{% endblock %}
+{% block page_subtitle %}platform architecture, live preferences &amp; mandatory isolated range clearance{% endblock %}
+
+{% block extra_head %}
+<style>
+  .docs-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .docs-top-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 980px) {
+    .docs-top-grid { grid-template-columns: 1fr; }
+  }
+
+  .setup-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .setup-step-card {
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-cyan);
+    padding: 10px 12px;
+    font-family: var(--font-mono);
+  }
+
+  .setup-step-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: #FFFFFF;
+    margin-bottom: 4px;
+  }
+
+  .setup-step-body {
+    font-size: 11px;
+    color: var(--color-text-dim);
+    line-height: 1.5;
+  }
+
+  .settings-list {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    font-family: var(--font-mono);
+  }
+
+  .setting-name {
+    font-size: 12px;
+    font-weight: 700;
+    color: #FFFFFF;
+  }
+
+  .setting-hint {
+    font-size: 10px;
+    color: var(--color-muted);
+    margin-top: 2px;
+  }
+
+  .setting-select {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    color: var(--color-cyan);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 6px 10px;
+  }
+
+  .toggle-btn {
+    min-width: 78px;
+    padding: 6px 12px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    border: 1px solid var(--color-border);
+    background: #080B10;
+    color: var(--color-muted);
+    cursor: pointer;
+  }
+
+  .toggle-btn.on {
+    border-color: var(--color-green);
+    color: var(--color-green);
+    background: rgba(0, 255, 106, 0.1);
+  }
+
+  .ethics-panel {
+    border-color: rgba(255, 31, 61, 0.45);
+  }
+
+  .ethics-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border: 1px solid var(--color-red);
+    color: var(--color-red);
+  }
+
+  .ethics-badge.verified {
+    border-color: var(--color-green);
+    color: var(--color-green);
+    background: rgba(0, 255, 106, 0.1);
+  }
+
+  .ethics-question-card {
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    font-family: var(--font-mono);
+  }
+
+  .ethics-question-card.wrong {
+    border-color: var(--color-red);
+    background: rgba(255, 31, 61, 0.06);
+  }
+
+  .ethics-question-card.correct {
+    border-color: var(--color-green);
+    background: rgba(0, 255, 106, 0.06);
+  }
+
+  .ethics-opt-label {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--color-text-dim);
+    cursor: pointer;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="docs-layout">
+  <div class="docs-top-grid">
+    <!-- SETUP (4 Steps) -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">SETUP // 4-STEP ARCHITECTURE GUIDE</span>
+        <span style="font-family:var(--font-mono); font-size:10px; color:var(--color-cyan);">ISOLATED LAB</span>
+      </div>
+      <div class="setup-steps">
+        <div class="setup-step-card">
+          <div class="setup-step-title">01. INSTALL PYTHON DEPENDENCIES</div>
+          <div class="setup-step-body">Run <code>pip install -r requirements.txt</code> and copy <code>.env.example</code> to <code>.env</code> cleanly.</div>
+        </div>
+        <div class="setup-step-card">
+          <div class="setup-step-title">02. LAUNCH FASTAPI + SIMULATION BUS</div>
+          <div class="setup-step-body">Start <code>python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000</code>. SQLite initializes automatically under <code>data/no_entry.db</code>.</div>
+        </div>
+        <div class="setup-step-card">
+          <div class="setup-step-title">03. COMPLETE MANDATORY ETHICS CHECK</div>
+          <div class="setup-step-body">Confirm the isolated range scope pledge and answer all 3 ethics check questions below to unlock interactive attack missions.</div>
+        </div>
+        <div class="setup-step-card">
+          <div class="setup-step-title">04. RUN ATTACK -&gt; DETECT -&gt; FIX -&gt; VERIFY</div>
+          <div class="setup-step-body">Exploit virtual targets on <code>/missions</code>, author zero-false-positive Sigma rules, patch code flaws, and prove blocks on replay.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">PLATFORM SETTINGS</span>
+        <span style="font-family:var(--font-mono); font-size:10px; color:var(--color-green);">LIVE SYNCED</span>
+      </div>
+      <div class="settings-list">
+        <div class="setting-row">
+          <div>
+            <div class="setting-name">HUD COLOR THEME</div>
+            <div class="setting-hint">Switches primary accent variables across all screens</div>
+          </div>
+          <select id="settingThemeSelect" class="setting-select">
+            <option value="tactical-red">Tactical Red / Cyan</option>
+            <option value="stealth-amber">Stealth Amber / Gold</option>
+            <option value="phosphor-green">Phosphor Matrix Green</option>
+          </select>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-name">WEBAUDIO SYNTHESIS (SOUND FX)</div>
+            <div class="setting-hint">Key clicks, threat alerts, access chimes &amp; glitch bursts</div>
+          </div>
+          <button id="settingSoundToggle" class="toggle-btn">OFF</button>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-name">REFLEX AUTO-RESPONSE</div>
+            <div class="setting-hint">Enable automated SOAR firewall IP blocking &amp; host isolation playbooks</div>
+          </div>
+          <button id="settingAutoResponseToggle" class="toggle-btn on">ON</button>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-name">LIVE SIMULATED ALERTS</div>
+            <div class="setting-hint">Background autopilot telemetry stream &amp; toast notifications</div>
+          </div>
+          <button id="settingAlertsToggle" class="toggle-btn on">ON</button>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-name">PERFORMANCE MODE</div>
+            <div class="setting-hint">Caps 3D WebGL frame budget &amp; post-processing effects</div>
+          </div>
+          <button id="settingPerfToggle" class="toggle-btn">OFF</button>
+        </div>
+
+        <div class="setting-row">
+          <div>
+            <div class="setting-name">REDUCE MOTION</div>
+            <div class="setting-hint">Disables 3D tilt, camera shakes, and glitch transitions</div>
+          </div>
+          <button id="settingMotionToggle" class="toggle-btn">OFF</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ETHICS AND SAFETY + MANDATORY ETHICS MODULE -->
+  <div id="ethics" class="panel ethics-panel">
+    <div class="panel-header">
+      <span class="panel-title">ETHICS AND SAFETY // MANDATORY ETHICS MODULE</span>
+      <span id="ethicsStatusBadge" class="ethics-badge">CLEARANCE REQUIRED</span>
+    </div>
+
+    <div style="font-family:var(--font-mono); font-size:11px; color:var(--color-text-dim); margin-bottom:12px; padding:10px 12px; background:#04060A; border-left:3px solid var(--color-red);">
+      All NO ENTRY tooling, simulated hosts (10.0.0.0/16), web portals, and logs execute inside a 100% deterministic local simulator. Attack missions stay HTTP 403 locked until you confirm the safety pledge and pass the 3-question check below.
+    </div>
+
+    <div id="ethicsQuestionsContainer">
+      <div style="font-family:var(--font-mono); font-size:11px; color:var(--color-muted);">Loading ethics check...</div>
+    </div>
+
+    <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; padding:12px; background:#04060A; border:1px solid var(--color-border);">
+      <label style="display:flex; align-items:center; gap:10px; font-family:var(--font-mono); font-size:12px; color:#FFFFFF; cursor:pointer;">
+        <input type="checkbox" id="ethicsAgreeCheckbox" style="width:16px; height:16px; accent-color:var(--color-green);">
+        <span id="ethicsPledgeText">I confirm that NO ENTRY labs are isolated and I will never test offensive techniques without written authorization.</span>
+      </label>
+
+      <div style="display:flex; gap:10px; align-items:center;">
+        <button id="submitEthicsBtn" class="btn btn-red" style="font-size:12px;">VERIFY &amp; UNLOCK RANGE</button>
+        <a id="ethicsProceedMissionsBtn" href="/missions" class="btn btn-outline" style="display:none; border-color:var(--color-green); color:var(--color-green); font-size:12px;">GO TO MISSIONS &gt;</a>
+      </div>
+    </div>
+
+    <div id="ethicsFeedbackBanner" style="display:none; margin-top:10px; padding:10px 12px; font-family:var(--font-mono); font-size:12px;"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/docs.js"></script>
+{% endblock %}
+

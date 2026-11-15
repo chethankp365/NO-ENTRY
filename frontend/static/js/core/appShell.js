@@ -13,6 +13,7 @@ import { initOverlays } from '../fx/overlays.js';
 import { initCursorFx } from '../fx/cursorFx.js';
 import { navigateWithGlitch } from '../fx/glitchTransition.js';
 import { MatrixRain } from '../fx/matrixRain.js';
+import { ghostAssistant } from './ghostAssistant.js';
 import './logo.js';
 
 export function initAppShell(activeRouteKey) {
@@ -41,6 +42,9 @@ export function initAppShell(activeRouteKey) {
 
   // 7. Tactical Command Palette ("/")
   setupCommandPalette();
+
+  // 8. Unified Floating Ghost AI Mentor Assistant
+  ghostAssistant.mount(activeRouteKey);
 }
 
 function bindThreatLevel() {

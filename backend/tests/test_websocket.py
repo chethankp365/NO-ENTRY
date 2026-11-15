@@ -117,3 +117,43 @@ def test_red_run_propagates_events_to_watch_websocket(client):
             assert received_event_in_watch, "Expected simulation event from RED scenario in WATCH WebSocket stream"
             red_ws.send_json({"type": "stop_scenario"})
 
+
+def test_terminal_websocket_switch_scenario_mid_run(client):
+    """Switching scenarios mid-run must finish stopping the old task before starting the new one."""
+    with client.websocket_connect("/ws/terminal") as websocket:
+        for _ in range(4):
+            websocket.receive_json()
+
+        websocket.send_json({"type": "run_scenario", "scenario_id": "web-breach"})
+        seen_first_output = False
+        for _ in range(10):
+            msg = websocket.receive_json()
+            if msg.get("type") == "output":
+                seen_first_output = True
+                break
+        assert seen_first_output
+
+        # Switch to credential while web-breach is running
+        websocket.send_json({"type": "run_scenario", "scenario_id": "credential"})
+
+        seen_new_start = False
+        post_switch_types = []
+        for _ in range(12):
+            msg = websocket.receive_json()
+            mtype = msg.get("type")
+            if mtype == "scenario_start" and msg.get("scenario_id") == "credential":
+                seen_new_start = True
+                continue
+            if seen_new_start:
+                post_switch_types.append(mtype)
+                if len(post_switch_types) >= 2:
+                    break
+
+        assert seen_new_start, "Expected scenario_start for credential after switching mid-run"
+        assert "scenario_stopped" not in post_switch_types, (
+            f"Stale scenario_stopped arrived after new scenario started: {post_switch_types}"
+        )
+        assert "stage" in post_switch_types
+        websocket.send_json({"type": "stop_scenario"})
+
+

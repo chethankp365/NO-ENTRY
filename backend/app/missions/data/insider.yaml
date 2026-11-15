@@ -1,0 +1,325 @@
+id: insider
+order: 3
+title: "Silent Insider"
+subtitle: "a honeytoken catches the abuse"
+description: "Track internal Active Directory enumeration, trigger the Trap honeytoken alert, author a high-fidelity Wazuh AD rule, and disable the abused service account."
+track: purple
+difficulty: INTERMEDIATE
+mitre_ids:
+  - T1087
+  - T1078
+  - T1552
+xp_reward: 700
+playable: true
+target_host: ad01
+target_ip: 10.0.2.10
+story: "Someone on finance workstation ws-01 (10.0.2.15) is quietly mapping Active Directory service accounts after hours and probing unlinked executive folders. Trap deception placed a decoy credential (`svc_backup`) and canary spreadsheet (`passwords.xlsx`) across AD. Walk through the abuse, see the honeytoken fire, write the detection rule, disable the decoy identity, and prove access is denied."
+scope: "10.0.0.0/16 Virtual Corporate Range (Isolated). Target AD domain controller ad01 (10.0.2.10). Lab is isolated. Attacks stay inside the range."
+briefing_lines:
+  - "INCIDENT TICKET #AD-771 // TARGET: ad01 Domain Controller (10.0.2.10)"
+  - "Simulate an insider enumerating domain accounts and tripping a deception honeytoken, then contain it."
+  - "REMINDER: Lab is isolated. Attacks stay inside the range."
+steps:
+  - id: ad-enum
+    order: 1
+    title: "Internal Account Enumeration"
+    goal: "Enumerate Active Directory accounts on ad01 (10.0.2.10) to locate privileged or backup targets."
+    tool: "net / ldapsearch"
+    mitre_id: "T1087"
+    accepted_patterns:
+      - "^\\s*(net\\s+user\\s+/domain|ldapsearch\\b.*(10\\.0\\.2\\.10|ad01)|Get-ADUser|nmap\\b.*(10\\.0\\.2\\.10|ad01))"
+    sample_command: "net user /domain"
+    wrong_command_hint: "Run `net user /domain` (or `ldapsearch -h 10.0.2.10`) to list domain users."
+    expected_output:
+      - "The request will be processed at a domain controller for domain corp.internal (10.0.2.10)."
+      - "User accounts for \\\\DC01.corp.internal"
+      - "-------------------------------------------------------------------------------"
+      - "Administrator            j.doe                    a.turing"
+      - "krbtgt                   svc_backup (SPN: MSSQLSvc/db01)"
+      - "The command completed successfully."
+    hints:
+      - "Query Active Directory for domain user accounts."
+      - "Use `net user /domain` or `ldapsearch -x -h 10.0.2.10` in the console."
+      - "Run exact command: net user /domain"
+    sim_event:
+      technique_id: "T1087"
+      technique_name: "Account Discovery"
+      event: "net user /domain enumeration executed from ws-01 against ad01"
+      source_ip: "10.0.2.15"
+      target_host: "ad01"
+      state: "DETECTED"
+      severity: "LOW"
+      module: "Watch"
+      breach: false
+    generated_logs:
+      - source: "ad"
+        event_type: "recon"
+        technique_id: "T1087"
+        source_ip: "10.0.2.15"
+        target_host: "ad01"
+        raw_line: "2026-11-11T22:05:10Z AD01 EventID=4661 Subject=ws-01$ SAMAccountQuery target=corp.internal"
+        is_true_positive: false
+        structured:
+          event_id: 4661
+          service: "active_directory"
+          account_name: "ws-01$"
+          target_file: "SAM_DOMAIN"
+          source_ip: "10.0.2.15"
+          message: "Domain user enumeration via SAMR"
+
+  - id: honeytoken-trip
+    order: 2
+    title: "Access Decoy Account & Canary File"
+    goal: "Attempt to authenticate with `svc_backup` or open decoy `passwords.xlsx`."
+    tool: "kinit / smbclient"
+    mitre_id: "T1078"
+    accepted_patterns:
+      - "^\\s*(kinit\\b.*svc_backup|impacket-GetUserSPNs\\b.*svc_backup|cat\\b.*passwords\\.xlsx|open\\b.*passwords\\.xlsx|smbclient\\b.*svc_backup)"
+    sample_command: "kinit svc_backup@CORP.INTERNAL"
+    wrong_command_hint: "Attempt authentication or ticket request for decoy account `svc_backup` (`kinit svc_backup@CORP.INTERNAL`) or open `passwords.xlsx`."
+    expected_output:
+      - "[*] Requesting Kerberos TGT for svc_backup@CORP.INTERNAL on 10.0.2.10..."
+      - "[+] Canary credential used against SYSVOL decoy folder \\\\ad01\\decoy\\passwords.xlsx"
+      - "[TRAP ALERT] HONEYTOKEN TRIPPED: Account svc_backup has zero authorized human users!"
+      - "[*] Decoy vault path mounted -> inspect /mnt/decoy/flag.txt"
+    hints:
+      - "Target the suspicious service account `svc_backup` discovered during enumeration."
+      - "Use `kinit svc_backup@CORP.INTERNAL` or `cat passwords.xlsx`."
+      - "Run exact command: kinit svc_backup@CORP.INTERNAL"
+    sim_event:
+      technique_id: "T1078"
+      technique_name: "Valid Accounts"
+      event: "HONEYTOKEN svc_backup triggered on ad01 (decoy passwords.xlsx accessed)"
+      source_ip: "10.0.2.15"
+      target_host: "ad01"
+      state: "ALERT"
+      severity: "CRITICAL"
+      module: "Trap"
+      breach: true
+    generated_logs:
+      - source: "wazuh"
+        event_type: "attack"
+        technique_id: "T1078"
+        source_ip: "10.0.2.15"
+        target_host: "ad01"
+        raw_line: "2026-11-11T22:05:31Z AD01 EventID=4769 Service=active_directory Account=svc_backup Target=\\\\ad01\\decoy\\passwords.xlsx [HONEYTOKEN HIT]"
+        is_true_positive: true
+        structured:
+          event_id: 4769
+          service: "active_directory"
+          account_name: "svc_backup"
+          target_file: "\\\\ad01\\decoy\\passwords.xlsx"
+          source_ip: "10.0.2.15"
+          message: "Kerberos TGS and decoy share access using honeytoken account svc_backup"
+
+  - id: read-insider-flag
+    order: 3
+    title: "Inspect Canary Vault & Grab Flag"
+    goal: "Read the decoy vault artifact flag from `/mnt/decoy/flag.txt` or `smbclient //10.0.2.10/decoy`."
+    tool: "smbclient / cat"
+    mitre_id: "T1552"
+    accepted_patterns:
+      - "^\\s*(cat\\s+/mnt/decoy/flag\\.txt|smbclient\\b.*(10\\.0\\.2\\.10|ad01).*decoy)"
+    sample_command: "smbclient //10.0.2.10/decoy -U svc_backup -c 'get flag.txt -'"
+    wrong_command_hint: "Access `//10.0.2.10/decoy` with `smbclient` or run `cat /mnt/decoy/flag.txt`."
+    expected_output:
+      - "Try \"help\" to get a list of possible commands."
+      - "getting file \\flag.txt of size 42 as - (0.8 kb/s)"
+      - "FLAG RECOVERED: NOENTRY{h0n3yt0k3n_tr4pp3d_svc_b4ckup}"
+      - "[*] Submit this flag in Stage 3 before switching to Blue Team defense."
+    hints:
+      - "Fetch `flag.txt` from the decoy share on ad01 (`10.0.2.10`) or read `/mnt/decoy/flag.txt`."
+      - "Run `smbclient //10.0.2.10/decoy -U svc_backup -c 'get flag.txt -'` or `cat /mnt/decoy/flag.txt`."
+      - "Run exact command: smbclient //10.0.2.10/decoy -U svc_backup -c 'get flag.txt -'"
+    sim_event:
+      technique_id: "T1552"
+      technique_name: "Unsecured Credentials"
+      event: "Canary credential vault accessed on ad01 using svc_backup"
+      source_ip: "10.0.2.15"
+      target_host: "ad01"
+      state: "ALERT"
+      severity: "CRITICAL"
+      module: "Trap"
+      breach: true
+    generated_logs:
+      - source: "wazuh"
+        event_type: "attack"
+        technique_id: "T1078"
+        source_ip: "10.0.2.15"
+        target_host: "ad01"
+        raw_line: "2026-11-11T22:05:49Z AD01 EventID=5145 Account=svc_backup Share=\\\\ad01\\decoy Object=passwords.xlsx Src=10.0.2.15"
+        is_true_positive: true
+        structured:
+          event_id: 5145
+          service: "active_directory"
+          account_name: "svc_backup"
+          target_file: "\\\\ad01\\decoy\\passwords.xlsx"
+          source_ip: "10.0.2.15"
+          message: "SMB share read on decoy passwords.xlsx by svc_backup"
+
+flag: "NOENTRY{h0n3yt0k3n_tr4pp3d_svc_b4ckup}"
+
+rule_challenge:
+  prompt: "Select the MITRE technique for abusing decoy/valid AD credentials and tune the Sigma rule so it detects `svc_backup` & `passwords.xlsx` without alerting on legitimate `j.doe` finance spreadsheets."
+  expected_mitre_id: "T1078"
+  mitre_choices:
+    - id: "T1078"
+      label: "T1078 - Valid Accounts"
+    - id: "T1190"
+      label: "T1190 - Exploit Public-Facing Application"
+    - id: "T1048"
+      label: "T1048 - Exfiltration Over Alternative Protocol"
+    - id: "T1486"
+      label: "T1486 - Data Encrypted for Impact"
+  required_min_hits: 2
+  max_false_positives: 0
+  template_yaml: |
+    title: Honeytoken Decoy Account & File Access
+    id: rule-mission-insider
+    level: critical
+    logsource:
+      category: security_event
+      service: active_directory
+    detection:
+      selection:
+        account_name: "REPLACE_WITH_HONEYTOKEN_ACCOUNT"
+        target_file|contains: "REPLACE_WITH_DECOY_FILENAME"
+      condition: selection
+  reference_solution_yaml: |
+    title: Honeytoken Decoy Account & File Access
+    id: rule-mission-insider
+    level: critical
+    logsource:
+      category: security_event
+      service: active_directory
+    detection:
+      selection:
+        account_name: "svc_backup"
+        target_file|contains: "passwords.xlsx"
+      condition: selection
+  benign_baseline_logs:
+    - source: "ad"
+      event_type: "normal"
+      technique_id: "NONE"
+      source_ip: "10.0.2.15"
+      target_host: "ad01"
+      raw_line: "2026-11-11T22:04:01Z AD01 EventID=4624 Account=j.doe Target=\\\\ad01\\finance\\q4_budget.xlsx"
+      benign: true
+      is_true_positive: false
+      structured:
+        event_id: 4624
+        service: "active_directory"
+        account_name: "j.doe"
+        target_file: "\\\\ad01\\finance\\q4_budget.xlsx"
+        source_ip: "10.0.2.15"
+        benign: true
+    - source: "ad"
+      event_type: "normal"
+      technique_id: "NONE"
+      source_ip: "10.0.2.16"
+      target_host: "ad01"
+      raw_line: "2026-11-11T22:04:22Z AD01 EventID=4769 Account=a.turing Target=\\\\ad01\\eng\\specs.md"
+      benign: true
+      is_true_positive: false
+      structured:
+        event_id: 4769
+        service: "active_directory"
+        account_name: "a.turing"
+        target_file: "\\\\ad01\\eng\\specs.md"
+        source_ip: "10.0.2.16"
+        benign: true
+
+fix:
+  prompt: "Contain the insider threat at Active Directory and wire automated response so future honeytoken touches revoke sessions instantaneously."
+  language: "powershell"
+  vulnerable_code: |
+    # CURRENT AD POLICY ON ad01:
+    # Account svc_backup remains enabled with non-expiring SPN & active Kerberos TGTs.
+    Get-ADUser svc_backup | Select-Object Enabled, PasswordNeverExpires
+    # Output: Enabled=True, PasswordNeverExpires=True
+  options:
+    - id: "opt-clear-log"
+      label: "Clear Windows Security EventID 4769/5145 to reduce disk usage"
+      code_snippet: "Clear-EventLog -LogName Security"
+      is_correct: false
+      explanation: "Clearing Security logs destroys forensic evidence without revoking the insider's active tokens or access."
+    - id: "opt-email-only"
+      label: "Send a weekly digest email to IT every Friday morning"
+      code_snippet: "Schedule-DigestReport -Frequency Weekly"
+      is_correct: false
+      explanation: "Delayed weekly digests allow an active insider days to exfiltrate sensitive shares before any containment runs."
+    - id: "opt-disable-ad"
+      label: "Disable AD account svc_backup, revoke Kerberos TGTs & isolate ws-01"
+      code_snippet: "Disable-ADAccount -Identity svc_backup; Revoke-ADUserToken -Identity svc_backup"
+      is_correct: true
+      explanation: "Disabling the compromised identity and revoking active Kerberos tickets immediately terminates unauthorized share access."
+  accepted_patch_patterns:
+    - "Disable-ADAccount\\s+-Identity\\s+svc_backup"
+  patch_explanation: "Explicitly disabling svc_backup blocks all further Kerberos and SMB requests."
+
+verify:
+  attack_command: "smbclient //10.0.2.10/decoy -U svc_backup -c 'get flag.txt -'"
+  blocked_output:
+    - "[*] Re-testing decoy share access as svc_backup against ad01 (10.0.2.10)..."
+    - "[BLOCKED] session setup failed: NT_STATUS_ACCOUNT_DISABLED (EventID 4625 Status 0xC0000072)"
+    - "[REFLEX] Automated playbook disable_ad_account confirmed svc_backup disabled and ws-01 session terminated."
+  blocked_log_line: "2026-11-11T22:07:02Z AD01 EventID=4625 Account=svc_backup Reason=ACCOUNT_DISABLED [BLOCKED]"
+  waf_control: "Active Directory Account Disablement + Reflex disable_ad_account Playbook"
+  explanation: "With `svc_backup` disabled and Kerberos tickets revoked, repeated insider access fails at domain authentication."
+
+debrief:
+  why_it_worked: "Internal enumeration queries were unmonitored and legacy service account `svc_backup` possessed domain-accessible shares without immediate session revocation."
+  how_it_was_stopped: "Placing deception honeytokens guaranteed near-zero-false-positive detection the moment an insider touched `svc_backup` or `passwords.xlsx`, enabling instant Sigma alerting and AD account containment."
+  mitre_summary: "T1087 (Account Discovery) -> T1078 (Valid Accounts) -> T1552 (Unsecured Credentials)."
+  key_takeaways:
+    - "Honeytoken accounts have zero legitimate traffic, making any single authentication a high-confidence alert."
+    - "Combine Sigma alerting with Reflex account-disable playbooks to cut insider dwell time to seconds."
+    - "Audit internal SMB shares and remove dormant service SPNs following least privilege."
+
+quiz:
+  - id: "iq1"
+    question: "Why do honeytokens (`svc_backup`, canary files) yield unusually high signal-to-noise ratios?"
+    options:
+      - "Because they encrypt every workstation hourly"
+      - "No legitimate user or workflow ever accesses a decoy, so any hit indicates suspicious activity"
+      - "They automatically disable HTTPS"
+      - "Because AD ignores failed logons on decoys"
+    correct_index: 1
+    explanation: "Zero normal business activity touches decoy credentials or canary files, eliminating most false-positive noise."
+  - id: "iq2"
+    question: "Which MITRE ATT&CK technique describes abusing legitimate or decoy AD credentials for access?"
+    options:
+      - "T1078 - Valid Accounts"
+      - "T1595 - Active Scanning"
+      - "T1048 - Exfiltration Over Alternative Protocol"
+      - "T1486 - Data Encrypted for Impact"
+    correct_index: 0
+    explanation: "T1078 covers adversaries and insiders using existing or dormant valid accounts."
+  - id: "iq3"
+    question: "Why is `j.doe` accessing `q4_budget.xlsx` included in your Sigma rule evaluation?"
+    options:
+      - "To verify your detection rule does not flag normal finance work as an insider breach"
+      - "To block all Excel spreadsheets company-wide"
+      - "Because AD does not log EventID 4624"
+      - "To boost XP even if rules fail"
+    correct_index: 0
+    explanation: "Good detections separate benign employee activity from explicit honeytoken indicators."
+  - id: "iq4"
+    question: "What immediate Active Directory action neuters stolen or abused account tokens?"
+    options:
+      - "Disabling the account and revoking active Kerberos tickets/sessions"
+      - "Changing the workstation desktop wallpaper"
+      - "Restarting Nginx on web01"
+      - "Enabling verbose DNS debug logging only"
+    correct_index: 0
+    explanation: "Account disablement paired with session/ticket revocation stops lateral movement right at AD."
+  - id: "iq5"
+    question: "What MITRE technique describes initially mapping AD domain accounts via `net user /domain`?"
+    options:
+      - "T1087 - Account Discovery"
+      - "T1190 - Exploit Public-Facing Application"
+      - "T1505 - Server Software Component"
+      - "T1566 - Phishing"
+    correct_index: 0
+    explanation: "T1087 covers adversaries enumerating local or domain user lists to plan privilege abuse."
+

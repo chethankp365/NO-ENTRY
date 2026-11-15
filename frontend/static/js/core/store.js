@@ -9,6 +9,8 @@ class Store {
       audioOn: localStorage.getItem('ne_audio_on') === 'true',
       performanceMode: localStorage.getItem('ne_perf_mode') === 'true',
       reduceMotion: localStorage.getItem('ne_reduce_motion') === 'true' || window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+      alertsEnabled: localStorage.getItem('ne_alerts_on') !== 'false',
+      theme: localStorage.getItem('ne_theme') || 'tactical-red',
       threatLevel: 'ELEVATED',
       operatorId: 'op-0x7f3a',
       alertsCount: 128,
@@ -16,6 +18,13 @@ class Store {
       mttr: 8.4,
       labArmed: true
     };
+
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.theme = this.state.theme;
+      if (document.body) {
+        document.body.classList.toggle('reduce-motion', Boolean(this.state.reduceMotion));
+      }
+    }
 
     this.subscribers = new Map(); // key -> Set(callbacks)
     this.globalSubscribers = new Set();
@@ -37,9 +46,14 @@ class Store {
     // Persist user toggles
     if (key === 'audioOn') localStorage.setItem('ne_audio_on', String(value));
     if (key === 'performanceMode') localStorage.setItem('ne_perf_mode', String(value));
+    if (key === 'alertsEnabled') localStorage.setItem('ne_alerts_on', String(value));
+    if (key === 'theme') {
+      localStorage.setItem('ne_theme', String(value));
+      document.documentElement.dataset.theme = String(value);
+    }
     if (key === 'reduceMotion') {
       localStorage.setItem('ne_reduce_motion', String(value));
-      document.body.classList.toggle('reduce-motion', Boolean(value));
+      if (document.body) document.body.classList.toggle('reduce-motion', Boolean(value));
     }
 
     // Notify key-specific listeners

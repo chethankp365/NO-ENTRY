@@ -6,7 +6,7 @@ Cyber Range and Threat Simulation Platform
 import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException, Depends
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -16,6 +16,11 @@ from backend.app.db.database import init_db
 from backend.app.sim.engine import sim_engine
 from backend.app.api.routes import api_router
 from backend.app.api.auth import auth_router
+from backend.app.api.missions import missions_router
+from backend.app.api.ghost import ghost_router
+from backend.app.api.academy import academy_router, academy_terminal_handler
+from backend.app.api.auth import resolve_operator
+from backend.app.db.database import get_session
 
 # Lifespan event handler for startup and shutdown
 @asynccontextmanager
@@ -37,12 +42,17 @@ app = FastAPI(
     title=settings.APP_NAME,
     description="Open-source attack simulation and automated threat detection.",
     version="0.1.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    docs_url="/api/docs",
+    redoc_url="/api/redoc"
 )
 
 # Include REST API routes (no CORS middleware needed - same origin)
 app.include_router(api_router)
 app.include_router(auth_router)
+app.include_router(missions_router)
+app.include_router(ghost_router)
+app.include_router(academy_router)
 
 # Mount static files and templates
 settings.STATIC_DIR.mkdir(parents=True, exist_ok=True)
@@ -124,6 +134,139 @@ def purple_page(request: Request):
         context={"app_name": settings.APP_NAME}
     )
 
+@app.get("/shield", response_class=HTMLResponse)
+def shield_page(request: Request):
+    """Screen 8: Shield Hardening & Posture."""
+    return templates.TemplateResponse(
+        request=request,
+        name="shield.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/trap", response_class=HTMLResponse)
+def trap_page(request: Request):
+    """Screen 9: Trap Deception & Honeypots."""
+    return templates.TemplateResponse(
+        request=request,
+        name="trap.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/reflex", response_class=HTMLResponse)
+def reflex_page(request: Request):
+    """Screen 10: Reflex SOAR Playbooks & Actions."""
+    return templates.TemplateResponse(
+        request=request,
+        name="reflex.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/intel", response_class=HTMLResponse)
+def intel_page(request: Request):
+    """Screen 11: Threat Intelligence & IOC Graph."""
+    return templates.TemplateResponse(
+        request=request,
+        name="intel.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/forensics", response_class=HTMLResponse)
+def forensics_page(request: Request):
+    """Screen 12: Digital Forensics & Evidence Chain."""
+    return templates.TemplateResponse(
+        request=request,
+        name="forensics.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/attack", response_class=HTMLResponse)
+def attack_page(request: Request):
+    """Screen 14: MITRE ATT&CK Matrix Heatmap."""
+    return templates.TemplateResponse(
+        request=request,
+        name="attack.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+@app.get("/reports", response_class=HTMLResponse)
+def reports_page(request: Request):
+    """Screen 15: Incident Reports & PDF Generation."""
+    return templates.TemplateResponse(
+        request=request,
+        name="reports.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+
+@app.get("/missions", response_class=HTMLResponse)
+def missions_page(request: Request):
+    """Missions Hub: 5 cyber scenarios + XP/cleared progress."""
+    return templates.TemplateResponse(
+        request=request,
+        name="missions.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+
+@app.get("/missions/{mission_id}", response_class=HTMLResponse)
+def mission_player_page(request: Request, mission_id: str):
+    """8-stage interactive Attack -> Defend Mission Player."""
+    return templates.TemplateResponse(
+        request=request,
+        name="mission_player.html",
+        context={"app_name": settings.APP_NAME, "mission_id": mission_id}
+    )
+
+
+@app.get("/learn", response_class=HTMLResponse)
+def learn_page(request: Request):
+    """Learn Academy: Ranks, Badges, Leaderboard, Streaks, Cheat-Sheet."""
+    return templates.TemplateResponse(
+        request=request,
+        name="learn.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+
+@app.get("/docs", response_class=HTMLResponse)
+def docs_page(request: Request):
+    """Docs, Lab Settings & Mandatory 3-Question Ethics Gate."""
+    return templates.TemplateResponse(
+        request=request,
+        name="docs.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+
+@app.get("/academy", response_class=HTMLResponse)
+def academy_catalog_page(request: Request):
+    """Hands-on Cybersecurity Academy 80-Room Curriculum Catalog."""
+    return templates.TemplateResponse(
+        request=request,
+        name="academy.html",
+        context={"app_name": settings.APP_NAME}
+    )
+
+
+@app.get("/academy/rooms/{room_id}", response_class=HTMLResponse)
+def academy_room_page(request: Request, room_id: str):
+    """TryHackMe-style Hands-On Practical Room Workspace."""
+    return templates.TemplateResponse(
+        request=request,
+        name="room_workspace.html",
+        context={"app_name": settings.APP_NAME, "room_id": room_id}
+    )
+
+
+@app.websocket("/ws/academy/{room_id}/terminal")
+async def academy_terminal_direct_ws(
+    websocket: WebSocket,
+    room_id: str,
+    session = Depends(get_session),
+):
+    """Direct WebSocket endpoint for xterm.js terminal connection."""
+    user = resolve_operator(websocket, session)
+    await academy_terminal_handler.handle_connection(websocket, room_id, user)
 
 
 
@@ -219,12 +362,9 @@ def app_screen_fallback(request: Request, screen_path: str):
         "reflex": ("REFLEX // SOAR", "automated response playbooks"),
         "intel": ("INTEL // THREAT ENRICHMENT", "live IP reputation & IOC feeds"),
         "forensics": ("FORENSICS", "packet analysis & artifact timeline"),
-        "missions": ("MISSIONS // SCENARIOS", "curated cyber defense challenges"),
         "attack": ("MITRE ATT&CK MATRIX", "tactics, techniques & procedures"),
         "reports": ("EXECUTIVE REPORTS", "incident timelines & compliance metrics"),
-        "learn": ("CYBER LAB ACADEMY", "interactive threat simulation tutorials"),
-        "purple-team": ("PURPLE TEAM WORKSPACE", "collaborative attack-defense exercises"),
-        "docs": ("DOCUMENTATION", "cyber range architecture & developer guide")
+        "purple-team": ("PURPLE TEAM WORKSPACE", "collaborative attack-defense exercises")
     }
     clean_path = screen_path.strip("/")
     if clean_path in valid_screens:

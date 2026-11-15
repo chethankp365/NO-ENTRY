@@ -1,0 +1,192 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // INCIDENT REPORTS{% endblock %}
+{% block page_title %}REPORTS // EXECUTIVE BRIEFS{% endblock %}
+{% block page_subtitle %}automated breach summaries, forensics telemetry &amp; ReportLab PDF generation{% endblock %}
+
+{% block extra_head %}
+<style>
+  .reports-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .reports-main-layout {
+    display: grid;
+    grid-template-columns: 1.1fr 1.3fr;
+    gap: 16px;
+  }
+
+  /* Printing Animation Banner */
+  .printing-banner {
+    display: none;
+    padding: 10px 14px;
+    background: #020406;
+    border-left: 3px solid var(--color-cyan);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-cyan);
+    margin-bottom: 12px;
+  }
+
+  /* Reports Table */
+  .reports-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .reports-table th {
+    text-align: left;
+    padding: 8px 10px;
+    background: #080B10;
+    color: var(--color-muted);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .reports-table td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+  }
+
+  .reports-table tbody tr {
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .reports-table tbody tr:hover {
+    background: rgba(0, 229, 255, 0.06);
+  }
+
+  .reports-table tbody tr.active-report {
+    background: rgba(0, 229, 255, 0.12);
+    border-left: 2px solid var(--color-cyan);
+  }
+
+  /* Preview Panel */
+  .preview-card {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 18px;
+    font-family: var(--font-mono);
+  }
+
+  .preview-section-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--color-muted);
+    margin: 14px 0 6px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding-bottom: 4px;
+  }
+
+  .preview-bullet-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    font-size: 11px;
+    color: #FFFFFF;
+    line-height: 1.6;
+  }
+
+  .preview-bullet-list li {
+    position: relative;
+    padding-left: 14px;
+    margin-bottom: 4px;
+  }
+
+  .preview-bullet-list li::before {
+    content: '>';
+    position: absolute;
+    left: 0;
+    color: var(--color-cyan);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reports-view-container">
+  <!-- StatCards (Reports Archived, Audit Compliance, Generator Engine) -->
+  <div class="reports-stat-grid">
+    <div class="stat-card" style="border-left: 3px solid var(--color-cyan);">
+      <div class="stat-card-title">REPORTS ARCHIVED</div>
+      <div id="statReportsCount" class="stat-card-value" style="color:var(--color-cyan);">3 EXECUTIVE BRIEFS</div>
+      <div class="stat-card-subtitle">INCIDENT RESPONSE &amp; AUDITS</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 3px solid var(--color-green);">
+      <div class="stat-card-title">INCIDENT COMPLIANCE</div>
+      <div class="stat-card-value" style="color:var(--color-green);">100% AUDITED</div>
+      <div class="stat-card-subtitle">SOC2 / ISO 27001 LOGGED</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 3px solid #FFB800);">
+      <div class="stat-card-title">PDF ENGINE</div>
+      <div class="stat-card-value" style="color:#FFB800;">REPORTLAB 5.1</div>
+      <div class="stat-card-subtitle">REAL PDF COMPILATION ACTIVE</div>
+    </div>
+  </div>
+
+  <div class="reports-main-layout">
+    <!-- Left Column: Generate Action & Reports Table -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// EXECUTIVE INCIDENT ARCHIVE</span>
+          <button id="generateReportBtn" class="btn btn-red" style="padding: 6px 14px; font-size: 11px;">
+            GENERATE REPORT
+          </button>
+        </div>
+
+        <!-- Printing Animation Banner -->
+        <div id="printingBanner" class="printing-banner">
+          <span id="printingBannerText">&gt; compiling incident telemetry...</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="reports-table">
+            <thead>
+              <tr>
+                <th>TITLE</th>
+                <th>TYPE</th>
+                <th>DATE</th>
+                <th>PDF</th>
+              </tr>
+            </thead>
+            <tbody id="reportsTbody">
+              <!-- Dynamically populated from /api/reports -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: Document Preview Panel & Download PDF -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">// EXECUTIVE BRIEF PREVIEW</span>
+        <a id="downloadPdfBtn" href="#" target="_blank" class="btn btn-outline" style="padding: 5px 12px; font-size: 11px; border-color:var(--color-cyan); color:var(--color-cyan);">
+          DOWNLOAD PDF &darr;
+        </a>
+      </div>
+
+      <div id="previewCardContainer" class="preview-card">
+        <!-- Dynamically rendered -->
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/reports.js"></script>
+{% endblock %}

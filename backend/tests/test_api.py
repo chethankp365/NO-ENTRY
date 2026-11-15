@@ -68,14 +68,62 @@ def test_purple_page_load(client):
     assert "attackerPanel" in response.text
     assert "connectorSvg" in response.text
 
-def test_app_screen_fallback(client):
+def test_shield_page_load(client):
     response = client.get("/shield")
     assert response.status_code == 200
     assert "SHIELD // DEFENSE" in response.text
+    assert "statBeforeScore" in response.text
+    assert "checklistTbody" in response.text
+    assert "shieldCanvasContainer" in response.text
 
+def test_trap_page_load(client):
+    response = client.get("/trap")
+    assert response.status_code == 200
+    assert "TRAP // DECEPTION" in response.text
+    assert "honeytokensList" in response.text
+    assert "sessionsTbody" in response.text
+    assert "trapSphereCanvasContainer" in response.text
+    assert "attackerMapCanvas" in response.text
 
+def test_reflex_page_load(client):
+    response = client.get("/reflex")
+    assert response.status_code == 200
+    assert "REFLEX // SOAR" in response.text
+    assert "playbooksList" in response.text
+    assert "actionsTbody" in response.text
+    assert "nodeAlert" in response.text
+    assert "nodeAct" in response.text
 
+def test_intel_page_load(client):
+    response = client.get("/intel")
+    assert response.status_code == 200
+    assert "INTEL // THREAT RECON" in response.text
+    assert "feedGridContainer" in response.text
+    assert "iocSearchInput" in response.text
+    assert "graphCanvasContainer" in response.text
 
+def test_forensics_page_load(client):
+    response = client.get("/forensics")
+    assert response.status_code == 200
+    assert "FORENSICS // INCIDENT TIMELINE" in response.text
+    assert "timelineNodesContainer" in response.text
+    assert "evidenceListContainer" in response.text
+    assert "hexViewerContainer" in response.text
+
+def test_attack_page_load(client):
+    response = client.get("/attack")
+    assert response.status_code == 200
+    assert "ATT&amp;CK // COVERAGE HEATMAP" in response.text
+    assert "heatmapBoardContainer" in response.text
+    assert "statDetectedCount" in response.text
+
+def test_reports_page_load(client):
+    response = client.get("/reports")
+    assert response.status_code == 200
+    assert "REPORTS // EXECUTIVE BRIEFS" in response.text
+    assert "generateReportBtn" in response.text
+    assert "reportsTbody" in response.text
+    assert "previewCardContainer" in response.text
 def test_api_state(client):
     response = client.get("/api/state")
     assert response.status_code == 200

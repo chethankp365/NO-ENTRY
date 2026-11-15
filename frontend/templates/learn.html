@@ -1,0 +1,274 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // LEARN &amp; RANK{% endblock %}
+{% block page_title %}LEARN // OPERATOR ACADEMY{% endblock %}
+{% block page_subtitle %}ranks, xp progression, badges, live leaderboard &amp; tactical field cheat sheets{% endblock %}
+
+{% block extra_head %}
+<style>
+  .learn-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .learn-top-grid {
+    display: grid;
+    grid-template-columns: 1.5fr 1fr;
+    gap: 16px;
+  }
+
+  .learn-mid-grid {
+    display: grid;
+    grid-template-columns: 1fr 1.2fr;
+    gap: 16px;
+  }
+
+  @media (max-width: 1024px) {
+    .learn-top-grid, .learn-mid-grid { grid-template-columns: 1fr; }
+  }
+
+  .rank-hero-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .rank-title-big {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--color-cyan);
+    letter-spacing: 2px;
+    text-shadow: 0 0 14px var(--color-cyan-glow);
+  }
+
+  .rank-xp-fraction {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    color: #FFFFFF;
+  }
+
+  .rank-bar-outer {
+    width: 100%;
+    height: 12px;
+    background: #030508;
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+    margin-bottom: 12px;
+  }
+
+  .rank-bar-inner {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--color-red), var(--color-cyan), var(--color-green));
+    transition: width 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .rank-ladder {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .ladder-tier {
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    padding: 8px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+
+  .ladder-tier.reached {
+    border-color: var(--color-cyan);
+    background: rgba(0, 229, 255, 0.08);
+  }
+
+  .badges-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .badge-card {
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    padding: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    opacity: 0.6;
+  }
+
+  .badge-card.unlocked {
+    opacity: 1;
+    border-color: var(--color-green);
+    background: rgba(0, 255, 106, 0.06);
+    box-shadow: 0 0 16px rgba(0, 255, 106, 0.14);
+  }
+
+  .badge-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+
+  .badge-name {
+    font-family: var(--font-display);
+    font-size: 13px;
+    color: #FFFFFF;
+  }
+
+  .leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .leaderboard-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 10px;
+    color: var(--color-muted);
+    border-bottom: 1px solid var(--color-border);
+    letter-spacing: 1.5px;
+  }
+
+  .leaderboard-table td {
+    padding: 9px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .leaderboard-table tr.is-you {
+    background: rgba(0, 229, 255, 0.12);
+    border-left: 3px solid var(--color-cyan);
+    color: #FFFFFF;
+    font-weight: 700;
+  }
+
+  .glossary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 12px;
+  }
+
+  .glossary-mini-card {
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    padding: 12px;
+    font-family: var(--font-mono);
+  }
+
+  .glossary-mini-card pre {
+    background: #020305;
+    padding: 8px;
+    margin: 8px 0 0 0;
+    font-size: 10px;
+    color: var(--color-green);
+    border-left: 2px solid var(--color-cyan);
+    white-space: pre-wrap;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="learn-layout">
+  <div class="learn-top-grid">
+    <!-- YOUR RANK Panel -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">YOUR RANK &amp; PROGRESSION</span>
+        <span id="nextRankTargetBadge" style="font-family:var(--font-mono); font-size:11px; color:var(--color-muted);">LOADING...</span>
+      </div>
+      <div class="rank-hero-row">
+        <div>
+          <div style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted); letter-spacing:1.5px;">ACTIVE CLEARANCE RANK</div>
+          <div id="learnRankTitle" class="rank-title-big">SCRIPT RUNNER</div>
+        </div>
+        <div id="learnXpFraction" class="rank-xp-fraction">1,240 / 2,000 XP</div>
+      </div>
+      <div class="rank-bar-outer">
+        <div id="learnRankBar" class="rank-bar-inner"></div>
+      </div>
+      <div id="rankLadderGrid" class="rank-ladder"></div>
+    </div>
+
+    <!-- Streak & Stats -->
+    <div class="panel" style="display:flex; flex-direction:column; justify-content:space-between;">
+      <div class="panel-header">
+        <span class="panel-title">STREAK &amp; OPERATOR STATS</span>
+        <button id="openGlossaryBtn" class="btn btn-outline" style="padding:4px 10px; font-size:11px;">CHEAT-SHEET [?]</button>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; text-align:center; margin:6px 0;">
+        <div style="background:#04060A; border:1px solid var(--color-border); padding:10px;">
+          <div style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted);">STREAK</div>
+          <div id="learnStreakVal" style="font-family:var(--font-display); font-size:22px; color:var(--color-yellow);">3d</div>
+        </div>
+        <div style="background:#04060A; border:1px solid var(--color-border); padding:10px;">
+          <div style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted);">MISSIONS</div>
+          <div id="learnMissionsVal" style="font-family:var(--font-display); font-size:22px; color:var(--color-green);">0/5</div>
+        </div>
+        <div style="background:#04060A; border:1px solid var(--color-border); padding:10px;">
+          <div style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted);">BADGES</div>
+          <div id="learnBadgesVal" style="font-family:var(--font-display); font-size:22px; color:var(--color-cyan);">0/4</div>
+        </div>
+      </div>
+      <div style="display:flex; gap:10px; margin-top:10px;">
+        <a href="/missions" class="btn btn-red" style="flex:1; font-size:11px;">GO TO MISSIONS &gt;</a>
+        <a href="/docs#ethics" class="btn btn-outline" style="font-size:11px;">ETHICS GATE</a>
+      </div>
+    </div>
+  </div>
+
+  <div class="learn-mid-grid">
+    <!-- BADGES -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">BADGES &amp; MERITS</span>
+        <span style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted);">PYTHON GRADED</span>
+      </div>
+      <div id="learnBadgesGrid" class="badges-grid"></div>
+    </div>
+
+    <!-- LEADERBOARD -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">GLOBAL RANGE LEADERBOARD</span>
+        <span style="font-family:var(--font-mono); font-size:10px; color:var(--color-cyan);">LIVE XP RANKING</span>
+      </div>
+      <table class="leaderboard-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>OPERATOR</th>
+            <th>RANK</th>
+            <th>CLEARED</th>
+            <th>STREAK</th>
+            <th style="text-align:right;">XP</th>
+          </tr>
+        </thead>
+        <tbody id="learnLeaderboardTbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Quick Cheat-Sheet Grid -->
+  <div class="panel">
+    <div class="panel-header">
+      <span class="panel-title">QUICK FIELD REFERENCE // COMMANDS &amp; SIGMA</span>
+      <button id="openGlossaryBtnBottom" class="btn btn-outline" style="padding:3px 10px; font-size:10px;">OPEN FULL DRAWER</button>
+    </div>
+    <div id="learnGlossaryCards" class="glossary-grid"></div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/learn.js"></script>
+{% endblock %}
+

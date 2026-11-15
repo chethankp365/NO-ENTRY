@@ -5,8 +5,10 @@ scenarios, Reflex automation, and host operations.
 """
 
 import hashlib
+from pathlib import Path
 from typing import Optional, List, Dict, Any
 from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 from backend.app.sim.engine import sim_engine
@@ -201,4 +203,135 @@ def get_hunt_presets():
 def run_purple_scenario(req: PurpleRunRequest):
     """Execute paired purple team scenario returning synchronized attacker and defender actions."""
     return get_purple_scenario(req.scenario)
+
+# -------------------------------------------------------------
+# SHIELD HARDENING ENDPOINTS
+# -------------------------------------------------------------
+from backend.app.api.shield import shield_service
+
+@api_router.get("/shield")
+def get_shield_status():
+    """Retrieve hardening checklist, before/after score, and area posture scores."""
+    return shield_service.get_state()
+
+@api_router.post("/shield/fix/{item_id}")
+def apply_shield_fix(item_id: str):
+    """Apply remediation fix for a hardening item and recalculate scores."""
+    res = shield_service.apply_fix(item_id)
+    if "error" in res:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return res
+
+# -------------------------------------------------------------
+# TRAP DECEPTION & HONEYPOT ENDPOINTS
+# -------------------------------------------------------------
+from backend.app.api.trap import trap_service
+
+@api_router.get("/trap")
+def get_trap_status():
+    """Retrieve honeypot sessions, honeytoken statuses, and attacker origin geography."""
+    return trap_service.get_state()
+
+@api_router.post("/trap/touch/{token_id}")
+async def touch_honeytoken(token_id: str):
+    """Simulate touching/tripping a honeytoken, generating an alert event and triggering SOAR."""
+    res = await trap_service.touch_token(token_id, sim_engine)
+    if "error" in res:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return res
+
+# -------------------------------------------------------------
+# REFLEX SOAR AUTOMATION ENDPOINTS
+# -------------------------------------------------------------
+@api_router.get("/reflex")
+def get_reflex_status():
+    """Get complete SOAR playbooks, execution action history with response times, and workflow stages."""
+    return {
+        "playbooks": [p.model_dump() for p in reflex_engine.get_playbooks()],
+        "actions": [a.model_dump() for a in reflex_engine.action_history],
+        "workflow": ["Alert", "Enrich", "Decide", "Act", "Notify"]
+    }
+
+# -------------------------------------------------------------
+# THREAT INTELLIGENCE ENDPOINTS
+# -------------------------------------------------------------
+from backend.app.api.intel import get_intel_state, lookup_ioc
+
+@api_router.get("/intel")
+def get_intel():
+    """Retrieve curated IOC indicator catalog, threat feed sync health, and 3D relationship graph."""
+    return get_intel_state()
+
+@api_router.get("/intel/lookup")
+def get_ioc_lookup(ioc: str = Query(..., description="IP, domain, or file hash to evaluate")):
+    """Deterministic, believable verdict evaluation derived from hashing the provided IOC."""
+    res = lookup_ioc(ioc)
+    if "error" in res:
+        raise HTTPException(status_code=400, detail=res["error"])
+    return res
+
+# -------------------------------------------------------------
+# FORENSICS & EVIDENCE INTEGRITY ENDPOINTS
+# -------------------------------------------------------------
+from backend.app.api.forensics import get_forensics_state, verify_file_sha256, get_file_hex_dump
+
+@api_router.get("/forensics")
+def get_forensics():
+    """Retrieve incident investigation timeline and sealed evidence artifacts list."""
+    return get_forensics_state()
+
+@api_router.post("/forensics/verify/{filename}")
+def verify_forensics_file(filename: str):
+    """Compute real cryptographic SHA-256 of stored evidence file and verify against custody record."""
+    res = verify_file_sha256(filename)
+    if "error" in res:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return res
+
+@api_router.get("/forensics/hex/{filename}")
+def get_forensics_hex(filename: str, offset: int = Query(0, ge=0), limit: int = Query(512, ge=16, le=2048)):
+    """Extract authentic hex-dump view with byte offset, hex octets, and ASCII representation."""
+    res = get_file_hex_dump(filename, offset=offset, limit=limit)
+    if "error" in res:
+        raise HTTPException(status_code=404, detail=res["error"])
+    return res
+
+# -------------------------------------------------------------
+# MITRE ATT&CK MATRIX COVERAGE ENDPOINTS
+# -------------------------------------------------------------
+from backend.app.api.attack import attack_service
+
+@api_router.get("/attack/coverage")
+def get_attack_coverage():
+    """Retrieve 12x6 tactic-technique heatmap coverage, detected techniques, and gap metrics."""
+    return attack_service.get_coverage_data(sim_engine)
+
+# -------------------------------------------------------------
+# EXECUTIVE INCIDENT REPORTS & PDF ENDPOINTS
+# -------------------------------------------------------------
+from backend.app.api.reports import reports_service
+
+@api_router.get("/reports")
+def get_reports():
+    """List all available executive incident and penetration test reports."""
+    return reports_service.get_reports_list()
+
+@api_router.post("/reports/generate")
+def generate_report():
+    """Build a new incident report dynamically compiled from live simulation telemetry and render PDF."""
+    rep = reports_service.generate_report_from_sim(sim_engine)
+    return rep.to_dict()
+
+@api_router.get("/reports/{report_id}/pdf")
+def download_report_pdf(report_id: str):
+    """Download authentic ReportLab-compiled incident report PDF."""
+    rep = reports_service.get_report(report_id)
+    if not rep or not rep.pdf_path or not Path(rep.pdf_path).exists():
+        raise HTTPException(status_code=404, detail=f"PDF for report '{report_id}' not found.")
+    return FileResponse(
+        path=rep.pdf_path,
+        media_type="application/pdf",
+        filename=f"{report_id}.pdf"
+    )
+
 

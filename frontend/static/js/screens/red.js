@@ -17,6 +17,11 @@ class RedTeamController {
     this.currentInput = '';
     this.activeScenario = null;
     this.pendingScenario = null;
+    this.isScenarioRunning = false;
+    this.awaitingCommandPrompt = false;
+    this.commandPromptTimer = null;
+    this.finishPromptTimer = null;
+    this.reconnectTimer = null;
     this.victimHost = 'web01';
   }
 
@@ -26,6 +31,19 @@ class RedTeamController {
     this.initWebSocket();
     this.initScenarioButtons();
     this.initVictim3D();
+  }
+
+  fitTerminal() {
+    const container = document.getElementById('terminalContainer');
+    if (!container || !this.term) return;
+    const width = container.clientWidth - 28;
+    const height = container.clientHeight - 20;
+    if (width <= 0 || height <= 0) return;
+    const cols = Math.max(50, Math.min(140, Math.floor(width / 7.4)));
+    const rows = Math.max(12, Math.min(45, Math.floor(height / (12 * 1.35))));
+    try {
+      this.term.resize(cols, rows);
+    } catch (_) {}
   }
 
   initTerminal() {
@@ -64,6 +82,8 @@ class RedTeamController {
     });
 
     this.term.open(container);
+    this.fitTerminal();
+    window.addEventListener('resize', () => this.fitTerminal());
 
     // Initial prompt
     this.term.write('kali@offensive:~/range$ ');
@@ -74,17 +94,19 @@ class RedTeamController {
         // Enter pressed
         this.term.write('\r\n');
         const trimmed = this.currentInput.trim();
+        this.currentInput = '';
         if (trimmed) {
           if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+            this.awaitingCommandPrompt = true;
+            this.scheduleCommandPrompt(250);
             this.ws.send(JSON.stringify({ type: 'command', command: trimmed }));
           } else {
-            this.term.write('\033[38;2;255;31;61m[!] Terminal WebSocket disconnected.\033[0m\r\n');
+            this.term.write('\x1b[38;2;255;31;61m[!] Terminal WebSocket disconnected.\x1b[0m\r\n');
+            this.term.write('kali@offensive:~/range$ ');
           }
-        }
-        this.currentInput = '';
-        setTimeout(() => {
+        } else {
           this.term.write('kali@offensive:~/range$ ');
-        }, 80);
+        }
       } else if (data === '\u007F' || data === '\b') {
         // Backspace
         if (this.currentInput.length > 0) {
@@ -105,6 +127,19 @@ class RedTeamController {
     });
   }
 
+  scheduleCommandPrompt(delayMs = 120) {
+    if (this.commandPromptTimer) {
+      clearTimeout(this.commandPromptTimer);
+    }
+    this.commandPromptTimer = setTimeout(() => {
+      this.commandPromptTimer = null;
+      if (this.awaitingCommandPrompt && this.term) {
+        this.awaitingCommandPrompt = false;
+        this.term.write('kali@offensive:~/range$ ');
+      }
+    }, delayMs);
+  }
+
   updateWsStatus(text, color = 'var(--color-cyan)') {
     const el = document.getElementById('terminalWsStatus');
     if (el) {
@@ -113,6 +148,14 @@ class RedTeamController {
   }
 
   initWebSocket() {
+    if (this.reconnectTimer) {
+      clearTimeout(this.reconnectTimer);
+      this.reconnectTimer = null;
+    }
+    if (this.ws && (this.ws.readyState === WebSocket.OPEN || this.ws.readyState === WebSocket.CONNECTING)) {
+      return;
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const wsUrl = `${protocol}//${window.location.host}/ws/terminal`;
 
@@ -124,7 +167,7 @@ class RedTeamController {
       console.error('[RED WS] Connection attempt failed:', err);
       this.updateWsStatus('FAILED', 'var(--color-red)');
       toast('Failed to connect to /ws/terminal', 'danger');
-      setTimeout(() => this.initWebSocket(), 3000);
+      this.reconnectTimer = setTimeout(() => this.initWebSocket(), 3000);
       return;
     }
 
@@ -156,9 +199,14 @@ class RedTeamController {
     this.ws.onclose = () => {
       this.updateWsStatus('DISCONNECTED (RECONNECTING)', 'var(--color-red)');
       if (this.term) {
-        this.term.write('\r\n\033[38;2;255;31;61m[!] Disconnected from /ws/terminal. Reconnecting in 3s...\033[0m\r\n');
+        this.term.write('\r\n\x1b[38;2;255;31;61m[!] Disconnected from /ws/terminal. Reconnecting in 3s...\x1b[0m\r\n');
       }
-      setTimeout(() => this.initWebSocket(), 3000);
+      if (!this.reconnectTimer) {
+        this.reconnectTimer = setTimeout(() => {
+          this.reconnectTimer = null;
+          this.initWebSocket();
+        }, 3000);
+      }
     };
   }
 
@@ -167,7 +215,16 @@ class RedTeamController {
 
     if (msg.type === 'output') {
       this.term.write(msg.data);
+      this.term.scrollToBottom();
+      if (this.awaitingCommandPrompt) {
+        this.scheduleCommandPrompt(120);
+      }
     } else if (msg.type === 'clear') {
+      this.awaitingCommandPrompt = false;
+      if (this.commandPromptTimer) {
+        clearTimeout(this.commandPromptTimer);
+        this.commandPromptTimer = null;
+      }
       this.term.clear();
       this.term.write('kali@offensive:~/range$ ');
     } else if (msg.type === 'scenario_start') {
@@ -182,7 +239,7 @@ class RedTeamController {
   initScenarioButtons() {
     const runBtns = document.querySelectorAll('.run-scenario-btn');
     runBtns.forEach(btn => {
-      btn.addEventListener('click', (e) => {
+      btn.addEventListener('click', () => {
         const scenarioId = btn.dataset.scenario;
         this.startScenario(scenarioId);
       });
@@ -191,8 +248,11 @@ class RedTeamController {
     const stopBtn = document.getElementById('stopScenarioBtn');
     if (stopBtn) {
       stopBtn.addEventListener('click', () => {
+        this.pendingScenario = null;
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
           this.ws.send(JSON.stringify({ type: 'stop_scenario' }));
+        } else {
+          this.onScenarioFinished({ type: 'scenario_stopped', scenario_id: this.activeScenario });
         }
         this.resetKillChain();
       });
@@ -204,7 +264,14 @@ class RedTeamController {
       sound.threatAlert();
     } catch (_) {}
 
+    if (this.finishPromptTimer) {
+      clearTimeout(this.finishPromptTimer);
+      this.finishPromptTimer = null;
+    }
+
+    this.awaitingCommandPrompt = false;
     this.activeScenario = scenarioId;
+    this.isScenarioRunning = true;
 
     // Send start to terminal WebSocket
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
@@ -215,7 +282,7 @@ class RedTeamController {
     } else if (this.ws && this.ws.readyState === WebSocket.CONNECTING) {
       this.pendingScenario = scenarioId;
       if (this.term) {
-        this.term.write(`\r\n\033[38;2;0;229;255m[*] Connecting terminal uplink... Starting ${scenarioId} momentarily.\033[0m\r\n`);
+        this.term.write(`\r\n\x1b[38;2;0;229;255m[*] Connecting terminal uplink... Starting ${scenarioId} momentarily.\x1b[0m\r\n`);
       }
     } else {
       this.pendingScenario = scenarioId;
@@ -244,6 +311,10 @@ class RedTeamController {
   }
 
   onScenarioStarted(msg) {
+    this.isScenarioRunning = true;
+    if (msg.scenario_id) {
+      this.activeScenario = msg.scenario_id;
+    }
     if (msg.target) {
       this.victimHost = msg.target;
       const vName = document.getElementById('victimHostName');
@@ -282,11 +353,15 @@ class RedTeamController {
     this.setVictimDamage(stageName);
 
     // Audio cue
-    sound.blip(850 + (currentIdx * 120), 0.08);
+    try {
+      sound.blip(850 + (Math.max(0, currentIdx) * 120), 0.08);
+    } catch (_) {}
 
     if (stage === 'impact') {
-      screenShake(6, 400);
-      sound.screenShake();
+      try {
+        screenShake(6, 400);
+        sound.screenShake();
+      } catch (_) {}
     }
   }
 
@@ -296,6 +371,11 @@ class RedTeamController {
   }
 
   onScenarioFinished(msg) {
+    if (msg && msg.scenario_id && this.activeScenario && msg.scenario_id !== this.activeScenario) {
+      return;
+    }
+    this.isScenarioRunning = false;
+
     const stopBtn = document.getElementById('stopScenarioBtn');
     if (stopBtn) stopBtn.style.display = 'none';
 
@@ -304,89 +384,97 @@ class RedTeamController {
 
     const ind = document.getElementById('activeScenarioIndicator');
     if (ind) {
-      ind.innerText = '[IDLE // ATTACK FINISHED]';
-      ind.style.color = 'var(--color-green)';
+      ind.innerText = msg?.type === 'scenario_stopped' ? '[IDLE // ATTACK STOPPED]' : '[IDLE // ATTACK FINISHED]';
+      ind.style.color = msg?.type === 'scenario_stopped' ? '#FFB800' : 'var(--color-green)';
     }
 
-    setTimeout(() => {
-      if (this.term) {
+    if (this.finishPromptTimer) {
+      clearTimeout(this.finishPromptTimer);
+    }
+    this.finishPromptTimer = setTimeout(() => {
+      this.finishPromptTimer = null;
+      if (!this.isScenarioRunning && this.term) {
         this.term.write('\r\nkali@offensive:~/range$ ');
       }
-    }, 400);
+    }, 300);
   }
 
   initVictim3D() {
     const container = document.getElementById('victimCanvasContainer');
     if (!container) return;
 
-    const w = container.clientWidth || 170;
-    const h = container.clientHeight || 170;
+    try {
+      const w = container.clientWidth || 170;
+      const h = container.clientHeight || 170;
 
-    this.scene = new THREE.Scene();
-    this.camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 100);
-    this.camera.position.set(0, 1.5, 4.5);
-    this.camera.lookAt(0, 0, 0);
+      this.scene = new THREE.Scene();
+      this.camera = new THREE.PerspectiveCamera(40, w / h, 0.1, 100);
+      this.camera.position.set(0, 1.5, 4.5);
+      this.camera.lookAt(0, 0, 0);
 
-    this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
-    this.renderer.setSize(w, h);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
-    container.appendChild(this.renderer.domElement);
+      this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+      this.renderer.setSize(w, h);
+      this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5));
+      container.appendChild(this.renderer.domElement);
 
-    // 1. Server Wireframe Box
-    const boxGeo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
-    const edges = new THREE.EdgesGeometry(boxGeo);
-    this.wireMat = new THREE.LineBasicMaterial({
-      color: 0x00E5FF,
-      transparent: true,
-      opacity: 0.85
-    });
-    this.wireMesh = new THREE.LineSegments(edges, this.wireMat);
-    this.scene.add(this.wireMesh);
+      // 1. Server Wireframe Box
+      const boxGeo = new THREE.BoxGeometry(1.6, 1.6, 1.6);
+      const edges = new THREE.EdgesGeometry(boxGeo);
+      this.wireMat = new THREE.LineBasicMaterial({
+        color: 0x00E5FF,
+        transparent: true,
+        opacity: 0.85
+      });
+      this.wireMesh = new THREE.LineSegments(edges, this.wireMat);
+      this.scene.add(this.wireMesh);
 
-    // 2. Dark Inner Core
-    const coreMat = new THREE.MeshBasicMaterial({ color: 0x04060A, transparent: true, opacity: 0.8 });
-    const coreMesh = new THREE.Mesh(boxGeo, coreMat);
-    coreMesh.scale.setScalar(0.96);
-    this.scene.add(coreMesh);
+      // 2. Dark Inner Core
+      const coreMat = new THREE.MeshBasicMaterial({ color: 0x04060A, transparent: true, opacity: 0.8 });
+      const coreMesh = new THREE.Mesh(boxGeo, coreMat);
+      coreMesh.scale.setScalar(0.96);
+      this.scene.add(coreMesh);
 
-    // 3. Shockwave Ring
-    const ringGeo = new THREE.RingGeometry(0.9, 1.2, 32);
-    this.ringMat = new THREE.MeshBasicMaterial({
-      color: 0xFF1F3D,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.0,
-      blending: THREE.AdditiveBlending
-    });
-    this.ringMesh = new THREE.Mesh(ringGeo, this.ringMat);
-    this.ringMesh.rotation.x = Math.PI / 2;
-    this.scene.add(this.ringMesh);
+      // 3. Shockwave Ring
+      const ringGeo = new THREE.RingGeometry(0.9, 1.2, 32);
+      this.ringMat = new THREE.MeshBasicMaterial({
+        color: 0xFF1F3D,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.0,
+        blending: THREE.AdditiveBlending
+      });
+      this.ringMesh = new THREE.Mesh(ringGeo, this.ringMat);
+      this.ringMesh.rotation.x = Math.PI / 2;
+      this.scene.add(this.ringMesh);
 
-    // Animation Loop
-    let time = 0;
-    const animate = () => {
-      requestAnimationFrame(animate);
-      time += 0.02;
+      // Animation Loop
+      let time = 0;
+      const animate = () => {
+        requestAnimationFrame(animate);
+        time += 0.02;
 
-      this.wireMesh.rotation.y += 0.015;
-      this.wireMesh.rotation.x += 0.008;
+        this.wireMesh.rotation.y += 0.015;
+        this.wireMesh.rotation.x += 0.008;
 
-      if (this.isGlitching) {
-        // Glitch vibration
-        this.wireMesh.position.x = (Math.random() - 0.5) * 0.12;
-        this.wireMesh.position.y = (Math.random() - 0.5) * 0.12;
+        if (this.isGlitching) {
+          // Glitch vibration
+          this.wireMesh.position.x = (Math.random() - 0.5) * 0.12;
+          this.wireMesh.position.y = (Math.random() - 0.5) * 0.12;
 
-        const pulse = (time * 3) % 1.0;
-        this.ringMesh.scale.setScalar(1.0 + pulse * 1.8);
-        this.ringMat.opacity = Math.max(0, 0.85 - pulse);
-      } else {
-        this.wireMesh.position.set(0, 0, 0);
-        this.ringMat.opacity = 0.0;
-      }
+          const pulse = (time * 3) % 1.0;
+          this.ringMesh.scale.setScalar(1.0 + pulse * 1.8);
+          this.ringMat.opacity = Math.max(0, 0.85 - pulse);
+        } else {
+          this.wireMesh.position.set(0, 0, 0);
+          this.ringMat.opacity = 0.0;
+        }
 
-      this.renderer.render(this.scene, this.camera);
-    };
-    animate();
+        this.renderer.render(this.scene, this.camera);
+      };
+      animate();
+    } catch (err) {
+      console.warn('[RED 3D] Victim WebGL fallback:', err);
+    }
   }
 
   setVictimDamage(stageName) {
@@ -394,21 +482,21 @@ class RedTeamController {
     const statusEl = document.getElementById('victimHostStatus');
 
     if (stage === 'recon' || stage === 'initial access') {
-      this.wireMat.color.set(0x00E5FF);
+      if (this.wireMat) this.wireMat.color.set(0x00E5FF);
       this.isGlitching = false;
       if (statusEl) {
         statusEl.innerText = 'PROBING';
         statusEl.style.color = 'var(--color-cyan)';
       }
     } else if (stage === 'execution' || stage === 'priv esc') {
-      this.wireMat.color.set(0xFFB800);
+      if (this.wireMat) this.wireMat.color.set(0xFFB800);
       this.isGlitching = true;
       if (statusEl) {
         statusEl.innerText = 'EXPLOITED';
         statusEl.style.color = '#FFB800';
       }
     } else if (stage === 'lateral' || stage === 'impact') {
-      this.wireMat.color.set(0xFF1F3D);
+      if (this.wireMat) this.wireMat.color.set(0xFF1F3D);
       this.isGlitching = true;
       if (statusEl) {
         statusEl.innerText = 'COMPROMISED';
@@ -418,7 +506,7 @@ class RedTeamController {
   }
 
   resetVictim3D() {
-    this.wireMat.color.set(0x00E5FF);
+    if (this.wireMat) this.wireMat.color.set(0x00E5FF);
     this.isGlitching = false;
     const statusEl = document.getElementById('victimHostStatus');
     if (statusEl) {

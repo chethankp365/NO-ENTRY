@@ -1,0 +1,237 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // TRAP DECEPTION{% endblock %}
+{% block page_title %}TRAP // DECEPTION{% endblock %}
+{% block page_subtitle %}honeypots, decoy credentials &amp; canary tokens{% endblock %}
+
+{% block extra_head %}
+<style>
+  .trap-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .trap-main-layout {
+    display: grid;
+    grid-template-columns: 1.35fr 0.95fr;
+    gap: 16px;
+  }
+
+  /* Honeytokens Card List */
+  .honeytoken-card {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 12px 14px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.3s ease;
+  }
+
+  .honeytoken-card.tripped-flash {
+    animation: tokenAlarmFlash 1.2s ease-in-out;
+  }
+
+  @keyframes tokenAlarmFlash {
+    0% { background: rgba(255, 31, 61, 0.4); border-color: var(--color-red); box-shadow: 0 0 25px var(--color-red); }
+    50% { background: rgba(255, 31, 61, 0.15); }
+    100% { background: #080B10; border-color: var(--color-border); box-shadow: none; }
+  }
+
+  .btn-touch {
+    padding: 4px 12px;
+    font-size: 11px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 1px;
+    background: rgba(255, 31, 61, 0.15);
+    border: 1px solid var(--color-red);
+    color: var(--color-red);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-touch:hover {
+    background: var(--color-red);
+    color: #FFFFFF;
+    box-shadow: 0 0 12px rgba(255, 31, 61, 0.6);
+  }
+
+  /* 3D Sphere Box */
+  .trap-3d-box {
+    height: 280px;
+    position: relative;
+    background: radial-gradient(circle at center, rgba(0, 229, 255, 0.08) 0%, rgba(8, 11, 16, 0.95) 75%);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+  }
+
+  #trapSphereCanvasContainer {
+    width: 100%;
+    height: 100%;
+  }
+
+  /* Mini World Map */
+  .world-map-box {
+    height: 200px;
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  #attackerMapCanvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+  }
+
+  /* Honeypot Table */
+  .trap-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .trap-table th {
+    text-align: left;
+    padding: 8px 10px;
+    background: #080B10;
+    color: var(--color-muted);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .trap-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .trap-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.02);
+  }
+
+  .token-badge {
+    padding: 2px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .token-badge.armed {
+    background: rgba(0, 229, 255, 0.12);
+    border: 1px solid var(--color-cyan);
+    color: var(--color-cyan);
+  }
+
+  .token-badge.triggered {
+    background: rgba(255, 31, 61, 0.15);
+    border: 1px solid var(--color-red);
+    color: var(--color-red);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="trap-view-container">
+  <!-- StatCards (37 sessions captured, 9 unique countries, 1 honeytoken tripped) -->
+  <div class="trap-stat-grid">
+    <div class="stat-card" style="border-left: 3px solid var(--color-cyan);">
+      <div class="stat-card-title">SESSIONS CAPTURED</div>
+      <div id="statSessionsCount" class="stat-card-value" style="color:var(--color-cyan);">37</div>
+      <div class="stat-card-subtitle">DECOY INTERACTIONS</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 3px solid #FFB800;">
+      <div class="stat-card-title">UNIQUE COUNTRIES</div>
+      <div id="statCountriesCount" class="stat-card-value" style="color:#FFB800;">9</div>
+      <div class="stat-card-subtitle">GLOBAL ATTACK ORIGINS</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 3px solid var(--color-red);">
+      <div class="stat-card-title">HONEYTOKENS TRIPPED</div>
+      <div id="statTrippedCount" class="stat-card-value" style="color:var(--color-red);">1</div>
+      <div class="stat-card-subtitle">ACTIVE INTRUSION CANARIES</div>
+    </div>
+  </div>
+
+  <div class="trap-main-layout">
+    <!-- Left Column: Honeytokens & Live Capture Sessions -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- Honeytokens Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// DEPLOYED HONEYTOKENS</span>
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--color-muted);">AUTONOMOUS CANARY TRIPWIRES</span>
+        </div>
+
+        <div id="honeytokensList">
+          <!-- Dynamically populated from /api/trap -->
+        </div>
+      </div>
+
+      <!-- Honeypot Sessions Table -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// HONEYPOT SESSIONS STREAM</span>
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--color-green);">&bull; CAPTURE LOG ACTIVE</span>
+        </div>
+
+        <div style="overflow-x: auto; max-height: 280px; overflow-y: auto;">
+          <table class="trap-table">
+            <thead>
+              <tr>
+                <th>TIME</th>
+                <th>HONEYPOT</th>
+                <th>PAYLOAD / CREDENTIALS</th>
+                <th>SOURCE IP</th>
+                <th>GEO</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+            <tbody id="sessionsTbody">
+              <!-- Dynamically populated from /api/trap -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: 3D Glowing Mesh Sphere & Mini World Map -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- 3D Glowing Mesh Sphere -->
+      <div class="trap-3d-box">
+        <div style="position: absolute; top: 12px; left: 12px; z-index: 2; font-family: var(--font-mono); font-size: 10px; color: var(--color-cyan); letter-spacing: 1.5px;">
+          // 3D DECEPTION FIELD // NEURAL MESH SPHERE
+        </div>
+        <div id="trapSphereCanvasContainer"></div>
+        <div style="position: absolute; bottom: 10px; left: 12px; right: 12px; display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--color-muted); pointer-events: none;">
+          <span id="meshStatusLabel">FIELD: RESONATING</span>
+          <span style="color:var(--color-cyan);">RIPPLE SENSOR ARMED</span>
+        </div>
+      </div>
+
+      <!-- Mini World Map -->
+      <div class="panel" style="padding: 12px;">
+        <div class="panel-header" style="margin-bottom: 8px;">
+          <span class="panel-title">// ATTACKER ORIGIN GEOGRAPHY</span>
+          <span id="mapOriginCount" style="font-family:var(--font-mono); font-size:11px; color:#FFB800;">9 REGIONS</span>
+        </div>
+        <div class="world-map-box">
+          <canvas id="attackerMapCanvas"></canvas>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/trap.js"></script>
+{% endblock %}

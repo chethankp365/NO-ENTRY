@@ -1,0 +1,50 @@
+id: exfiltration
+order: 5
+title: "Ghost Tunnel"
+subtitle: "dns tunnel caught by zeek"
+description: "Watch how covert data exfiltration encodes stolen database chunks inside high-entropy DNS TXT queries until Zeek and pfSense sever the C2 channel."
+track: purple
+difficulty: ADVANCED
+mitre_ids:
+  - T1005
+  - T1071
+  - T1048
+xp_reward: 300
+playable: false
+target_host: ws-02
+target_ip: 10.0.2.31
+story: "Because outbound HTTPS proxies blocked unauthorized uploads, an attacker staged compressed financial archives on engineering workstation ws-02 (10.0.2.31) and smuggled data out via encoded subdomains over UDP port 53. Zeek `dns.log` Shannon-entropy analytics spotted the anomalous TXT burst and pfSense severed the DNS tunnel."
+scope: "10.0.0.0/16 Virtual Corporate Range (Isolated). Attacks stay inside the range."
+briefing_lines:
+  - "[INTEL BRIEF] Incident #EX-512 // Covert DNS Exfiltration caught on Core Switch"
+  - "[PATH] Local archive staging -> Base64 DNS subdomain queries -> Zeek entropy trigger -> UDP/53 block."
+  - "[MODE] Full cinematic walkthrough highlighting Zeek network telemetry + perimeter egress control."
+cinematic_walkthrough:
+  - phase: "1. COLLECTION"
+    delay: 1.3
+    mitre_id: "T1005"
+    speaker: "EDR"
+    text: "[DETECTED] tar czf /tmp/finance_db.tar.gz /var/lib/data staged on ws-02 (10.0.2.31)."
+  - phase: "2. C2 CHANNEL"
+    delay: 1.5
+    mitre_id: "T1071"
+    speaker: "ZEEK"
+    text: "[ALERT] High-frequency TXT queries to *.c2.darknet.org with 52-char base32 labels (entropy 4.72 bits/char)."
+  - phase: "3. EXFILTRATION"
+    delay: 1.5
+    mitre_id: "T1048"
+    speaker: "SURICATA"
+    text: "[CRITICAL] Egress volume anomaly on UDP/53 from 10.0.2.31: 4.2 MB/min via resolver bypass."
+  - phase: "4. CONTAINMENT"
+    delay: 1.5
+    mitre_id: "T1048"
+    speaker: "REFLEX"
+    text: "[BLOCKED] pfSense severed external UDP/53 egress from 10.0.2.31; recursive DNS restricted to internal resolver ad01."
+debrief:
+  why_it_worked: "Workstations could send direct DNS queries to external resolvers rather than being forced exclusively through monitored internal DNS servers."
+  how_it_was_stopped: "Zeek DNS inspection detected abnormally long high-entropy subdomain labels and TXT payload bursts, allowing Reflex + pfSense to cut off direct UDP/53 egress."
+  mitre_summary: "T1005 (Data from Local System) -> T1071 (Application Layer Protocol: DNS) -> T1048 (Exfiltration Over Alternative Protocol)."
+  key_takeaways:
+    - "Block direct outbound UDP/TCP port 53 from client subnets except authorized internal DNS resolvers."
+    - "Monitor DNS query length, NXDOMAIN spikes, TXT record bursts, and label Shannon entropy with Zeek."
+

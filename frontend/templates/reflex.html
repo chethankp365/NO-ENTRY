@@ -1,0 +1,317 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // REFLEX SOAR{% endblock %}
+{% block page_title %}REFLEX // SOAR{% endblock %}
+{% block page_subtitle %}security orchestration, automated playbooks &amp; active response{% endblock %}
+
+{% block extra_head %}
+<style>
+  .reflex-stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  /* Flow Diagram */
+  .flow-diagram-panel {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 16px;
+    margin-bottom: 16px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .flow-track {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+    padding: 10px 20px;
+  }
+
+  .flow-node {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    z-index: 2;
+    transition: all 0.3s ease;
+  }
+
+  .flow-box {
+    width: 110px;
+    height: 48px;
+    background: #0D121A;
+    border: 1px solid var(--color-border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    color: var(--color-muted);
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    position: relative;
+  }
+
+  .flow-box.active-node {
+    border-color: var(--color-cyan);
+    color: #FFFFFF;
+    background: rgba(0, 229, 255, 0.15);
+    box-shadow: 0 0 20px var(--color-cyan-dim);
+    transform: translateY(-2px);
+  }
+
+  .flow-box.active-act {
+    border-color: var(--color-red);
+    color: #FFFFFF;
+    background: rgba(255, 31, 61, 0.2);
+    box-shadow: 0 0 25px var(--color-red);
+  }
+
+  .flow-connector {
+    flex: 1;
+    height: 2px;
+    background: #1A2332;
+    position: relative;
+    margin: 0 10px;
+  }
+
+  .flow-connector.active-line {
+    background: var(--color-cyan);
+    box-shadow: 0 0 8px var(--color-cyan);
+  }
+
+  .flow-subtext {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-muted);
+  }
+
+  /* Main Layout */
+  .reflex-main-layout {
+    display: grid;
+    grid-template-columns: 1fr 1.4fr;
+    gap: 16px;
+  }
+
+  /* Playbook Toggles */
+  .playbook-card {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 12px 14px;
+    margin-bottom: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  /* Switch */
+  .switch-label {
+    position: relative;
+    display: inline-block;
+    width: 44px;
+    height: 24px;
+  }
+
+  .switch-label input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+
+  .switch-slider {
+    position: absolute;
+    cursor: pointer;
+    inset: 0;
+    background-color: #1A2332;
+    transition: .3s;
+    border: 1px solid var(--color-border);
+  }
+
+  .switch-slider:before {
+    position: absolute;
+    content: "";
+    height: 16px;
+    width: 16px;
+    left: 3px;
+    bottom: 3px;
+    background-color: var(--color-muted);
+    transition: .3s;
+  }
+
+  input:checked + .switch-slider {
+    background-color: rgba(0, 255, 106, 0.2);
+    border-color: var(--color-green);
+  }
+
+  input:checked + .switch-slider:before {
+    transform: translateX(20px);
+    background-color: var(--color-green);
+    box-shadow: 0 0 8px var(--color-green);
+  }
+
+  /* Live Actions Table */
+  .reflex-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .reflex-table th {
+    text-align: left;
+    padding: 8px 10px;
+    background: #080B10;
+    color: var(--color-muted);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .reflex-table td {
+    padding: 9px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .reflex-table tbody tr.new-action {
+    animation: actionEnter 0.5s ease-out;
+  }
+
+  @keyframes actionEnter {
+    from { background: rgba(0, 229, 255, 0.2); }
+    to { background: transparent; }
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="reflex-view-container">
+  <!-- StatCards (Playbooks Armed, Mean Response Time, Actions Executed) -->
+  <div class="reflex-stat-grid">
+    <div class="stat-card" style="border-left: 3px solid var(--color-green);">
+      <div class="stat-card-title">PLAYBOOKS ACTIVE</div>
+      <div id="statActivePlaybooks" class="stat-card-value" style="color:var(--color-green);">4 / 4</div>
+      <div class="stat-card-subtitle">AUTONOMOUS DISPATCHERS</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 3px solid var(--color-cyan);">
+      <div class="stat-card-title">MEAN RESPONSE TIME</div>
+      <div id="statResponseTime" class="stat-card-value" style="color:var(--color-cyan);">8.4 ms</div>
+      <div class="stat-card-subtitle">END-TO-END EXECUTION LATENCY</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 3px solid #FFB800;">
+      <div class="stat-card-title">ACTIONS EXECUTED</div>
+      <div id="statActionsExecuted" class="stat-card-value" style="color:#FFB800;">42</div>
+      <div class="stat-card-subtitle">FIREWALL, ISOLATION &amp; REVOCATIONS</div>
+    </div>
+  </div>
+
+  <!-- Animated Flow Diagram (Alert > Enrich > Decide > Act > Notify) -->
+  <div class="flow-diagram-panel">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; font-family: var(--font-mono); font-size: 11px;">
+      <span style="color: var(--color-muted); letter-spacing: 1.5px;">// SOAR EXECUTION PIPELINE // REAL-TIME EVENT REACTIVITY</span>
+      <span id="pipelineClock" style="color: var(--color-cyan);">READY &bull; LISTENING TO EVENT BUS</span>
+    </div>
+
+    <div class="flow-track">
+      <!-- 1. ALERT -->
+      <div class="flow-node">
+        <div id="nodeAlert" class="flow-box">
+          [1] ALERT
+        </div>
+        <span class="flow-subtext">Event Ingest</span>
+      </div>
+
+      <div id="line1" class="flow-connector"></div>
+
+      <!-- 2. ENRICH -->
+      <div class="flow-node">
+        <div id="nodeEnrich" class="flow-box">
+          [2] ENRICH
+        </div>
+        <span class="flow-subtext">AbuseIPDB / OTX</span>
+      </div>
+
+      <div id="line2" class="flow-connector"></div>
+
+      <!-- 3. DECIDE -->
+      <div class="flow-node">
+        <div id="nodeDecide" class="flow-box">
+          [3] DECIDE
+        </div>
+        <span class="flow-subtext">Playbook Policy</span>
+      </div>
+
+      <div id="line3" class="flow-connector"></div>
+
+      <!-- 4. ACT -->
+      <div class="flow-node">
+        <div id="nodeAct" class="flow-box">
+          [4] ACT
+        </div>
+        <span class="flow-subtext">Firewall / Isolate</span>
+      </div>
+
+      <div id="line4" class="flow-connector"></div>
+
+      <!-- 5. NOTIFY -->
+      <div class="flow-node">
+        <div id="nodeNotify" class="flow-box">
+          [5] NOTIFY
+        </div>
+        <span class="flow-subtext">Telegram Dispatch</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="reflex-main-layout">
+    <!-- Left Column: Playbook Toggles -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">// AUTOMATED PLAYBOOKS</span>
+        <span style="font-family:var(--font-mono); font-size:11px; color:var(--color-cyan);">HOT TOGGLE</span>
+      </div>
+
+      <div id="playbooksList">
+        <!-- Dynamically rendered -->
+      </div>
+    </div>
+
+    <!-- Right Column: Live Actions Log -->
+    <div class="panel">
+      <div class="panel-header">
+        <span class="panel-title">// LIVE ACTIONS LOG &amp; RESPONSE TIMES</span>
+        <span style="font-family:var(--font-mono); font-size:11px; color:var(--color-green);">&bull; REAL-TIME FEED</span>
+      </div>
+
+      <div style="overflow-x: auto; max-height: 380px; overflow-y: auto;">
+        <table class="reflex-table">
+          <thead>
+            <tr>
+              <th>TIME</th>
+              <th>ACTION</th>
+              <th>TARGET</th>
+              <th>PLAYBOOK</th>
+              <th style="text-align: right;">LATENCY</th>
+            </tr>
+          </thead>
+          <tbody id="actionsTbody">
+            <!-- Dynamically populated from /api/reflex -->
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/reflex.js"></script>
+{% endblock %}

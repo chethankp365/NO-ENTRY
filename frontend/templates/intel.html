@@ -1,0 +1,274 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // THREAT INTEL{% endblock %}
+{% block page_title %}INTEL // THREAT RECON{% endblock %}
+{% block page_subtitle %}indicator database, feed synchronization &amp; campaign relationship graph{% endblock %}
+
+{% block extra_head %}
+<style>
+  /* Feed Sync Grid */
+  .feed-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .feed-card {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 10px 14px;
+  }
+
+  .feed-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    margin-bottom: 6px;
+  }
+
+  .pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    display: inline-block;
+    animation: pulseSync 1.5s infinite;
+  }
+
+  @keyframes pulseSync {
+    0% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.6); opacity: 0.4; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  /* Main Layout */
+  .intel-main-layout {
+    display: grid;
+    grid-template-columns: 1.25fr 1.05fr;
+    gap: 16px;
+  }
+
+  /* Lookup Box */
+  .lookup-panel {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 14px;
+    margin-bottom: 16px;
+    position: relative;
+  }
+
+  .lookup-input-group {
+    display: flex;
+    gap: 8px;
+  }
+
+  .lookup-input {
+    flex: 1;
+    background: #020406;
+    border: 1px solid var(--color-border);
+    padding: 8px 12px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: #FFFFFF;
+    outline: none;
+    transition: border-color 0.2s ease;
+  }
+
+  .lookup-input:focus {
+    border-color: var(--color-cyan);
+    box-shadow: 0 0 10px var(--color-cyan-dim);
+  }
+
+  /* Scanning animation container */
+  .scanning-strip {
+    display: none;
+    margin-top: 10px;
+    padding: 10px 14px;
+    background: #020406;
+    border-left: 3px solid var(--color-cyan);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-cyan);
+  }
+
+  .lookup-verdict-box {
+    display: none;
+    margin-top: 12px;
+    padding: 12px;
+    background: #0D121A;
+    border: 1px solid var(--color-border);
+  }
+
+  /* 3D Graph Container */
+  .intel-3d-box {
+    height: 520px;
+    position: relative;
+    background: radial-gradient(circle at center, rgba(0, 229, 255, 0.06) 0%, rgba(8, 11, 16, 0.98) 80%);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+  }
+
+  #graphCanvasContainer {
+    width: 100%;
+    height: 100%;
+    cursor: grab;
+  }
+
+  #graphCanvasContainer:active {
+    cursor: grabbing;
+  }
+
+  .graph-legend {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    display: flex;
+    gap: 12px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-muted);
+    background: rgba(4, 6, 10, 0.85);
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    pointer-events: none;
+  }
+
+  /* Indicator Table */
+  .intel-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+
+  .intel-table th {
+    text-align: left;
+    padding: 8px 10px;
+    background: #080B10;
+    color: var(--color-muted);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .intel-table td {
+    padding: 9px 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  }
+
+  .intel-table tbody tr {
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+
+  .intel-table tbody tr:hover {
+    background: rgba(0, 229, 255, 0.06);
+  }
+
+  .score-bar-mini {
+    height: 6px;
+    background: #0D121A;
+    border: 1px solid var(--color-border);
+    width: 70px;
+    display: inline-block;
+    vertical-align: middle;
+    margin-right: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .score-bar-mini-fill {
+    height: 100%;
+    position: absolute;
+    left: 0;
+    top: 0;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="intel-view-container">
+  <!-- Feed Health Bars (AbuseIPDB 100, AlienVault OTX 100, VirusTotal 72, MISP 100) -->
+  <div class="feed-grid" id="feedGridContainer">
+    <!-- Populated dynamically -->
+  </div>
+
+  <div class="intel-main-layout">
+    <!-- Left Column: Search IOC & Indicators Table -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- IOC Search Panel -->
+      <div class="lookup-panel">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-family: var(--font-mono); font-size: 11px;">
+          <span style="color: var(--color-muted); letter-spacing: 1.5px;">// DETERMINISTIC IOC ENRICHMENT ENGINE</span>
+          <span style="color: var(--color-cyan);">SHA-256 VERDICT HASH</span>
+        </div>
+
+        <div class="lookup-input-group">
+          <input type="text" id="iocSearchInput" class="lookup-input" placeholder="Enter IP, domain or hash (e.g. 185.220.101.4 or cobalt.bin)...">
+          <button id="iocSearchBtn" class="btn btn-red" style="padding: 6px 14px; font-size: 11px;">
+            SCAN IOC
+          </button>
+        </div>
+
+        <!-- Scanning Terminal Strip -->
+        <div id="scanningStrip" class="scanning-strip">
+          <span id="scanningText">&gt; contacting threat intelligence feeds...</span>
+        </div>
+
+        <!-- Verdict Result Box -->
+        <div id="verdictBox" class="lookup-verdict-box">
+          <!-- Dynamically rendered -->
+        </div>
+      </div>
+
+      <!-- Indicators Table -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// ACTIVE INDICATORS OF COMPROMISE (IOCs)</span>
+          <span id="iocCountLabel" style="font-family:var(--font-mono); font-size:11px; color:var(--color-cyan);">5 REPUTATION RECORDS</span>
+        </div>
+
+        <div style="overflow-x: auto; max-height: 280px; overflow-y: auto;">
+          <table class="intel-table">
+            <thead>
+              <tr>
+                <th>INDICATOR</th>
+                <th>TYPE</th>
+                <th>THREAT SCORE</th>
+                <th>CAMPAIGN / MALWARE</th>
+                <th>SOURCE</th>
+              </tr>
+            </thead>
+            <tbody id="indicatorsTbody">
+              <!-- Dynamically populated from /api/intel -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: 3D Force-Directed Graph -->
+    <div class="intel-3d-box">
+      <div style="position: absolute; top: 12px; left: 12px; z-index: 2; font-family: var(--font-mono); font-size: 10px; color: var(--color-cyan); letter-spacing: 1.5px;">
+        // 3D THREAT CAMPAIGN GRAPH // DRAG TO ORBIT // SCROLL TO ZOOM
+      </div>
+
+      <div id="graphCanvasContainer"></div>
+
+      <div class="graph-legend">
+        <span><span style="color:#FF1F3D;">&#9632;</span> CAMPAIGN</span>
+        <span><span style="color:#00E5FF;">&#9632;</span> IP ADDR</span>
+        <span><span style="color:#FFB800;">&#9632;</span> DOMAIN</span>
+        <span><span style="color:#D500F9;">&#9632;</span> FILE HASH</span>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/intel.js"></script>
+{% endblock %}

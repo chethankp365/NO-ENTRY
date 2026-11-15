@@ -58,6 +58,7 @@
   .purple-split-area {
     display: grid;
     grid-template-columns: 1fr 24px 1fr;
+    grid-template-rows: minmax(0, 1fr);
     gap: 0;
     flex: 1;
     min-height: 0;
@@ -74,6 +75,7 @@
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    min-height: 0;
   }
 
   .attacker-panel.glitch-active {
@@ -122,6 +124,7 @@
     flex-direction: column;
     overflow: hidden;
     position: relative;
+    min-height: 0;
   }
 
   /* Lines Containers */

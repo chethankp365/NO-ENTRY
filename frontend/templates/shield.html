@@ -1,0 +1,278 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // SHIELD DEFENSE{% endblock %}
+{% block page_title %}SHIELD // DEFENSE{% endblock %}
+{% block page_subtitle %}system hardening posture &amp; active baseline remediation{% endblock %}
+
+{% block extra_head %}
+<style>
+  .shield-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+
+  .shield-main-layout {
+    display: grid;
+    grid-template-columns: 1.35fr 0.95fr;
+    gap: 16px;
+  }
+
+  /* Checklist Table */
+  .checklist-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .checklist-table th {
+    text-align: left;
+    padding: 8px 12px;
+    background: #080B10;
+    color: var(--color-muted);
+    font-size: 10px;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  .checklist-table td {
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    vertical-align: middle;
+  }
+
+  .checklist-row {
+    transition: background 0.3s ease;
+  }
+
+  .checklist-row.flash-success {
+    background: rgba(0, 255, 106, 0.15) !important;
+  }
+
+  .status-badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  .status-badge.pass {
+    background: rgba(0, 255, 106, 0.12);
+    border: 1px solid var(--color-green);
+    color: var(--color-green);
+  }
+
+  .status-badge.open {
+    background: rgba(255, 31, 61, 0.12);
+    border: 1px solid var(--color-red);
+    color: var(--color-red);
+  }
+
+  /* Fix Button */
+  .btn-fix {
+    padding: 3px 10px;
+    font-size: 10px;
+    font-family: var(--font-mono);
+    font-weight: 700;
+    letter-spacing: 1px;
+    background: rgba(255, 31, 61, 0.15);
+    border: 1px solid var(--color-red);
+    color: var(--color-red);
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .btn-fix:hover {
+    background: var(--color-red);
+    color: #FFFFFF;
+    box-shadow: 0 0 10px rgba(255, 31, 61, 0.5);
+  }
+
+  .btn-fix:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  /* Applying terminal strip */
+  .fix-terminal-strip {
+    display: none;
+    margin-top: 8px;
+    padding: 8px 12px;
+    background: #020406;
+    border-left: 3px solid var(--color-cyan);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-cyan);
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+  }
+
+  /* 3D Shield Box */
+  .shield-3d-box {
+    height: 320px;
+    position: relative;
+    background: radial-gradient(circle at center, rgba(0, 229, 255, 0.08) 0%, rgba(8, 11, 16, 0.95) 70%);
+    border: 1px solid var(--color-border);
+    overflow: hidden;
+  }
+
+  #shieldCanvasContainer {
+    width: 100%;
+    height: 100%;
+  }
+
+  .shield-overlay-hud {
+    position: absolute;
+    bottom: 12px;
+    left: 12px;
+    right: 12px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    pointer-events: none;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+
+  /* Area Bars */
+  .area-bar-row {
+    margin-bottom: 14px;
+  }
+
+  .area-bar-header {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .area-bar-track {
+    height: 8px;
+    background: #0D121A;
+    border: 1px solid var(--color-border);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .area-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00B0FF, #00E5FF);
+    box-shadow: 0 0 10px var(--color-cyan);
+    width: 0%;
+    transition: width 1s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="shield-view-container">
+  <!-- StatCards (Before 38, After 86, Gained +48) -->
+  <div class="shield-grid">
+    <div class="stat-card" style="border-left: 3px solid var(--color-red);">
+      <div class="stat-card-title">BEFORE HARDENING</div>
+      <div id="statBeforeScore" class="stat-card-value" style="color:var(--color-red);">38</div>
+      <div class="stat-card-subtitle">BASELINE AUDIT SCORE</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 3px solid var(--color-green);">
+      <div class="stat-card-title">AFTER HARDENING</div>
+      <div id="statAfterScore" class="stat-card-value" style="color:var(--color-green);">86</div>
+      <div class="stat-card-subtitle">ACTIVE POLICY SCORE</div>
+    </div>
+
+    <div class="stat-card" style="border-left: 3px solid var(--color-cyan);">
+      <div class="stat-card-title">SCORE GAINED</div>
+      <div id="statGainedScore" class="stat-card-value" style="color:var(--color-cyan);">+48</div>
+      <div class="stat-card-subtitle">TOTAL POSTURE DELTA</div>
+    </div>
+  </div>
+
+  <div class="shield-main-layout">
+    <!-- Left Column: Hardening Checklist & Area Postures -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- Hardening Checklist Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// HARDENING CHECKLIST</span>
+          <span id="checklistProgress" style="font-family:var(--font-mono); font-size:11px; color:var(--color-muted);">5 OF 7 COMPLIANT</span>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table class="checklist-table">
+            <thead>
+              <tr>
+                <th>SECURITY CONTROL</th>
+                <th>DOMAIN / AREA</th>
+                <th>STATUS</th>
+                <th style="text-align: right;">ACTION</th>
+              </tr>
+            </thead>
+            <tbody id="checklistTbody">
+              <!-- Dynamically populated from /api/shield -->
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Animated Applying Terminal Strip -->
+        <div id="fixTerminalStrip" class="fix-terminal-strip">
+          <span id="fixTerminalText">&gt; applying remediation policy...</span>
+        </div>
+      </div>
+
+      <!-- Area Posture Bars -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// POSTURE BY INFRASTRUCTURE AREA</span>
+          <span style="font-family:var(--font-mono); font-size:11px; color:var(--color-cyan);">ACTIVE TELEMETRY</span>
+        </div>
+
+        <div id="areaBarsContainer">
+          <!-- Dynamically populated from /api/shield -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Right Column: 3D Shield & Posture Status -->
+    <div style="display: flex; flex-direction: column; gap: 16px;">
+      <!-- 3D Hexagonal Shield Canvas Container -->
+      <div class="shield-3d-box">
+        <div style="position: absolute; top: 12px; left: 12px; z-index: 2; font-family: var(--font-mono); font-size: 10px; color: var(--color-cyan); letter-spacing: 1.5px;">
+          // 3D DEFENSE MATRIX // ROTATING HEX-SHIELD
+        </div>
+        <div id="shieldCanvasContainer"></div>
+        <div class="shield-overlay-hud">
+          <span id="shieldEnergyLabel">ENERGY: 86% HARDENED</span>
+          <span style="color:var(--color-cyan);">REACTIVE BARRIER ACTIVE</span>
+        </div>
+      </div>
+
+      <!-- Hardening Policy Brief -->
+      <div class="panel">
+        <div class="panel-header">
+          <span class="panel-title">// COMPLIANCE VERIFICATION</span>
+          <span class="badge" style="background:rgba(0, 255, 106, 0.1); border:1px solid var(--color-green); color:var(--color-green);">DISA STIG / CIS L2</span>
+        </div>
+        <p style="font-size: 12px; line-height: 1.6; color: var(--color-muted); margin-bottom: 12px;">
+          Hardening rules enforce defense-in-depth across the simulated domain: disabling legacy SMBv1/v2, enforcing LAPS to eliminate pass-the-hash pivots, and isolating Tier 0 Domain Controllers.
+        </p>
+        <div style="display: flex; justify-content: space-between; align-items: center; font-family: var(--font-mono); font-size: 11px; padding: 8px 12px; background: #080B10; border: 1px solid var(--color-border);">
+          <span>AUDIT AGENT: <span style="color:var(--color-text);">wazuh-compliance-daemon</span></span>
+          <span style="color:var(--color-green);">&bull; SYNCED</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/shield.js"></script>
+{% endblock %}

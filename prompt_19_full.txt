@@ -1,0 +1,229 @@
+<USER_REQUEST>
+# NO ENTRY — PROMPT 19: BLUE TEAM ROOMS 13–16
+
+Continue development of the existing NO ENTRY cybersecurity training platform.
+
+Implement the next four Blue Team rooms:
+
+13. Network Intrusion Detection
+14. Threat Hunting
+15. Incident Triage
+16. Incident Response
+
+IMPORTANT: This is a continuation of the existing platform. Do not rebuild the application, replace existing architecture, remove existing functionality, or redesign the UI.
+
+## 1. PRESERVE THE EXISTING ARCHITECTURE
+
+Preserve:
+- Existing FastAPI backend.
+- Existing Docker lab runner and isolated container architecture.
+- Existing Jinja2, HTML, CSS, and JavaScript frontend.
+- Existing database, authentication, session management, and progress tracking.
+- Existing GHOST AI multi-provider architecture.
+- Existing 80-room curriculum structure.
+- Existing XP, hints, assessments, completion validation, and learning progression.
+
+Do not introduce React, Next.js, a frontend framework, or a new build system.
+
+## 2. CRITICAL SECURITY REQUIREMENTS
+
+Before implementing the new rooms, inspect the current session identity and isolation architecture from Prompt 18C.
+
+Preserve the trusted-session implementation:
+- Never trust learner-supplied session or operator IDs as authentication.
+- Never reintroduce the `"default"` session fallback.
+- Maintain backend-authoritative session identity.
+- Preserve HMAC verification for process-emulation requests.
+- Preserve dedicated Docker attacker/target container pairs and their session isolation.
+- Never expose internal signing secrets or trusted credentials to learners.
+- Keep session state separated.
+- Stop and expire sessions securely and remove their associated state.
+
+Add explicit security tests for the actual browser-terminal request path:
+1. Learner A cannot access or modify Learner B's target.
+2. Learner A cannot impersonate Learner B by changing HTTP headers.
+3. Query-string identity manipulation is rejected.
+4. Missing or invalid session credentials fail closed.
+5. A stopped or expired session cannot continue using its old target.
+6. Valid activity in one session cannot satisfy another session's room requirements.
+7. Learners cannot access target containers belonging to other sessions through alternate network paths.
+
+Verify that Docker target containers are not unintentionally exposed through public interfaces or shared networks.
+
+If an existing security test fails, fix the underlying issue before proceeding.
+
+## 3. ROOM IMPLEMENTATION REQUIREMENTS
+
+Each room must provide a complete learning experience:
+
+- Introduction and learning objectives.
+- Clear technical explanations with real-world examples.
+- Practical demonstrations.
+- An actual isolated Docker lab.
+- Browser-based terminal access where appropriate.
+- Real commands and tools executed inside the isolated lab.
+- Actual evidence, logs, network traffic, or incident artefacts.
+- Guided practical exercises with progressive hints.
+- An independent challenge.
+- Backend-side validation of learner actions and findings.
+- A knowledge assessment.
+- XP and progress tracking.
+- Completion only after backend verification.
+
+Do not create button-click-only simulations, canned terminal outputs, frontend-only validation, or fabricated success messages.
+
+## 4. ROOM 13 — NETWORK INTRUSION DETECTION
+
+Build a practical network intrusion detection investigation.
+
+Include:
+- A realistic isolated network environment.
+- Actual network traffic or generated lab traffic.
+- Network intrusion patterns such as scanning, suspicious connections, and unusual communication.
+- PCAP evidence that learners can inspect.
+- Tools such as tcpdump, tshark, and Wireshark-compatible PCAP analysis.
+- Practical filtering and traffic interpretation.
+- Identification of suspicious source/destination addresses, ports, protocols, and behaviour.
+- A detection exercise requiring learners to identify an actual suspicious pattern.
+- Backend validation of the findings.
+
+The learner must investigate traffic rather than simply select a pre-written answer.
+
+## 5. ROOM 14 — THREAT HUNTING
+
+Build a practical threat-hunting investigation.
+
+Include:
+- A realistic fictional organisation and investigation scenario.
+- Actual log and telemetry datasets.
+- Process execution, authentication, network activity, and suspicious behaviour.
+- Command-line investigation using appropriate tools.
+- Search, filtering, correlation, and timeline reconstruction.
+- Identification of suspicious activity using evidence.
+- A hypothesis-driven hunting exercise.
+- Backend validation of the investigation results.
+
+The learner must form and investigate a threat hypothesis using actual evidence.
+
+## 6. ROOM 15 — INCIDENT TRIAGE
+
+Build a realistic security incident triage workflow.
+
+Include:
+- A realistic incident report and alert.
+- Supporting logs, timestamps, affected systems, and evidence.
+- Severity and priority assessment.
+- Identification of affected assets and potential impact.
+- Timeline reconstruction.
+- Distinction between confirmed facts, assumptions, and unknowns.
+- Incident classification and escalation decisions.
+- Backend validation of the triage outcome.
+
+The learner must make decisions based on evidence, not merely select a generic severity button.
+
+## 7. ROOM 16 — INCIDENT RESPONSE
+
+Build an end-to-end incident response practical.
+
+Include:
+- A realistic security incident scenario.
+- Detection and initial investigation.
+- Evidence preservation.
+- Containment decisions.
+- Eradication and recovery planning.
+- Verification that the incident has been contained.
+- Post-incident documentation and lessons learned.
+- Appropriate response commands or actions within the isolated lab.
+- Backend validation of the response sequence.
+
+All actions must remain within the isolated lab. Do not execute commands on the host machine or target real external systems.
+
+## 8. LEARNING AND VALIDATION
+
+Each room should have approximately six meaningful tasks:
+- Five practical tasks.
+- One knowledge assessment.
+
+Target approximately 350 XP per room, consistent with the existing Blue Team rooms.
+
+Requirements:
+- Validate practical actions on the backend.
+- Bind findings to the authenticated active session.
+- Do not expose completion flags through GET endpoints, static room definitions, frontend metadata, or evidence files.
+- Do not allow predictable tokens or manually supplied answers to bypass actual investigation requirements.
+- Require the relevant prerequisite actions before issuing completion.
+- Provide useful feedback and progressive hints.
+- Keep progress and completion independent between learners.
+
+## 9. EVIDENCE AND DATA AUTHENTICITY
+
+Use actual lab-generated traffic and activity wherever practical.
+
+For pre-seeded datasets:
+- Make them technically realistic.
+- Clearly identify them as prepared training evidence.
+- Ensure commands and investigation tools operate on the actual files.
+- Do not claim that synthetic or programmatically generated evidence is captured from live production traffic.
+
+Preserve the distinction between a realistic training simulation and a genuine live enterprise environment.
+
+## 10. TESTING REQUIREMENTS
+
+Run and report:
+
+1. Blue Team Rooms 13–16 unit tests.
+2. Docker integration tests for all four new rooms.
+3. Browser-terminal practical workflow tests.
+4. Cross-session isolation and impersonation tests.
+5. Flag leakage and backend validation tests.
+6. Session expiry and cleanup tests.
+7. Full regression tests covering existing Red Team and Blue Team Rooms 01–16.
+8. Existing authentication, GHOST AI, and platform regression tests.
+
+Clearly separate:
+- Unit/process-emulation test results.
+- Actual Docker integration test results.
+- Browser-terminal workflow test results.
+
+Do not report a Docker test as passed if it used process emulation or a mocked container.
+
+If tests are skipped, explain exactly why.
+
+## 11. FINAL STATUS REPORT
+
+At completion, report:
+- Rooms implemented.
+- Practical features and tools added.
+- Docker services and ports.
+- New or modified files.
+- Session isolation and security changes.
+- Unit test results.
+- Docker integration test results.
+- Browser-terminal test results.
+- Full regression results.
+- Any limitations or known issues.
+- Updated live academy room count.
+
+STOP after Blue Team Room 16.
+
+Do not implement Blue Team Rooms 17–20 yet.
+Do not start Purple Team.
+Do not start Detection Engineering.
+Do not execute Prompt 9.
+Do not perform the final deployment or final UI polish.
+
+Preserve all existing work and wait for the next instruction.
+</USER_REQUEST>
+<ADDITIONAL_METADATA>
+The current local time is: 2026-11-15T14:20:27+05:30.
+
+The user's current state is as follows:
+Active Document: d:\NO ENTRY\backend\app\db\database.py (LANGUAGE_UNSPECIFIED)
+Cursor is on line: 1
+Other open documents:
+- d:\NO ENTRY\docs\PROJECT_BRIEF.md (LANGUAGE_UNSPECIFIED)
+- d:\NO ENTRY\frontend\templates\mission_player.html (LANGUAGE_UNSPECIFIED)
+- d:\NO ENTRY\frontend\static\js\screens\missionPlayer.js (LANGUAGE_UNSPECIFIED)
+- d:\NO ENTRY\frontend\static\js\screens\missions.js (LANGUAGE_UNSPECIFIED)
+- d:\NO ENTRY\backend\tests\test_missions.py (LANGUAGE_UNSPECIFIED)
+</ADDITIONAL_METADATA>

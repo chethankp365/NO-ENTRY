@@ -145,7 +145,10 @@ class WatchController {
       if (Array.isArray(events)) {
         const tbody = document.getElementById('watchAlertsTbody');
         if (tbody) tbody.innerHTML = '';
+        const seen = new Set();
         events.forEach(evt => {
+          if (!evt || (evt.id && seen.has(evt.id))) return;
+          if (evt.id) seen.add(evt.id);
           this.eventsCache.set(evt.id, evt);
           this.appendAlertRow(evt, false);
         });
@@ -162,12 +165,18 @@ class WatchController {
       if (msg.type === 'event') {
         const evt = msg.data;
         if (!evt) return;
+        if (evt.id && this.eventsCache.has(evt.id)) return;
 
         this.eventsCache.set(evt.id, evt);
         this.onNewEvent(evt);
       } else if (msg.type === 'metrics') {
         if (msg.data && msg.data.events_per_second) {
           this.pushEps(msg.data.events_per_second);
+        }
+      } else if (msg.type === 'snapshot') {
+        const eps = msg.data?.events_per_second ?? msg.data?.metrics?.events_per_second;
+        if (eps != null) {
+          this.pushEps(eps);
         }
       }
     });
@@ -380,7 +389,7 @@ class WatchController {
 
         document.getElementById('drawerIntelScore').innerText = `${intel.abuse_confidence_score ?? 88}% THREAT`;
         document.getElementById('drawerIntelCountry').innerText = `${intel.country_name || 'Global'} (${intel.country_code || 'US'})`;
-        document.getElementById('drawerIntelIsp').innerText = `ISP: ${intel.isp || 'Host Provider'} &bull; Usage: ${intel.usage_type || 'Datacenter'}`;
+        document.getElementById('drawerIntelIsp').innerText = `ISP: ${intel.isp || 'Host Provider'} \u2022 Usage: ${intel.usage_type || 'Datacenter'}`;
 
         document.getElementById('drawerRawJson').innerText = JSON.stringify(data.raw_log || evt, null, 2);
       }
@@ -407,15 +416,25 @@ class WatchController {
     presetBtns.forEach(btn => {
       btn.addEventListener('click', () => {
         if (input) input.value = btn.dataset.query;
-        sound.keyClick();
+        try { sound.keyClick(); } catch (_) {}
         this.executeHunt(btn.dataset.query);
       });
     });
 
     if (runBtn && input) {
       runBtn.addEventListener('click', () => {
-        sound.keyClick();
+        try { sound.keyClick(); } catch (_) {}
         this.executeHunt(input.value);
+      });
+    }
+
+    if (input) {
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          try { sound.keyClick(); } catch (_) {}
+          this.executeHunt(input.value);
+        }
       });
     }
   }
@@ -424,6 +443,7 @@ class WatchController {
     const resultBox = document.getElementById('huntResultBox');
     const hitsText = document.getElementById('huntHitsText');
     const hypText = document.getElementById('huntHypothesisText');
+    const runBtn = document.getElementById('runHuntBtn');
 
     const cleanQuery = (queryStr || '').trim();
     if (!cleanQuery) {
@@ -431,14 +451,26 @@ class WatchController {
       return;
     }
 
+    const originalLabel = runBtn ? runBtn.innerText : 'RUN HUNT';
+    if (runBtn) {
+      runBtn.disabled = true;
+      runBtn.innerText = 'HUNTING...';
+    }
+
     try {
       const res = await api.post('/hunt', { query: cleanQuery });
+      if (res && Array.isArray(res.matched_events)) {
+        res.matched_events.forEach(evt => {
+          if (evt && evt.id) this.eventsCache.set(evt.id, evt);
+        });
+      }
       if (res && resultBox) {
         resultBox.classList.add('active');
         if (hitsText) hitsText.innerText = `HITS: ${res.hits} in ${res.timeframe}`;
         if (hypText) hypText.innerText = `Hypothesis: ${res.hypothesis}`;
 
         this.renderMiniHistogram(res.histogram || []);
+        resultBox.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       }
     } catch (err) {
       console.error('Hunt execution error:', err);
@@ -447,6 +479,11 @@ class WatchController {
         resultBox.classList.add('active');
         if (hitsText) hitsText.innerText = 'HITS: 0 (Error)';
         if (hypText) hypText.innerText = `Query Error: ${err.message}`;
+      }
+    } finally {
+      if (runBtn) {
+        runBtn.disabled = false;
+        runBtn.innerText = originalLabel || 'RUN HUNT';
       }
     }
   }

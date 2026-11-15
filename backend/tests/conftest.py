@@ -14,6 +14,7 @@ sys.path.insert(0, str(WORKSPACE_ROOT))
 os.environ["APP_ENV"] = "test"
 os.environ["AUTOPILOT_ENABLED"] = "false" # Keep test deterministic
 os.environ["DATABASE_URL"] = "sqlite:///:memory:"
+os.environ["ALLOW_PROCESS_EMULATION"] = "true"
 
 from backend.app.main import app
 from backend.app.db.database import get_session

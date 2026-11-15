@@ -1,0 +1,282 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // MISSIONS{% endblock %}
+{% block page_title %}MISSIONS // TRAINING SCENARIOS{% endblock %}
+{% block page_subtitle %}guided &amp; challenge operations - attack, detect with sigma, patch &amp; verify{% endblock %}
+
+{% block extra_head %}
+<style>
+  .missions-layout {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .missions-top-row {
+    display: grid;
+    grid-template-columns: 1.2fr 1fr 1fr;
+    gap: 14px;
+  }
+
+  .progress-bar-track {
+    width: 100%;
+    height: 8px;
+    background: #030508;
+    border: 1px solid var(--color-border);
+    margin-top: 8px;
+    overflow: hidden;
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--color-cyan), var(--color-green));
+    box-shadow: 0 0 12px var(--color-cyan-glow);
+    transition: width 0.6s ease;
+  }
+
+  .switch-group {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+  }
+
+  .switch-btn {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 6px 10px;
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    cursor: pointer;
+    letter-spacing: 1px;
+    transition: all 0.2s ease;
+  }
+
+  .switch-btn:hover {
+    border-color: var(--color-cyan);
+    color: #FFFFFF;
+  }
+
+  .switch-btn.active {
+    background: rgba(0, 229, 255, 0.14);
+    border-color: var(--color-cyan);
+    color: var(--color-cyan);
+    box-shadow: 0 0 10px var(--color-cyan-dim);
+  }
+
+  .ethics-gate-banner {
+    display: none;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 12px 16px;
+    background: rgba(255, 31, 61, 0.08);
+    border: 1px solid var(--color-red);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .ethics-gate-banner.visible {
+    display: flex;
+  }
+
+  .ethics-ok-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-green);
+    border: 1px solid rgba(0, 255, 106, 0.4);
+    padding: 3px 8px;
+    letter-spacing: 1px;
+  }
+
+  .missions-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+    perspective: 1100px;
+  }
+
+  @media (max-width: 1120px) {
+    .missions-top-row { grid-template-columns: 1fr; }
+    .missions-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  }
+
+  @media (max-width: 760px) {
+    .missions-grid { grid-template-columns: 1fr; }
+  }
+
+  .mission-card {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 12px;
+    position: relative;
+    transition: transform 0.18s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+    transform-style: preserve-3d;
+  }
+
+  .mission-card::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    width: 10px;
+    height: 10px;
+    border-top: 2px solid var(--color-red);
+    border-left: 2px solid var(--color-red);
+  }
+
+  .mission-card.is-done::before { border-color: var(--color-green); }
+
+  .mission-card:hover {
+    border-color: var(--color-red);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(255, 31, 61, 0.22);
+  }
+
+  .mission-card.is-done:hover {
+    border-color: var(--color-green);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.7), 0 0 16px rgba(0, 255, 106, 0.2);
+  }
+
+  .mission-card-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+
+  .mission-status-tag {
+    padding: 2px 7px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    border: 1px solid var(--color-border);
+  }
+
+  .mission-status-tag.NEW { color: var(--color-cyan); border-color: var(--color-cyan); }
+  .mission-status-tag.LOCKED { color: var(--color-red); border-color: var(--color-red); background: rgba(255, 31, 61, 0.12); }
+  .mission-status-tag.IN_PROGRESS { color: var(--color-yellow); border-color: var(--color-yellow); }
+  .mission-status-tag.DONE { color: var(--color-green); border-color: var(--color-green); background: rgba(0, 255, 106, 0.1); }
+
+  .mission-title {
+    font-family: var(--font-display);
+    font-size: 15px;
+    color: #FFFFFF;
+    margin: 4px 0 2px 0;
+    letter-spacing: 1px;
+  }
+
+  .mission-sub {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-cyan);
+    text-transform: uppercase;
+  }
+
+  .mission-desc {
+    font-family: var(--font-ui);
+    font-size: 13px;
+    color: var(--color-text-dim);
+    line-height: 1.45;
+  }
+
+  .mission-meta-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    font-family: var(--font-mono);
+    font-size: 10px;
+  }
+
+  .mitre-pill {
+    padding: 2px 6px;
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+  }
+
+  .mission-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 10px;
+    border-top: 1px solid var(--color-border);
+    font-family: var(--font-mono);
+    font-size: 11px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="missions-layout">
+  <!-- Mandatory Ethics Gate Alert (Hidden cleanly when ethics_accepted == true) -->
+  <div id="ethicsGateBanner" class="ethics-gate-banner">
+    <div>
+      <strong style="color:var(--color-red);">[!] ETHICS GATE LOCKED:</strong>
+      <span style="color:#FFFFFF;">Complete the mandatory 3-question isolated range safety &amp; ethics check on /docs before launching interactive attack missions.</span>
+    </div>
+    <a href="/docs#ethics" class="btn btn-red" style="padding:6px 14px; font-size:11px; white-space:nowrap;">UNLOCK ON /DOCS &gt;</a>
+  </div>
+
+  <!-- Top Control & Progress Row -->
+  <div class="missions-top-row">
+    <div class="panel" id="yourProgressCard">
+      <div class="panel-header" style="margin-bottom:8px;">
+        <span class="panel-title">YOUR PROGRESS</span>
+        <span id="ethicsStatusPill" class="ethics-ok-pill" style="display:none;">ETHICS VERIFIED</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; align-items:baseline;">
+        <div style="font-family:var(--font-display); font-size:20px; color:#FFFFFF;">
+          Missions cleared: <span id="clearedPctVal" style="color:var(--color-green);">0%</span>
+        </div>
+        <div style="font-family:var(--font-mono); font-size:11px; color:var(--color-cyan);">
+          <span id="clearedCountVal">0 / 5</span> &bull; <span id="userRankSummary">SCRIPT RUNNER (1,240 XP)</span>
+        </div>
+      </div>
+      <div class="progress-bar-track">
+        <div id="missionsProgressBar" class="progress-bar-fill"></div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header" style="margin-bottom:8px;">
+        <span class="panel-title">MISSION MODE</span>
+        <span id="modeDescTag" style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted);">HINTS ENABLED</span>
+      </div>
+      <div class="switch-group" id="modeSwitchGroup">
+        <button class="switch-btn active" data-mode="guided">GUIDED</button>
+        <button class="switch-btn" data-mode="challenge">CHALLENGE (+25% XP)</button>
+        <button class="switch-btn" data-mode="free_play">FREE PLAY</button>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="panel-header" style="margin-bottom:8px;">
+        <span class="panel-title">OPERATION TRACK</span>
+        <span id="trackDescTag" style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted);">FULL LOOP</span>
+      </div>
+      <div class="switch-group" id="trackSwitchGroup">
+        <button class="switch-btn active" data-track="purple">PURPLE (FULL)</button>
+        <button class="switch-btn" data-track="attacker">ATTACKER</button>
+        <button class="switch-btn" data-track="defender">DEFENDER</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5 Mission Cards Grid -->
+  <div id="missionsGrid" class="missions-grid">
+    <div style="font-family:var(--font-mono); font-size:12px; color:var(--color-muted);">Loading range mission catalog...</div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="/static/js/screens/missions.js"></script>
+{% endblock %}
+

@@ -1,0 +1,13 @@
+PAGE_DUMP_v2.4_NTFS_KERNEL_MEM
+SystemTime: 2026-11-02 12:02:18 UTC
+ActiveProcess: lsass.exe (PID 672)
+ThreatArtifact: mimikatz.exe sekurlsa::logonpasswords
+CrackedHash: svc_backup:AAD3B435B51404EEAAD3B435B51404EE:8846F7EAEE8FB117AD06BDD830B7586C
+CommandHistory: net user /domain, nltest /dclist:, rubeus.exe kerberoast
+TCP_Endpoints: 10.0.2.15:49218 -> 185.220.101.4:443 (ESTABLISHED)
+BeaconInterval: 45s (Jitter 15%)
+PayloadMemoryOffset: 0x0041F000
+Signature: CobaltStrike.Beacon.x64
+KernelState: UNMODIFIED
+DumpCompleted: TRUE
+EOF

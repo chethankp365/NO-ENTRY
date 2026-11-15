@@ -1,3 +1,10 @@
+# Secrets & Environment Files (Never commit real API keys or .env)
+.env
+backend/.env
+.env.*
+!.env.example
+!backend/.env.example
+
 # Python
 __pycache__/
 *.py[cod]

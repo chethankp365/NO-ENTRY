@@ -1,0 +1,11 @@
+MBR_SECTOR_0x00000000_NTFS_SYSTEM_RESERVED
+Offset 0x01BE: Partition 1 Bootable 0x80 System Type 0x07 (NTFS)
+Volume Label: OS_PRIMARY_WS01
+$MFT Record 0x000042: C:\Users\operator\Downloads\invoice_q4_confidential.xlsm
+$MFT Record 0x000043: C:\Windows\Temp\updater_svc.exe [Zone.Identifier: ZoneId=3]
+$LogFile Sequence: 0x992B104F Transaction Commit
+Prefetch: POWERSHELL.EXE-2A1F98B0.pf (Run count: 1, Last run: 12:00:14)
+VolumeShadowCopy: DELETED via vssadmin.exe delete shadows /all /quiet
+SectorStatus: PRESERVED_FOR_ANALYSIS
+HashSignature: SHA256_SEALED
+EOF

@@ -18,6 +18,13 @@ class PurpleTeamController {
     this.autoRunInterval = null;
     this.paths = [];
     this.isLoading = false;
+    this.loadPromise = null;
+    this.loadVersion = 0;
+    this.runToken = 0;
+    this.isAutoRunning = false;
+    this.finalEffectTimer = null;
+    this.glitchRemoveTimer = null;
+    this.transitionRedrawTimers = [];
   }
 
   async init() {
@@ -54,9 +61,8 @@ class PurpleTeamController {
     if (startBtn) {
       startBtn.addEventListener('click', async () => {
         try { sound.keyClick(); } catch (_) {}
-        if (this.autoRunInterval) {
+        if (this.autoRunInterval || this.isAutoRunning) {
           this.stopAutoRun();
-          startBtn.innerText = 'START RUN';
         } else {
           await this.startAutoRun();
         }
@@ -69,7 +75,15 @@ class PurpleTeamController {
       stepBtn.addEventListener('click', async () => {
         try { sound.keyClick(); } catch (_) {}
         this.stopAutoRun();
-        await this.step();
+        while (this.loadPromise) {
+          const p = this.loadPromise;
+          await p;
+          if (this.loadPromise === p) break;
+        }
+        if (!this.scenarioData) {
+          await this.loadScenario(this.currentScenario);
+        }
+        this.step();
       });
     }
 
@@ -83,23 +97,56 @@ class PurpleTeamController {
     }
   }
 
+  clearStepTimers() {
+    if (this.finalEffectTimer) {
+      clearTimeout(this.finalEffectTimer);
+      this.finalEffectTimer = null;
+    }
+    if (this.glitchRemoveTimer) {
+      clearTimeout(this.glitchRemoveTimer);
+      this.glitchRemoveTimer = null;
+    }
+    if (this.transitionRedrawTimers.length > 0) {
+      this.transitionRedrawTimers.forEach(t => clearTimeout(t));
+      this.transitionRedrawTimers = [];
+    }
+    const atkPanel = document.getElementById('attackerPanel');
+    if (atkPanel) atkPanel.classList.remove('glitch-active');
+  }
+
   async loadScenario(scenarioId) {
     this.stopAutoRun();
+    this.clearStepTimers();
     this.currentStep = 0;
     this.isLoading = true;
+    const version = ++this.loadVersion;
 
-    try {
-      const res = await api.post('/purple/run', { scenario: scenarioId });
-      this.scenarioData = res;
-      this.renderPairs();
-    } catch (err) {
-      console.error('Failed to load purple scenario:', err);
-      toast(`Failed to load purple scenario '${scenarioId}': ${err.message}`, 'danger');
-    } finally {
-      this.isLoading = false;
-      const startBtn = document.getElementById('startAutoRunBtn');
-      if (startBtn) startBtn.innerText = 'START RUN';
-    }
+    const p = (async () => {
+      try {
+        const res = await api.post('/purple/run', { scenario: scenarioId });
+        if (version !== this.loadVersion) return;
+        this.scenarioData = res;
+        this.renderPairs();
+      } catch (err) {
+        if (version !== this.loadVersion) return;
+        console.error('Failed to load purple scenario:', err);
+        toast(`Failed to load purple scenario '${scenarioId}': ${err.message}`, 'danger');
+      } finally {
+        if (version === this.loadVersion) {
+          this.isLoading = false;
+        }
+        if (this.loadPromise === p) {
+          this.loadPromise = null;
+        }
+        const startBtn = document.getElementById('startAutoRunBtn');
+        if (startBtn && !this.autoRunInterval && !this.isAutoRunning) {
+          startBtn.innerText = 'START RUN';
+        }
+      }
+    })();
+
+    this.loadPromise = p;
+    return p;
   }
 
   renderPairs() {
@@ -157,49 +204,79 @@ class PurpleTeamController {
 
   async startAutoRun() {
     this.stopAutoRun();
+    const token = ++this.runToken;
+    this.isAutoRunning = true;
+
+    const startBtn = document.getElementById('startAutoRunBtn');
+    if (startBtn) startBtn.innerText = 'LOADING...';
+
+    while (this.loadPromise) {
+      const p = this.loadPromise;
+      await p;
+      if (this.loadPromise === p) break;
+    }
+    if (!this.isAutoRunning || token !== this.runToken) return;
 
     if (!this.scenarioData) {
       await this.loadScenario(this.currentScenario);
+      // Note: loadScenario stops auto run; if it reloaded fresh, re-arm below only if needed
+      if (!this.scenarioData) {
+        this.stopAutoRun();
+        return;
+      }
+      this.isAutoRunning = true;
+      this.runToken = token;
     }
 
-    this.replay();
+    this.resetScenarioView();
 
-    const startBtn = document.getElementById('startAutoRunBtn');
     if (startBtn) startBtn.innerText = 'PAUSE';
 
-    this.step();
+    const firstHasMore = this.step();
+    if (!firstHasMore) {
+      this.stopAutoRun();
+      return;
+    }
+
     this.autoRunInterval = setInterval(() => {
       const more = this.step();
       if (!more) {
         this.stopAutoRun();
-        if (startBtn) startBtn.innerText = 'START RUN';
       }
     }, 1800);
   }
 
-  stopAutoRun() {
+  stopAutoRun(clearTimers = false) {
     if (this.autoRunInterval) {
       clearInterval(this.autoRunInterval);
       this.autoRunInterval = null;
+    }
+    this.isAutoRunning = false;
+    this.runToken++;
+    if (clearTimers) {
+      this.clearStepTimers();
     }
     const startBtn = document.getElementById('startAutoRunBtn');
     if (startBtn) startBtn.innerText = 'START RUN';
   }
 
-  replay() {
-    this.stopAutoRun();
+  resetScenarioView() {
+    this.clearStepTimers();
     this.currentStep = 0;
     this.renderPairs();
-    const startBtn = document.getElementById('startAutoRunBtn');
-    if (startBtn) startBtn.innerText = 'START RUN';
+  }
+
+  replay() {
+    this.stopAutoRun();
+    this.resetScenarioView();
   }
 
   step() {
-    if (!this.scenarioData || !this.scenarioData.pairs) return false;
+    if (!this.scenarioData || !this.scenarioData.pairs || this.scenarioData.pairs.length === 0) return false;
     const pairs = this.scenarioData.pairs;
 
     if (this.currentStep >= pairs.length) {
-      this.replay();
+      this.resetScenarioView();
     }
 
     const idx = this.currentStep;
@@ -214,16 +291,19 @@ class PurpleTeamController {
     // Audio cue
     try { sound.blip(750 + idx * 90, 0.08); } catch (_) {}
 
-    // Draw connecting bezier curve
+    // Draw connecting bezier curve and re-align after 0.4s CSS translateX transition
     if (atkCard && defCard) {
       this.drawConnector(atkCard, defCard, pair.link_id);
       atkCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
       defCard.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      const redrawTimer = setTimeout(() => this.redrawConnectors(), 420);
+      this.transitionRedrawTimers.push(redrawTimer);
     }
 
     // Check if final step (blocked)
     if (idx === pairs.length - 1) {
-      setTimeout(() => {
+      this.finalEffectTimer = setTimeout(() => {
+        this.finalEffectTimer = null;
         if (atkCard) atkCard.classList.add('blocked-alert');
         if (defCard) defCard.classList.add('contained');
 
@@ -236,7 +316,8 @@ class PurpleTeamController {
           screenShake(8, 450);
         } catch (_) {}
 
-        setTimeout(() => {
+        this.glitchRemoveTimer = setTimeout(() => {
+          this.glitchRemoveTimer = null;
           if (atkPanel) atkPanel.classList.remove('glitch-active');
         }, 600);
       }, 500);
@@ -279,16 +360,25 @@ class PurpleTeamController {
     svg.appendChild(path);
 
     this.paths.push({ path, atkEl, defEl });
+    this.redrawConnectors();
   }
 
   redrawConnectors() {
     const splitArea = document.getElementById('purpleSplitArea');
     if (!splitArea) return;
     const areaRect = splitArea.getBoundingClientRect();
+    const atkScroll = document.getElementById('attackerLinesScroll');
+    const defScroll = document.getElementById('defenderLinesScroll');
+    const atkBounds = atkScroll ? atkScroll.getBoundingClientRect() : null;
+    const defBounds = defScroll ? defScroll.getBoundingClientRect() : null;
 
     this.paths.forEach(({ path, atkEl, defEl }) => {
       const atkRect = atkEl.getBoundingClientRect();
       const defRect = defEl.getBoundingClientRect();
+
+      const atkHidden = atkBounds && (atkRect.bottom <= atkBounds.top || atkRect.top >= atkBounds.bottom);
+      const defHidden = defBounds && (defRect.bottom <= defBounds.top || defRect.top >= defBounds.bottom);
+      path.style.opacity = (atkHidden || defHidden) ? '0' : '0.85';
 
       const x1 = atkRect.right - areaRect.left;
       const y1 = atkRect.top + atkRect.height / 2 - areaRect.top;

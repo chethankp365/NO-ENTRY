@@ -82,3 +82,24 @@
   --z-cursor: 100;
   --z-toast: 110;
 }
+
+/* Optional User-Selected Visual Themes (from /docs Settings) */
+:root[data-theme="stealth-amber"] {
+  --color-red: #FF9100;
+  --color-red-dim: rgba(255, 145, 0, 0.16);
+  --color-red-glow: rgba(255, 145, 0, 0.5);
+  --color-border-glow: rgba(255, 145, 0, 0.4);
+  --color-cyan: #FFE57F;
+  --color-cyan-dim: rgba(255, 229, 127, 0.14);
+  --color-cyan-glow: rgba(255, 229, 127, 0.45);
+}
+
+:root[data-theme="phosphor-green"] {
+  --color-red: #00E676;
+  --color-red-dim: rgba(0, 230, 118, 0.16);
+  --color-red-glow: rgba(0, 230, 118, 0.5);
+  --color-border-glow: rgba(0, 230, 118, 0.4);
+  --color-cyan: #69F0AE;
+  --color-cyan-dim: rgba(105, 240, 174, 0.14);
+  --color-cyan-glow: rgba(105, 240, 174, 0.45);
+}
