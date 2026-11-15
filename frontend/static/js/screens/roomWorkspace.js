@@ -1,8 +1,11 @@
 /**
  * NO ENTRY Academy Room Workspace
- * TryHackMe-style hands-on room interface.
- * Connects concept theory, interactive tasks, lab session controls, and xterm.js terminal.
+ * Cinematic, hands-on cybersecurity training room interface.
+ * Connects concept theory, interactive tasks, lab session controls,
+ * simulated/Docker target services, xterm.js terminal, and audio-visual feedback.
  */
+
+import { sound } from '../core/sound.js';
 
 let currentRoom = null;
 let currentLabSession = null;
@@ -10,20 +13,93 @@ let terminal = null;
 let termFitAddon = null;
 let termSocket = null;
 let timerInterval = null;
+let currentInputLine = '';
 
 const containerEl = document.querySelector('.workspace-container');
 const roomId = containerEl ? containerEl.dataset.roomId : null;
 
-async function initRoomWorkspace() {
+export async function initRoomWorkspace() {
   if (!roomId) return;
 
   setupConceptToggle();
   setupLabButtons();
-  setupQuickCommands();
+  setupModalControls();
 
   await loadRoomData();
   await checkLabStatus();
   initTerminal();
+  setupQuickCommands();
+  setupEvidenceDrawer();
+}
+
+// ---------------------------------------------------------------------------
+// MODALS SETUP (Briefing, Mission Accomplished, Evidence Drawer)
+// ---------------------------------------------------------------------------
+
+function setupModalControls() {
+  // 1. Mission Briefing Modal
+  const btnOpenBriefing = document.getElementById('btnOpenBriefing');
+  const btnCommence = document.getElementById('btnCommenceMission');
+  const briefingModal = document.getElementById('missionBriefingModal');
+
+  if (btnOpenBriefing && briefingModal) {
+    btnOpenBriefing.addEventListener('click', () => {
+      sound.keyClick();
+      briefingModal.style.display = 'flex';
+    });
+  }
+
+  if (btnCommence && briefingModal) {
+    btnCommence.addEventListener('click', () => {
+      sound.bootHum();
+      briefingModal.style.display = 'none';
+      sessionStorage.setItem(`briefing_seen_${roomId}`, 'true');
+    });
+  }
+
+  // 2. Mission Accomplished Modal
+  const accomplishedModal = document.getElementById('missionAccomplishedModal');
+  const btnReview = document.getElementById('btnReviewWorkspace');
+
+  if (btnReview && accomplishedModal) {
+    btnReview.addEventListener('click', () => {
+      sound.keyClick();
+      accomplishedModal.style.display = 'none';
+    });
+  }
+
+  // 3. Evidence Drawer
+  const btnOpenEvidence = document.getElementById('btnOpenEvidence');
+  const btnCloseEvidence = document.getElementById('btnCloseEvidence');
+  const evidenceDrawer = document.getElementById('evidenceDrawerModal');
+
+  if (btnOpenEvidence && evidenceDrawer) {
+    btnOpenEvidence.addEventListener('click', () => {
+      sound.keyClick();
+      evidenceDrawer.style.display = 'flex';
+    });
+  }
+
+  if (btnCloseEvidence && evidenceDrawer) {
+    btnCloseEvidence.addEventListener('click', () => {
+      evidenceDrawer.style.display = 'none';
+    });
+  }
+
+  // Copy Evidence Command
+  const btnCopyEvidence = document.getElementById('btnCopyEvidenceCmd');
+  if (btnCopyEvidence) {
+    btnCopyEvidence.addEventListener('click', () => {
+      const filePath = document.getElementById('evidenceFilePath')?.textContent || '';
+      const cmd = `cat ${filePath}`;
+      navigator.clipboard.writeText(cmd).then(() => {
+        const origText = btnCopyEvidence.textContent;
+        btnCopyEvidence.textContent = '✓ COPIED';
+        sound.alertBlip();
+        setTimeout(() => { btnCopyEvidence.textContent = origText; }, 1800);
+      }).catch(() => {});
+    });
+  }
 }
 
 function setupConceptToggle() {
@@ -33,6 +109,7 @@ function setupConceptToggle() {
 
   if (header && content) {
     header.addEventListener('click', () => {
+      sound.keyClick();
       const isHidden = content.style.display === 'none';
       content.style.display = isHidden ? 'block' : 'none';
       if (icon) icon.innerHTML = isHidden ? '&#9660;' : '&#9654;';
@@ -40,21 +117,47 @@ function setupConceptToggle() {
   }
 }
 
+// ---------------------------------------------------------------------------
+// DATA FETCHING & UI POPULATION
+// ---------------------------------------------------------------------------
+
 async function loadRoomData() {
   try {
     const res = await fetch(`/api/academy/rooms/${roomId}`);
     if (!res.ok) {
-      alert(`Error loading room: ${res.statusText}`);
+      console.error(`Error loading room: ${res.statusText}`);
       return;
     }
     currentRoom = await res.json();
+    applyTrackTheme();
     renderRoomHeader();
     renderConcept();
     renderTasks();
+    populateMissionBriefing();
     updateProgress();
+
+    // Auto-display Mission Briefing on first entry
+    if (!sessionStorage.getItem(`briefing_seen_${roomId}`)) {
+      setTimeout(() => {
+        const briefingModal = document.getElementById('missionBriefingModal');
+        if (briefingModal) {
+          briefingModal.style.display = 'flex';
+          sound.alertBlip();
+        }
+      }, 350);
+    }
   } catch (err) {
     console.error('Failed to load room details:', err);
   }
+}
+
+function applyTrackTheme() {
+  if (!currentRoom || !containerEl) return;
+  const rawTrack = (currentRoom.track || 'blue').toLowerCase();
+  const trackTheme = rawTrack.startsWith('detect') ? 'detection' : rawTrack;
+
+  containerEl.classList.remove('theme-red', 'theme-blue', 'theme-purple', 'theme-detection', 'theme-cyan');
+  containerEl.classList.add(`theme-${trackTheme}`);
 }
 
 function renderRoomHeader() {
@@ -66,13 +169,66 @@ function renderRoomHeader() {
   const diffBadge = document.getElementById('roomDifficultyBadge');
   const durBadge = document.getElementById('roomDurationBadge');
   const xpBadge = document.getElementById('roomXpBadge');
+  const trackHudPill = document.getElementById('trackHudPill');
 
-  if (trackBreadcrumb) trackBreadcrumb.textContent = `${currentRoom.track.toUpperCase()} TEAM`;
-  if (numberBreadcrumb) numberBreadcrumb.textContent = `ROOM ${String(currentRoom.room_number).padStart(2, '0')}`;
+  const rawTrack = (currentRoom.track || 'SECURITY').toUpperCase();
+  const roomNum = String(currentRoom.room_number || 1).padStart(2, '0');
+
+  if (trackBreadcrumb) trackBreadcrumb.textContent = `${rawTrack} TRACK`;
+  if (numberBreadcrumb) numberBreadcrumb.textContent = `ROOM ${roomNum}`;
   if (titleText) titleText.textContent = currentRoom.title;
   if (diffBadge) diffBadge.textContent = currentRoom.difficulty;
   if (durBadge) durBadge.textContent = currentRoom.estimated_duration;
   if (xpBadge) xpBadge.textContent = `+${currentRoom.total_xp} XP`;
+
+  if (trackHudPill) {
+    if (rawTrack.includes('RED')) {
+      trackHudPill.textContent = 'RED // ATTACK VECTOR';
+    } else if (rawTrack.includes('BLUE')) {
+      trackHudPill.textContent = 'BLUE // DEFENSE MATRIX';
+    } else if (rawTrack.includes('PURPLE')) {
+      trackHudPill.textContent = 'PURPLE // ADVERSARY EMULATION';
+    } else if (rawTrack.includes('DETECT')) {
+      trackHudPill.textContent = 'DETECTION // ENGINE ACTIVE';
+    } else {
+      trackHudPill.textContent = `${rawTrack} // ACTIVE`;
+    }
+  }
+}
+
+function populateMissionBriefing() {
+  if (!currentRoom) return;
+
+  const rawTrack = (currentRoom.track || 'SECURITY').toUpperCase();
+  const roomNum = String(currentRoom.room_number || 1).padStart(2, '0');
+
+  const trackBadge = document.getElementById('briefingTrackBadge');
+  const idChip = document.getElementById('briefingIdChip');
+  const titleText = document.getElementById('briefingTitleText');
+  const descText = document.getElementById('briefingDescText');
+  const diffEl = document.getElementById('briefingDifficulty');
+  const durEl = document.getElementById('briefingDuration');
+  const xpEl = document.getElementById('briefingXp');
+  const targetEl = document.getElementById('briefingTarget');
+  const objList = document.getElementById('briefingObjectivesList');
+
+  if (trackBadge) trackBadge.textContent = `${rawTrack} TEAM ENGAGEMENT`;
+  if (idChip) idChip.textContent = `ROOM ${roomNum}`;
+  if (titleText) titleText.textContent = currentRoom.title;
+  if (descText) descText.textContent = currentRoom.description || (currentRoom.concept ? currentRoom.concept.why_it_matters : 'Operational parameters initialized.');
+  if (diffEl) diffEl.textContent = currentRoom.difficulty;
+  if (durEl) durEl.textContent = currentRoom.estimated_duration;
+  if (xpEl) xpEl.textContent = `+${currentRoom.total_xp} XP`;
+  if (targetEl) targetEl.textContent = currentLabSession ? `${currentLabSession.target_ip}:${currentLabSession.target_port}` : '10.10.14.90';
+
+  if (objList && currentRoom.learning_objectives && currentRoom.learning_objectives.length > 0) {
+    objList.innerHTML = currentRoom.learning_objectives.map(obj => `
+      <li style="display:flex;align-items:flex-start;gap:8px;margin-bottom:6px;">
+        <span style="color:var(--track-accent);font-weight:bold;">▶</span>
+        <span>${obj}</span>
+      </li>
+    `).join('');
+  }
 }
 
 function renderConcept() {
@@ -129,7 +285,7 @@ function renderTasks() {
     } else {
       inputAreaHtml = `
         <div class="task-input-row">
-          <input type="text" class="task-input" id="input_${task.task_id}" placeholder="${task.question || 'Enter flag or answer...'}" value="${task.is_completed ? '[COMPLETED]' : ''}" ${task.is_completed ? 'disabled' : ''}>
+          <input type="text" class="task-input" id="input_${task.task_id}" placeholder="${task.question || 'Enter flag, value, or command...'}" value="${task.is_completed ? '[COMPLETED]' : ''}" ${task.is_completed ? 'disabled' : ''}>
           <button class="btn-submit-task" data-task-id="${task.task_id}" data-type="text" ${task.is_completed ? 'disabled' : ''}>${task.is_completed ? 'SOLVED' : 'SUBMIT'}</button>
         </div>
       `;
@@ -196,6 +352,9 @@ async function handleTaskSubmit(taskId, type) {
     const result = await res.json();
 
     if (result.is_correct) {
+      sound.xpBurst();
+      showXpToast(result.earned_xp || task.xp_reward || 50);
+
       if (feedbackBox) {
         feedbackBox.textContent = `[+] ${result.feedback} (+${result.earned_xp} XP)`;
         feedbackBox.classList.add('success');
@@ -214,10 +373,11 @@ async function handleTaskSubmit(taskId, type) {
 
       if (result.room_completed) {
         setTimeout(() => {
-          alert(`🏆 CONGRATULATIONS! You have completed Room: ${currentRoom.title}!\nTotal XP Earned: +${currentRoom.total_xp} XP!`);
-        }, 300);
+          showMissionAccomplishedModal();
+        }, 600);
       }
     } else {
+      sound.alertBlip();
       if (feedbackBox) {
         feedbackBox.textContent = `[-] ${result.feedback}`;
         feedbackBox.classList.add('error');
@@ -230,6 +390,66 @@ async function handleTaskSubmit(taskId, type) {
   } catch (err) {
     console.error('Task submission error:', err);
   }
+}
+
+function showXpToast(amount) {
+  const toast = document.getElementById('xpToastNotification');
+  const toastText = document.getElementById('xpToastText');
+  if (!toast) return;
+
+  if (toastText) toastText.textContent = `+${amount} XP EARNED`;
+  toast.style.display = 'flex';
+  toast.classList.add('show');
+
+  setTimeout(() => {
+    toast.classList.remove('show');
+    setTimeout(() => { toast.style.display = 'none'; }, 300);
+  }, 2200);
+}
+
+function showMissionAccomplishedModal() {
+  sound.victoryChime();
+  const modal = document.getElementById('missionAccomplishedModal');
+  if (!modal || !currentRoom) return;
+
+  const roomTitleEl = document.getElementById('accomplishedRoomTitle');
+  const xpEarnedEl = document.getElementById('accomplishedXpEarned');
+  const btnNext = document.getElementById('btnNextRoom');
+
+  if (roomTitleEl) roomTitleEl.textContent = currentRoom.title;
+  if (xpEarnedEl) xpEarnedEl.textContent = `+${currentRoom.total_xp} XP`;
+
+  // Compute Next Room URL
+  const track = (currentRoom.track || 'red').toLowerCase();
+  const num = currentRoom.room_number || 1;
+  let nextUrl = '/academy';
+
+  if (num < 20) {
+    const nextNum = String(num + 1).padStart(2, '0');
+    if (track.startsWith('red')) nextUrl = `/academy/red-${nextNum}`;
+    else if (track.startsWith('blue')) nextUrl = `/academy/blue-${nextNum}`;
+    else if (track.startsWith('purple')) nextUrl = `/academy/purple-${nextNum}`;
+    else if (track.startsWith('detect')) nextUrl = `/academy/detect-${nextNum}`;
+  } else {
+    // End of track transition
+    if (track.startsWith('red')) nextUrl = '/academy/blue-01';
+    else if (track.startsWith('blue')) nextUrl = '/academy/purple-01';
+    else if (track.startsWith('purple')) nextUrl = '/academy/detect-01';
+    else if (track.startsWith('detect')) nextUrl = '/command-center';
+  }
+
+  if (btnNext) {
+    if (track.startsWith('detect') && num >= 20) {
+      btnNext.textContent = 'CLEARANCE COMPLETE // RETURN TO COMMAND CENTER';
+    } else {
+      btnNext.textContent = 'PROCEED TO NEXT MISSION >>';
+    }
+    btnNext.onclick = () => {
+      window.location.href = nextUrl;
+    };
+  }
+
+  modal.style.display = 'flex';
 }
 
 function updateProgress() {
@@ -282,6 +502,7 @@ async function checkLabStatus() {
 async function startLabSession() {
   const btnStart = document.getElementById('btnStartLab');
   if (btnStart) btnStart.textContent = 'SPAWNING...';
+  sound.keyClick();
 
   try {
     const res = await fetch(`/api/academy/labs/${roomId}/start`, { method: 'POST' });
@@ -291,7 +512,6 @@ async function startLabSession() {
       const statusTitle = detail.error || 'DOCKER_ERROR';
       const errMsg = detail.message || 'Failed to start lab session.';
       const guidance = detail.guidance ? `\n\nGUIDANCE: ${detail.guidance}` : '';
-      alert(`[${statusTitle}]\n${errMsg}${guidance}`);
 
       if (terminal) {
         terminal.writeln(`\r\n\x1b[31m[-] [${statusTitle}] ${errMsg}\x1b[0m`);
@@ -302,9 +522,10 @@ async function startLabSession() {
       return;
     }
     currentLabSession = await res.json();
+    sound.bootHum();
     updateLabUI();
     if (terminal) {
-      terminal.writeln('\r\n\x1b[32m[+] Isolated Docker lab environment ready! Connecting...\x1b[0m\r\n');
+      terminal.writeln('\r\n\x1b[32m[+] Lab environment ready! Target online.\x1b[0m\r\n');
     }
     reconnectTerminalWebSocket();
   } catch (err) {
@@ -315,7 +536,8 @@ async function startLabSession() {
 }
 
 async function resetLabSession() {
-  if (!confirm('Are you sure you want to reset the lab database to its initial state?')) return;
+  sound.keyClick();
+  if (!confirm('Are you sure you want to reset the lab database to its initial clean state?')) return;
   try {
     const res = await fetch(`/api/academy/labs/${roomId}/reset`, { method: 'POST' });
     if (res.ok) {
@@ -329,12 +551,13 @@ async function resetLabSession() {
 }
 
 async function stopLabSession() {
+  sound.keyClick();
   try {
     const res = await fetch(`/api/academy/labs/${roomId}/stop`, { method: 'POST' });
     if (res.ok) {
       currentLabSession = null;
       updateLabUI();
-      if (terminal) terminal.writeln('\r\n\x1b[31m[-] Lab session stopped and containers destroyed.\x1b[0m\r\n');
+      if (terminal) terminal.writeln('\r\n\x1b[31m[-] Lab session stopped and resources destroyed.\x1b[0m\r\n');
     }
   } catch (err) {
     console.error('Failed to stop lab:', err);
@@ -351,7 +574,6 @@ function updateLabUI() {
     if (targetIpEl) targetIpEl.textContent = `${currentLabSession.target_ip}:${currentLabSession.target_port}`;
     if (webLink) {
       if (currentLabSession.runner_mode === 'docker') {
-        // In Docker mode, target is strictly isolated inside the private bridge network
         webLink.style.display = 'none';
       } else {
         webLink.href = currentLabSession.target_url || `http://127.0.0.1:${currentLabSession.target_port}`;
@@ -411,7 +633,96 @@ function startTimer(seconds) {
 }
 
 // ---------------------------------------------------------------------------
-// XTERM.JS TERMINAL INTEGRATION
+// EVIDENCE DATASET DRAWER
+// ---------------------------------------------------------------------------
+
+function setupEvidenceDrawer() {
+  const filePathEl = document.getElementById('evidenceFilePath');
+  const contentPre = document.getElementById('evidenceContentPre');
+  if (!filePathEl || !contentPre || !currentRoom) return;
+
+  const track = (currentRoom.track || 'blue').toLowerCase();
+  const roomNum = currentRoom.room_number || 1;
+  const numPadded = String(roomNum).padStart(2, '0');
+
+  let filePath = '';
+  let content = '';
+
+  if (track.startsWith('red')) {
+    filePath = `/home/operator/targets/room_${numPadded}/recon_telemetry.json`;
+    content = JSON.stringify({
+      target_host: "10.10.14.90",
+      active_ports: [80, 443, 8080 + (roomNum % 25)],
+      detected_os: "Linux 6.1.0-custom-hardened",
+      service_banners: {
+        http: "Apache/2.4.52 (Ubuntu)",
+        custom_daemon: "NO_ENTRY_EXPLOIT_TARGET_v1.4"
+      },
+      vulnerability_indicators: [
+        `CWE-${100 + roomNum * 12}: Potential vector detected in input validation`,
+        "Session authentication token bypass possible on /api/v1/debug"
+      ],
+      capture_timestamp: new Date().toISOString()
+    }, null, 2);
+  } else if (track.startsWith('blue')) {
+    filePath = `/var/log/telemetry/incident_capture_${numPadded}.json`;
+    content = JSON.stringify({
+      incident_id: `INC-2026-${numPadded}`,
+      sensor_source: "SOC_EDR_AGENT_PRIMARY",
+      event_type: "PROCESS_INJECTION_OR_SUSPICIOUS_EXECUTION",
+      severity: "HIGH",
+      telemetry: {
+        host: "CORP-WKS-042",
+        parent_process: "powershell.exe",
+        command_line: "-NoP -NonI -W Hidden -Exec Bypass -EncodedCommand SQBFAFgA...",
+        source_ip: "198.51.100.42",
+        destination_ip: "10.10.14.90"
+      },
+      recommended_action: "ISOLATE_HOST_AND_EXTRACT_MEMORY"
+    }, null, 2);
+  } else if (track.startsWith('purple')) {
+    filePath = `/opt/adversary_emulation/plans/apt_${numPadded}_adversary.yml`;
+    content = `# NO ENTRY PURPLE TEAM // ADVERSARY EMULATION PLAN
+technique_id: "T1059.00${roomNum % 10}"
+tactic: "Execution / Persistence"
+adversary_profile: "APT-VOLT-STORM-${numPadded}"
+emulation_steps:
+  - step: 1
+    name: "Foothold Execution"
+    command: "curl -s http://10.10.14.90:${8300 + roomNum}/api/emulate/trigger"
+    expected_telemetry: "Sysmon EventID 1"
+  - step: 2
+    name: "Detection Validation"
+    endpoint: "http://10.10.14.90:${8300 + roomNum}/api/converge/metrics"
+    pass_criteria: "detection_gap_rate == 0.0"`;
+  } else {
+    filePath = `/etc/detection_rules/detect_${numPadded}_sigma.yml`;
+    content = `title: "NO_ENTRY_DETECT_${numPadded}_AnomalousExecution"
+status: experimental
+description: "Detects anomalous adversary execution pattern in detection engineering lab ${roomNum}"
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection:
+    Image|endswith:
+      - '/python3'
+      - '/bash'
+    CommandLine|contains:
+      - 'pipeline_tool.py'
+      - 'eval_rule'
+  condition: selection
+level: high
+falsepositives:
+  - Legitimate security automation pipelines`;
+  }
+
+  filePathEl.textContent = filePath;
+  contentPre.textContent = content;
+}
+
+// ---------------------------------------------------------------------------
+// XTERM.JS TERMINAL INTEGRATION & EASTER EGGS
 // ---------------------------------------------------------------------------
 
 function initTerminal() {
@@ -431,7 +742,7 @@ function initTerminal() {
       green: '#00FF6A',
       yellow: '#FFE600',
       blue: '#00E5FF',
-      magenta: '#bd00ff',
+      magenta: '#A855F7',
       cyan: '#00E5FF',
       white: '#ffffff',
     },
@@ -454,15 +765,94 @@ function initTerminal() {
   };
   setTimeout(updateSize, 100);
 
+  // Buffer user keypresses for Easter Egg interception
   terminal.onData(data => {
+    sound.keyClick();
+
+    if (data === '\r' || data === '\n') {
+      const trimmed = currentInputLine.trim().toLowerCase();
+      currentInputLine = '';
+
+      if (handleEasterEggCommand(trimmed)) {
+        return;
+      }
+    } else if (data === '\u007F' || data === '\b') {
+      currentInputLine = currentInputLine.slice(0, -1);
+    } else if (data.length === 1 && data >= ' ') {
+      currentInputLine += data;
+    }
+
     if (termSocket && termSocket.readyState === WebSocket.OPEN) {
       termSocket.send(JSON.stringify({ type: 'input', data: data }));
     }
   });
 
   window.addEventListener('resize', updateSize);
-
   reconnectTerminalWebSocket();
+}
+
+function handleEasterEggCommand(cmd) {
+  if (!terminal) return false;
+
+  if (cmd === 'matrix') {
+    terminal.writeln('\r\n\x1b[32m[INITIALIZING NEURAL MATRIX STREAM...]\x1b[0m');
+    sound.alertBlip();
+    let count = 0;
+    const matrixChars = 'ｦｱｳｴｵｶｷｹｺｻｼｽｾｿﾀﾂﾃﾅﾆﾇﾈﾊﾋﾎﾏﾐﾑﾒﾓﾔﾕﾗﾘﾜ1234567890ABCDEF';
+    const interval = setInterval(() => {
+      let line = '  ';
+      for (let i = 0; i < 48; i++) {
+        line += matrixChars[Math.floor(Math.random() * matrixChars.length)];
+      }
+      terminal.writeln(`\x1b[32m${line}\x1b[0m`);
+      count++;
+      if (count > 12) {
+        clearInterval(interval);
+        terminal.writeln('\r\n\x1b[32m[+] "Wake up, Neo... The Matrix has you. Follow the white rabbit, Operator."\x1b[0m\r\noperator@noentry-box:~$ ');
+      }
+    }, 90);
+    return true;
+  }
+
+  if (cmd === 'hack_the_planet' || cmd === 'hack-the-planet') {
+    sound.victoryChime();
+    terminal.writeln('\r\n\x1b[36m[+] "Mess with the best, die like the rest. HACK THE PLANET!" — Zero Cool (1995)\x1b[0m\r\noperator@noentry-box:~$ ');
+    return true;
+  }
+
+  if (cmd === 'ghost --whoami' || cmd === 'ghost') {
+    sound.bootHum();
+    terminal.writeln('\r\n\x1b[35m[GHOST COGNITIVE AI SENTINEL // NODE GH-9021-ALPHA]');
+    terminal.writeln('  Clearance:   OMNI-RESTRICTED');
+    terminal.writeln('  Providers:   Groq / Gemini / OpenRouter / Local Fallback');
+    terminal.writeln('  Neural Link: ONLINE // TELEMETRY CONTINUOUSLY INDEXED');
+    terminal.writeln('  Message:     "I observe every packet, Operator. Keep hunting."\x1b[0m\r\noperator@noentry-box:~$ ');
+    return true;
+  }
+
+  if (cmd.startsWith('sudo rm -rf') || cmd === 'sudo su' || cmd === 'sudo') {
+    sound.alertBlip();
+    terminal.writeln('\r\n\x1b[31m[-] [NO ENTRY KERNEL SECURITY ENFORCER]\r\n    Nice try, Operator. This incident will be reported to Santa Claus and the SOC.\x1b[0m\r\noperator@noentry-box:~$ ');
+    return true;
+  }
+
+  if (cmd === 'ne --stats' || cmd === 'noentry --stats') {
+    sound.xpBurst();
+    terminal.writeln('\r\n\x1b[32m=====================================================');
+    terminal.writeln('   NO ENTRY CYBERSECURITY TRAINING ACADEMY // STATS');
+    terminal.writeln('=====================================================');
+    terminal.writeln('   Total Operational Rooms:  80 / 80 (100% Complete)');
+    terminal.writeln('   - Red Team:              20 / 20');
+    terminal.writeln('   - Blue Team:             20 / 20');
+    terminal.writeln('   - Purple Team:           20 / 20');
+    terminal.writeln('   - Detection Engineering: 20 / 20');
+    terminal.writeln('   Lab Engine:              Zero-Trust Docker Network Bridge');
+    terminal.writeln('   AI Supervisor:           GHOST Multi-Provider System');
+    terminal.writeln('=====================================================\x1b[0m\r\noperator@noentry-box:~$ ');
+    return true;
+  }
+
+  return false;
 }
 
 function reconnectTerminalWebSocket() {
@@ -491,323 +881,39 @@ function reconnectTerminalWebSocket() {
   };
 }
 
+// ---------------------------------------------------------------------------
+// DYNAMIC QUICK PROBES (ALL 80 ROOMS)
+// ---------------------------------------------------------------------------
+
 function setupQuickCommands() {
-  const bar = document.querySelector('.quick-cmd-bar');
-  if (bar && roomId) {
-    let buttons = [];
-    if (roomId.startsWith('blue-01') || roomId.includes('blue-team-foundations') || roomId.includes('soc-fundamentals')) {
-      buttons = [
-        { label: 'curl soc events (:8201)', cmd: 'curl -s http://10.10.14.90:8201/api/soc/events' },
-        { label: 'python soc_query.py', cmd: 'python3 /home/operator/tools/soc_query.py' },
-        { label: 'curl siem alerts', cmd: 'curl -s http://10.10.14.90:8201/api/soc/alerts' },
-        { label: 'curl post triage', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"event_id\":\"EVT-1003\",\"classification\":\"TRUE_POSITIVE\",\"severity\":\"HIGH\"}' http://10.10.14.90:8201/api/soc/triage" },
-        { label: 'curl post challenge', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"incident_id\":\"INC-2026-01\",\"timeline_entry\":\"DC_BRUTEFORCE_SUCCESS\",\"dc_host\":\"DC-VOLT01\"}' http://10.10.14.90:8201/challenge" },
-        { label: 'curl post remediate', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"block_ip\":\"198.51.100.42\",\"action\":\"CONTAIN_SESSION\"}' http://10.10.14.90:8201/api/soc/remediate" },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-02') || roomId.includes('windows-security') || roomId.includes('windows-event-logs')) {
-      buttons = [
-        { label: 'curl logon events (:8202)', cmd: 'curl -s http://10.10.14.90:8202/api/windows/events/logon' },
-        { label: 'python parse_evtx.py', cmd: 'python3 /home/operator/tools/parse_evtx.py' },
-        { label: 'curl privilege audit', cmd: 'curl -s http://10.10.14.90:8202/api/windows/events/privileged' },
-        { label: 'curl post challenge', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"audit_type\":\"SEDEBUG_PRIVILEGE\",\"user\":\"corp\\\\operator\",\"status\":\"REVOKED\"}' http://10.10.14.90:8202/challenge" },
-        { label: 'curl post remediate', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"lockout_threshold\":5,\"reset_duration_mins\":30}' http://10.10.14.90:8202/api/windows/remediate" },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-03') || roomId.includes('linux-security') || roomId.includes('linux-log-analysis')) {
-      buttons = [
-        { label: 'cat /var/log/auth.log', cmd: 'cat /var/log/auth.log' },
-        { label: 'curl ssh auth logs (:8203)', cmd: 'curl -s http://10.10.14.90:8203/api/linux/logs/auth' },
-        { label: 'curl sudo logs', cmd: 'curl -s http://10.10.14.90:8203/api/linux/logs/sudo' },
-        { label: 'curl post challenge', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"attacker_ip\":\"192.0.2.144\",\"service\":\"ssh\",\"action\":\"BLOCK_AND_LOG\"}' http://10.10.14.90:8203/challenge" },
-        { label: 'curl post remediate', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"harden_ssh\":true,\"enable_fail2ban\":true}' http://10.10.14.90:8203/api/linux/remediate" },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-04') || roomId.includes('traffic-analysis') || roomId.includes('wireshark-packets')) {
-      buttons = [
-        { label: 'tcpdump -r incident_capture.pcap', cmd: 'tcpdump -nn -r /home/operator/pcaps/incident_capture.pcap' },
-        { label: 'curl pcap summary (:8204)', cmd: 'curl -s http://10.10.14.90:8204/api/traffic/summary' },
-        { label: 'curl dns exfil analysis', cmd: 'curl -s http://10.10.14.90:8204/api/traffic/dns-exfil' },
-        { label: 'curl post challenge', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"covert_channel\":\"dns\",\"tunnel_domain\":\"exfil-chunk-data.corp.noentry.internal\"}' http://10.10.14.90:8204/challenge" },
-        { label: 'curl post remediate', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"enforce_tls\":true,\"sinkhole_malicious_dns\":true}' http://10.10.14.90:8204/api/traffic/remediate" },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-05') || roomId.includes('wireshark-fundamentals') || roomId.includes('wireshark-packets')) {
-      buttons = [
-        { label: 'tshark pcap summary', cmd: 'tshark -r /home/operator/pcaps/suspicious_http_dns.pcap -c 10' },
-        { label: 'tshark HTTP requests', cmd: 'tshark -r /home/operator/pcaps/suspicious_http_dns.pcap -Y "http.request" -T fields -e http.host -e http.request.uri' },
-        { label: 'curl pcap summary (:8205)', cmd: 'curl -s http://10.10.14.90:8205/api/pcap/summary' },
-        { label: 'curl http streams (:8205)', cmd: 'curl -s http://10.10.14.90:8205/api/pcap/streams/http' },
-        { label: 'curl dns queries (:8205)', cmd: 'curl -s http://10.10.14.90:8205/api/pcap/queries/dns' },
-        { label: 'curl tcp flags (:8205)', cmd: 'curl -s http://10.10.14.90:8205/api/pcap/handshake/tcp' },
-        { label: 'curl post challenge', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"suspicious_domain":"c2-beacon.corp.noentry.internal","filter":"dns.qry.name contains \\"c2-beacon\\""}\' http://10.10.14.90:8205/challenge' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-06') || roomId.includes('log-analysis-fundamentals') || roomId.includes('log-analysis')) {
-      buttons = [
-        { label: 'cat nginx access.log', cmd: 'cat /var/log/nginx/access.log | head -n 15' },
-        { label: 'awk status codes', cmd: "awk '{print $9}' /var/log/nginx/access.log | sort | uniq -c" },
-        { label: 'grep 404 access.log', cmd: 'grep " 404 " /var/log/nginx/access.log' },
-        { label: 'grep CRITICAL app.log', cmd: 'grep "CRITICAL" /var/log/app/app.log' },
-        { label: 'curl nginx summary (:8206)', cmd: 'curl -s http://10.10.14.90:8206/api/logs/nginx/summary' },
-        { label: 'curl app critical (:8206)', cmd: 'curl -s http://10.10.14.90:8206/api/logs/app/critical' },
-        { label: 'curl post challenge', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"attacker_ip":"203.0.113.88","log_level":"CRITICAL"}\' http://10.10.14.90:8206/challenge' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-07') || roomId.includes('siem-fundamentals') || roomId.includes('siem-splunk-elk')) {
-      buttons = [
-        { label: 'python siem_query.py', cmd: 'python3 /home/operator/tools/siem_query.py' },
-        { label: 'curl siem search (:8207)', cmd: 'curl -s http://10.10.14.90:8207/api/siem/search' },
-        { label: 'curl siem alerts (:8207)', cmd: 'curl -s http://10.10.14.90:8207/api/siem/alerts' },
-        { label: 'curl filter high severity', cmd: 'curl -s "http://10.10.14.90:8207/api/siem/alerts?severity=HIGH"' },
-        { label: 'curl post custom rule', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"rule_name":"RULE_ANOMALOUS_EGRESS","condition":"bytes_out > 10000000","severity":"HIGH"}\' http://10.10.14.90:8207/api/siem/rules' },
-        { label: 'curl post challenge', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"alert_id":"ALRT-701","rule_name":"RULE_BRUTE_FORCE_EXFIL","priority":"CRITICAL"}\' http://10.10.14.90:8207/challenge' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-08') || roomId.includes('windows-event-investigation') || roomId.includes('windows-event-logs')) {
-      buttons = [
-        { label: 'python investigate_win_events.py', cmd: 'python3 /home/operator/tools/investigate_win_events.py' },
-        { label: 'curl process events (:8208)', cmd: 'curl -s http://10.10.14.90:8208/api/winevent/process' },
-        { label: 'curl group events (:8208)', cmd: 'curl -s http://10.10.14.90:8208/api/winevent/groups' },
-        { label: 'curl scriptblock events (:8208)', cmd: 'curl -s http://10.10.14.90:8208/api/winevent/scriptblock' },
-        { label: 'curl antiforensics (:8208)', cmd: 'curl -s http://10.10.14.90:8208/api/winevent/antiforensics' },
-        { label: 'curl post challenge', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"tamper_event_id":1102,"malicious_process":"powershell.exe","added_group":"Administrators"}\' http://10.10.14.90:8208/challenge' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-09') || roomId.includes('bruteforce')) {
-      buttons = [
-        { label: 'python detect_bruteforce.py', cmd: 'python3 /home/operator/tools/detect_bruteforce.py' },
-        { label: 'cat auth_bruteforce.log', cmd: 'cat /var/log/auth_bruteforce.log' },
-        { label: 'curl auth telemetry (:8209)', cmd: 'curl -s http://10.10.14.90:8209/api/auth/telemetry' },
-        { label: 'curl spray indicators (:8209)', cmd: 'curl -s http://10.10.14.90:8209/api/auth/spray-indicators' },
-        { label: 'deploy siem rule (:8209)', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"rule_name":"RULE_AUTH_BURST_SPRAY","threshold":5,"group_by":"source_ip"}\' http://10.10.14.90:8209/api/auth/rules' },
-        { label: 'curl post challenge (:8209)', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"source_ip":"198.51.100.55","attack_type":"PASSWORD_SPRAY","targeted_accounts_count":12}\' http://10.10.14.90:8209/challenge' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-10') || roomId.includes('malware')) {
-      buttons = [
-        { label: 'python yara_scanner.py', cmd: 'python3 /home/operator/tools/yara_scanner.py /home/operator/samples/dropper_sample.bin' },
-        { label: 'strings dropper_sample.bin', cmd: 'strings /home/operator/samples/dropper_sample.bin' },
-        { label: 'curl samples (:8210)', cmd: 'curl -s http://10.10.14.90:8210/api/malware/samples' },
-        { label: 'curl dropper headers (:8210)', cmd: 'curl -s http://10.10.14.90:8210/api/malware/sample/dropper/headers' },
-        { label: 'validate yara (:8210)', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"rule_text":"rule Dropper_VoltStage_Win32 { strings: $a = \\"VoltStage2_Payload\\" condition: $a }"}\' http://10.10.14.90:8210/api/malware/yara/validate' },
-        { label: 'curl post challenge (:8210)', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"sample_hash":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855","c2_url":"http://c2-stage.voltcorp.internal/gate.php","persistence_mechanism":"Registry RunKey"}\' http://10.10.14.90:8210/challenge' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-11') || roomId.includes('phishing')) {
-      buttons = [
-        { label: 'python inspect_email.py', cmd: 'python3 /home/operator/tools/inspect_email.py /home/operator/emails/password_reset.eml' },
-        { label: 'cat password_reset.eml', cmd: 'cat /home/operator/emails/password_reset.eml' },
-        { label: 'curl emails (:8211)', cmd: 'curl -s http://10.10.14.90:8211/api/phishing/emails' },
-        { label: 'curl headers EML-2026-02 (:8211)', cmd: 'curl -s http://10.10.14.90:8211/api/phishing/headers/EML-2026-02' },
-        { label: 'post triage (:8211)', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"email_id":"EML-2026-02","threat_category":"SPEAR_PHISHING","spoofed_domain":"v0ltcorp.internal"}\' http://10.10.14.90:8211/api/phishing/triage' },
-        { label: 'curl post challenge (:8211)', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"email_id":"EML-2026-02","dmarc_result":"FAIL","lookalike_domain":"v0ltcorp.internal","remediation_action":"PURGE_AND_BLOCK"}\' http://10.10.14.90:8211/challenge' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.startsWith('blue-12') || roomId.includes('endpoint')) {
-      buttons = [
-        { label: 'python edr_query.py', cmd: 'python3 /home/operator/tools/edr_query.py' },
-        { label: 'cat endpoint_events.json', cmd: 'cat /home/operator/endpoint_telemetry/endpoint_events.json' },
-        { label: 'curl processes (:8212)', cmd: 'curl -s http://10.10.14.90:8212/api/endpoint/telemetry/processes' },
-        { label: 'curl network sockets (:8212)', cmd: 'curl -s http://10.10.14.90:8212/api/endpoint/telemetry/network' },
-        { label: 'deploy edr rule (:8212)', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"parent_process":"winword.exe","child_process":"powershell.exe"}\' http://10.10.14.90:8212/api/endpoint/rules' },
-        { label: 'curl post challenge (:8212)', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d \'{"malicious_pid":4812,"parent_process":"winword.exe","lolbin":"powershell.exe","c2_ip":"198.51.100.88"}\' http://10.10.14.90:8212/challenge' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('01') || roomId.includes('foundations')) {
-      buttons = [
-        { label: 'ls assets/', cmd: 'ls -la /home/operator/assets/' },
-        { label: 'read backup_codes.txt', cmd: 'cat /home/operator/assets/backup_codes.txt' },
-        { label: 'read cia_scenario.txt', cmd: 'cat /home/operator/assets/cia_scenario.txt' },
-        { label: 'curl asset audit (:8081)', cmd: 'curl -s http://10.10.14.90:8081/audit' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('02') || roomId.includes('linux')) {
-      buttons = [
-        { label: 'pwd', cmd: 'pwd' },
-        { label: 'whoami', cmd: 'whoami' },
-        { label: 'ls challenges/', cmd: 'ls -la /home/operator/challenges/' },
-        { label: 'chmod +x script', cmd: 'chmod +x /home/operator/challenges/restricted_script.sh && /home/operator/challenges/restricted_script.sh' },
-        { label: 'ps aux | grep agent', cmd: 'ps aux | grep shadow_agent' },
-        { label: 'grep SECURITY_FLAG', cmd: 'grep SECURITY_FLAG /home/operator/challenges/system_telemetry.log' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('03') || roomId.includes('network')) {
-      buttons = [
-        { label: 'ip addr', cmd: 'ip addr show eth0' },
-        { label: 'nc tcp:9001', cmd: 'nc 10.10.14.90 9001' },
-        { label: 'curl network-info (:8080)', cmd: 'curl -s http://10.10.14.90:8080/network-info' },
-        { label: 'curl status (:8080)', cmd: 'curl -s http://10.10.14.90:8080/status' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('04') || roomId.includes('recon')) {
-      buttons = [
-        { label: 'curl -I (:8090)', cmd: 'curl -I http://10.10.14.90:8090/' },
-        { label: 'curl robots.txt', cmd: 'curl -s http://10.10.14.90:8090/robots.txt' },
-        { label: 'curl staging admin', cmd: 'curl -s http://10.10.14.90:8090/admin-portal-staging-7712/' },
-        { label: 'curl health API', cmd: 'curl -s http://10.10.14.90:8090/api/v1/health' },
-        { label: 'curl internal-docs', cmd: 'curl -s http://10.10.14.90:8090/api/v1/internal-docs' },
-        { label: 'curl database_credentials.bak', cmd: 'curl -s http://10.10.14.90:8090/secret-assets/database_credentials.bak' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('05') || roomId.includes('scan')) {
-      buttons = [
-        { label: 'nmap -sn 10.10.14.0/24', cmd: 'nmap -sn 10.10.14.0/24' },
-        { label: 'nmap -sT 10.10.14.90', cmd: 'nmap -sT 10.10.14.90' },
-        { label: 'curl scan-status (:8085)', cmd: 'curl -s http://10.10.14.90:8085/scan-status' },
-        { label: 'curl challenge (:8085)', cmd: 'curl -s http://10.10.14.90:8085/challenge' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('06') || roomId.includes('enum')) {
-      buttons = [
-        { label: 'nc ftp:2121', cmd: 'nc 10.10.14.90 2121' },
-        { label: 'nc ssh:2222', cmd: 'nc 10.10.14.90 2222' },
-        { label: 'curl -I enum (:8086)', cmd: 'curl -I http://10.10.14.90:8086/' },
-        { label: 'curl services (:8086)', cmd: 'curl -s http://10.10.14.90:8086/api/v1/services' },
-        { label: 'curl admin-internal', cmd: 'curl -s http://10.10.14.90:8086/admin-internal/' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('07') || roomId.includes('vuln')) {
-      buttons = [
-        { label: 'curl components (:8087)', cmd: 'curl -s http://10.10.14.90:8087/api/components' },
-        { label: 'cat cve_catalog.json', cmd: 'cat /home/operator/vuln_db/cve_catalog.json' },
-        { label: 'python3 vuln_audit.py', cmd: 'python3 /home/operator/tools/vuln_audit.py' },
-        { label: 'curl report (:8087)', cmd: 'curl -s http://10.10.14.90:8087/audit/report' },
-        { label: 'curl apply patch', cmd: "curl -s -X POST http://10.10.14.90:8087/audit/remediate -d 'action=apply_patch&cve=CVE-2024-2104'" },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('08') || roomId.includes('web')) {
-      buttons = [
-        { label: 'curl root (:8088)', cmd: 'curl -s http://10.10.14.90:8088/' },
-        { label: 'curl login POST', cmd: 'curl -s -X POST http://10.10.14.90:8088/api/auth/login -d "username=operator&password=voltpass123"' },
-        { label: 'curl profile (no cookie)', cmd: 'curl -s http://10.10.14.90:8088/api/profile' },
-        { label: 'curl profile (with cookie)', cmd: 'curl -s -b "session_id=op_sess_88291a" http://10.10.14.90:8088/api/profile' },
-        { label: 'curl PUT item 42', cmd: 'curl -s -X PUT http://10.10.14.90:8088/api/items/42 -H "Content-Type: application/json" -d \'{"price": 0.00}\'' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('09') || roomId.includes('sqli')) {
-      buttons = [
-        { label: "test quote injection", cmd: "curl -s \"http://10.10.14.90:8089/products?category=Hardware'\"" },
-        { label: "auth bypass OR 1=1", cmd: "curl -s \"http://10.10.14.90:8089/products?category=Hardware'%20OR%201=1--\"" },
-        { label: "UNION SELECT users", cmd: "curl -s \"http://10.10.14.90:8089/products?category='%20UNION%20SELECT%201,username,password,role%20FROM%20users--\"" },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('10') || roomId.includes('xss')) {
-      buttons = [
-        { label: 'curl reflected XSS (:8091)', cmd: 'curl -s "http://10.10.14.90:8091/reflected?q=<script>alert(1)</script>"' },
-        { label: 'curl stored comment', cmd: 'curl -s -X POST http://10.10.14.90:8091/comments -d "author=attacker&comment=<script>alert(1)</script>"' },
-        { label: 'curl context challenge', cmd: 'curl -s "http://10.10.14.90:8091/challenge?theme=\\"onmouseover=\\"alert(1)"' },
-        { label: 'curl POST remediate', cmd: 'curl -s -X POST http://10.10.14.90:8091/remediate' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('11') || roomId.includes('auth')) {
-      buttons = [
-        { label: 'cat passwords.txt', cmd: 'cat /home/operator/wordlists/passwords.txt' },
-        { label: 'curl dictionary login (:8092)', cmd: 'curl -s -X POST http://10.10.14.90:8092/api/login -d "username=support&password=voltcorp2024"' },
-        { label: 'curl telemetry logs', cmd: 'curl -s http://10.10.14.90:8092/api/logs' },
-        { label: 'curl verify policy challenge', cmd: 'curl -s "http://10.10.14.90:8092/challenge?action=verify_policy"' },
-        { label: 'curl POST remediate', cmd: 'curl -s -X POST http://10.10.14.90:8092/api/remediate' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('12') || roomId.includes('access')) {
-      buttons = [
-        { label: 'curl IDOR doc 101 (:8093)', cmd: "curl -s -H 'Authorization: Bearer bob_token' http://10.10.14.90:8093/api/documents/101" },
-        { label: 'curl vertical admin users', cmd: "curl -s -H 'Authorization: Bearer bob_token' http://10.10.14.90:8093/api/admin/users" },
-        { label: 'curl BOLA challenge', cmd: 'curl -s "http://10.10.14.90:8093/challenge?account_id=101"' },
-        { label: 'curl POST remediate', cmd: 'curl -s -X POST http://10.10.14.90:8093/api/remediate' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('13') || roomId.includes('upload')) {
-      buttons = [
-        { label: 'ls uploads/', cmd: 'ls -la /home/operator/uploads/' },
-        { label: 'curl bypass upload (:8094)', cmd: "curl -s -F 'file=@/home/operator/uploads/poc.php.png' http://10.10.14.90:8094/api/upload" },
-        { label: 'curl path traversal upload', cmd: "curl -s -F 'file=@/home/operator/uploads/avatar.png;filename=../../uploads/poc.txt' http://10.10.14.90:8094/api/upload" },
-        { label: 'curl MIME challenge', cmd: 'curl -s "http://10.10.14.90:8094/challenge?mime=application/x-php"' },
-        { label: 'curl POST remediate', cmd: 'curl -s -X POST http://10.10.14.90:8094/api/remediate' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('14') || roomId.includes('command')) {
-      buttons = [
-        { label: 'curl ping probe (:8095)', cmd: "curl -s 'http://10.10.14.90:8095/api/diagnostics/ping?host=127.0.0.1%3Bid'" },
-        { label: 'curl DNS chain', cmd: "curl -s 'http://10.10.14.90:8095/api/diagnostics/dns?domain=target.noentry.internal%26%26whoami'" },
-        { label: 'curl breakout challenge', cmd: "curl -s 'http://10.10.14.90:8095/challenge?probe=127.0.0.1%24(whoami)'" },
-        { label: 'curl POST remediate', cmd: 'curl -s -X POST http://10.10.14.90:8095/api/remediate' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('15') || roomId.includes('traversal')) {
-      buttons = [
-        { label: 'curl view vault (:8096)', cmd: "curl -s 'http://10.10.14.90:8096/api/files/view?file=../../vault/recovery.key'" },
-        { label: 'curl arbitrary download', cmd: "curl -s 'http://10.10.14.90:8096/api/files/download?file=/etc/telemetry.log'" },
-        { label: 'curl encoded challenge', cmd: "curl -s 'http://10.10.14.90:8096/challenge?doc=%2e%2e%2fsecret'" },
-        { label: 'curl POST remediate', cmd: 'curl -s -X POST http://10.10.14.90:8096/api/remediate' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('16') || roomId.includes('password')) {
-      buttons = [
-        { label: 'cat hashes.txt', cmd: 'cat /home/operator/hashes/hashes.txt' },
-        { label: 'curl dump users (:8097)', cmd: 'curl -s http://10.10.14.90:8097/api/users/dump' },
-        { label: 'curl verify login', cmd: 'curl -s -X POST http://10.10.14.90:8097/api/verify -H "Content-Type: application/json" -d \'{"username":"alice","password":"password"}\'' },
-        { label: 'curl bcrypt challenge', cmd: "curl -s 'http://10.10.14.90:8097/challenge?algorithm=bcrypt'" },
-        { label: 'curl POST remediate', cmd: 'curl -s -X POST http://10.10.14.90:8097/api/remediate' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('17') || roomId.includes('privesc')) {
-      buttons = [
-        { label: 'sh privesc_audit.sh', cmd: 'sh /home/operator/tools/privesc_audit.sh' },
-        { label: 'curl system audit (:8098)', cmd: 'curl -s http://10.10.14.90:8098/api/system/audit' },
-        { label: 'curl sudo check', cmd: "curl -s 'http://10.10.14.90:8098/api/sudo/check?user=backup_svc'" },
-        { label: 'curl simulate escalate', cmd: 'curl -s -X POST http://10.10.14.90:8098/api/escalate/simulate -H "Content-Type: application/json" -d \'{"command":"whoami"}\'' },
-        { label: 'curl vector challenge', cmd: "curl -s 'http://10.10.14.90:8098/challenge?vector=suid'" },
-        { label: 'curl POST remediate', cmd: 'curl -s -X POST http://10.10.14.90:8098/api/remediate' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('18') || roomId.includes('active-directory') || roomId.includes('ad')) {
-      buttons = [
-        { label: 'curl domain hierarchy (:8099)', cmd: 'curl -s http://10.10.14.90:8099/api/ad/domain' },
-        { label: 'python ldap_query.py', cmd: 'python3 /home/operator/tools/ad_ldap_query.py' },
-        { label: 'curl request TGT', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"username\":\"svc_backup\"}' http://10.10.14.90:8099/api/ad/kerberos/request_tgt" },
-        { label: 'curl audit challenge', cmd: "curl -s 'http://10.10.14.90:8099/challenge?audit=spn'" },
-        { label: 'curl POST remediate', cmd: 'curl -s -X POST http://10.10.14.90:8099/api/ad/remediate' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('19') || roomId.includes('exploitation') || roomId.includes('exploit')) {
-      buttons = [
-        { label: 'python exploit_runner.py (:8100)', cmd: 'python3 /home/operator/tools/exploit_runner.py' },
-        { label: 'curl post recon', cmd: "curl -s 'http://10.10.14.90:8100/api/post/recon?session=sess_post_99182'" },
-        { label: 'curl persist marker', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"session\":\"sess_post_99182\",\"mechanism\":\"cron\"}' http://10.10.14.90:8100/api/post/persist" },
-        { label: 'curl lateral challenge', cmd: "curl -s 'http://10.10.14.90:8100/challenge?stage=lateral'" },
-        { label: 'curl POST remediate', cmd: 'curl -s -X POST http://10.10.14.90:8100/api/remediate' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    } else if (roomId.includes('20') || roomId.includes('capstone')) {
-      buttons = [
-        { label: 'curl scope ROE (:8101)', cmd: 'curl -s http://10.10.14.90:8101/api/capstone/scope' },
-        { label: 'curl recon gateway', cmd: 'curl -s http://10.10.14.90:8101/api/capstone/recon' },
-        { label: 'curl exploit foothold', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"action\":\"foothold\"}' http://10.10.14.90:8101/api/capstone/exploit" },
-        { label: 'curl privesc root', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"technique\":\"suid\"}' http://10.10.14.90:8101/api/capstone/privesc" },
-        { label: 'curl submit report', cmd: 'curl -s -X POST -H "Content-Type: application/json" -d @/home/operator/capstone/report_template.json http://10.10.14.90:8101/api/capstone/report' },
-        { label: 'clear', cmd: 'clear' },
-      ];
-    }
+  const bar = document.getElementById('quickCmdBar');
+  if (!bar || !roomId) return;
 
-    if (buttons.length > 0) {
-      bar.innerHTML = '<span style="font-family:var(--font-mono);font-size:10px;color:#64748b;align-self:center;">QUICK PROBES:</span>';
-      buttons.forEach(b => {
-        const btnEl = document.createElement('button');
-        btnEl.className = 'btn-quick-cmd';
-        btnEl.dataset.cmd = b.cmd;
-        btnEl.textContent = b.label;
-        bar.appendChild(btnEl);
-      });
-    }
-  }
+  const track = (currentRoom ? currentRoom.track : 'red').toLowerCase();
+  const roomNum = currentRoom ? currentRoom.room_number : 1;
+  const port = currentLabSession ? currentLabSession.target_port : (8080 + roomNum);
 
-  document.querySelectorAll('.btn-quick-cmd').forEach(btn => {
+  let buttons = getQuickProbes(roomId, track, roomNum, port);
+
+  bar.innerHTML = '<span style="font-family:var(--font-mono);font-size:10px;color:#64748b;align-self:center;">QUICK PROBES:</span>';
+  buttons.forEach(b => {
+    const btnEl = document.createElement('button');
+    btnEl.className = 'btn-quick-cmd';
+    btnEl.dataset.cmd = b.cmd;
+    btnEl.textContent = b.label;
+    bar.appendChild(btnEl);
+  });
+
+  bar.querySelectorAll('.btn-quick-cmd').forEach(btn => {
     btn.addEventListener('click', () => {
+      sound.keyClick();
       const cmd = btn.dataset.cmd;
       if (!cmd || !terminal) return;
       if (cmd === 'clear') {
         terminal.clear();
+        return;
+      }
+      if (handleEasterEggCommand(cmd)) {
         return;
       }
       if (termSocket && termSocket.readyState === WebSocket.OPEN) {
@@ -815,6 +921,58 @@ function setupQuickCommands() {
       }
     });
   });
+}
+
+function getQuickProbes(rId, track, num, port) {
+  // Check exact room overrides first
+  if (rId.startsWith('blue-01')) {
+    return [
+      { label: 'curl soc events (:8201)', cmd: 'curl -s http://10.10.14.90:8201/api/soc/events' },
+      { label: 'python soc_query.py', cmd: 'python3 /home/operator/tools/soc_query.py' },
+      { label: 'curl siem alerts', cmd: 'curl -s http://10.10.14.90:8201/api/soc/alerts' },
+      { label: 'curl post triage', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"event_id\":\"EVT-1003\",\"classification\":\"TRUE_POSITIVE\",\"severity\":\"HIGH\"}' http://10.10.14.90:8201/api/soc/triage" },
+      { label: 'clear', cmd: 'clear' },
+    ];
+  }
+
+  if (rId.startsWith('purple-')) {
+    return [
+      { label: `curl status (:${port})`, cmd: `curl -s http://10.10.14.90:${port}/api/emulate/status` },
+      { label: 'python emulate_threat.py', cmd: 'python3 /home/operator/tools/emulate_threat.py' },
+      { label: 'curl trigger attack', cmd: `curl -s -X POST http://10.10.14.90:${port}/api/emulate/trigger` },
+      { label: 'curl converge metrics', cmd: `curl -s http://10.10.14.90:${port}/api/converge/metrics` },
+      { label: 'ghost --whoami', cmd: 'ghost --whoami' },
+      { label: 'clear', cmd: 'clear' },
+    ];
+  }
+
+  if (rId.startsWith('detect-')) {
+    return [
+      { label: 'python pipeline_tool.py lint', cmd: 'python3 /home/operator/tools/pipeline_tool.py lint' },
+      { label: 'python pipeline_tool.py test', cmd: 'python3 /home/operator/tools/pipeline_tool.py test' },
+      { label: `curl rules status (:${port})`, cmd: `curl -s http://10.10.14.90:${port}/api/rules/status` },
+      { label: 'ne --stats', cmd: 'ne --stats' },
+      { label: 'clear', cmd: 'clear' },
+    ];
+  }
+
+  if (rId.startsWith('red-')) {
+    return [
+      { label: `curl target (:${port})`, cmd: `curl -s http://10.10.14.90:${port}/` },
+      { label: 'whoami && id', cmd: 'whoami && id' },
+      { label: 'ls -la /home/operator', cmd: 'ls -la /home/operator/' },
+      { label: 'hack_the_planet', cmd: 'hack_the_planet' },
+      { label: 'clear', cmd: 'clear' },
+    ];
+  }
+
+  // Fallback defaults for any other room
+  return [
+    { label: `curl target (:${port})`, cmd: `curl -s http://10.10.14.90:${port}/` },
+    { label: 'ls /home/operator', cmd: 'ls -la /home/operator/' },
+    { label: 'ne --stats', cmd: 'ne --stats' },
+    { label: 'clear', cmd: 'clear' },
+  ];
 }
 
 document.addEventListener('DOMContentLoaded', initRoomWorkspace);

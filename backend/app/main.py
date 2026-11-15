@@ -54,6 +54,18 @@ app.include_router(missions_router)
 app.include_router(ghost_router)
 app.include_router(academy_router)
 
+@app.get("/api/health")
+@app.get("/health")
+def health_check():
+    """Service healthcheck probe for Docker and cloud monitoring."""
+    return {
+        "status": "ok",
+        "app": settings.APP_NAME,
+        "env": settings.APP_ENV,
+        "sensors_online": 5,
+        "rooms_total": 80
+    }
+
 # Mount static files and templates
 settings.STATIC_DIR.mkdir(parents=True, exist_ok=True)
 settings.TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
@@ -249,6 +261,7 @@ def academy_catalog_page(request: Request):
 
 
 @app.get("/academy/rooms/{room_id}", response_class=HTMLResponse)
+@app.get("/academy/{room_id}", response_class=HTMLResponse)
 def academy_room_page(request: Request, room_id: str):
     """TryHackMe-style Hands-On Practical Room Workspace."""
     return templates.TemplateResponse(

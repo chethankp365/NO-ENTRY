@@ -8,11 +8,11 @@ The NO ENTRY Cybersecurity Academy contains **80 practical hands-on rooms** stru
 
 | Track | Focus | Room Count | Available |
 | :--- | :--- | :---: | :---: |
-| **RED TEAM** | Offensive operations, exploitation, privilege escalation, web security | 20 | 20 (Rooms 01–20 Complete) |
-| **BLUE TEAM** | SOC analysis, traffic triage, memory forensics, incident response | 20 | 12 (Rooms 01–12 Complete) |
-| **PURPLE TEAM** | Threat emulation, MITRE mapping, detection validation, gap analysis | 20 | 0 (Planned) |
-| **DETECTION ENGINEERING** | Detection-as-code, Sigma rules, log normalization, CI/CD pipelines | 20 | 0 (Planned) |
-| **TOTAL** | **Comprehensive Full-Spectrum Cybersecurity Academy** | **80** | **32 Implemented (Docker Isolated Container Runtime), 48 Planned** |
+| **RED TEAM** | Offensive operations, exploitation, privilege escalation, web security | 20 | **20 (Rooms 01–20 Complete)** |
+| **BLUE TEAM** | SOC analysis, traffic triage, memory forensics, incident response | 20 | **20 (Rooms 01–20 Complete)** |
+| **PURPLE TEAM** | Threat emulation, MITRE mapping, detection validation, gap analysis | 20 | **20 (Rooms 01–20 Complete)** |
+| **DETECTION ENGINEERING** | Detection-as-code, Sigma rules, log normalization, CI/CD pipelines | 20 | **20 (Rooms 01–20 Complete)** |
+| **TOTAL** | **Comprehensive Full-Spectrum Cybersecurity Academy** | **80** | **80 Implemented (100% Complete across all 4 Tracks)** |
 
 ---
 

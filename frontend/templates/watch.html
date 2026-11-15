@@ -296,6 +296,310 @@
     gap: 10px;
   }
 
+  /* 60s Live Attack Replay Modal */
+  .live-attack-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(2, 4, 8, 0.94);
+    backdrop-filter: blur(10px);
+    z-index: 9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+
+  .live-attack-window {
+    width: 1200px;
+    max-width: 95vw;
+    height: 90vh;
+    background: #06090e;
+    border: 1px solid var(--color-red);
+    box-shadow: 0 0 40px rgba(255, 31, 61, 0.25), inset 0 0 20px rgba(0, 0, 0, 0.8);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+
+  .live-attack-header {
+    background: #04060A;
+    border-bottom: 1px solid var(--color-border);
+    padding: 12px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .live-attack-title-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .live-attack-badge {
+    background: rgba(255, 31, 61, 0.2);
+    border: 1px solid var(--color-red);
+    color: var(--color-red);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    letter-spacing: 1px;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .live-attack-pulse-dot {
+    width: 6px;
+    height: 6px;
+    background: var(--color-red);
+    border-radius: 50%;
+    animation: livePulse 1s infinite alternate;
+  }
+
+  @keyframes livePulse {
+    from { opacity: 0.3; transform: scale(0.8); }
+    to { opacity: 1; transform: scale(1.3); }
+  }
+
+  .live-attack-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    letter-spacing: 1px;
+    color: #fff;
+    margin: 0;
+  }
+
+  .btn-close-demo {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 4px 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .btn-close-demo:hover {
+    border-color: #fff;
+    color: #fff;
+  }
+
+  /* Scrubber & Controls Bar */
+  .demo-controls-bar {
+    background: #080B10;
+    border-bottom: 1px solid var(--color-border);
+    padding: 10px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+
+  .demo-btn-ctrl {
+    background: #0d121c;
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 6px 14px;
+    border-radius: 2px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.15s;
+  }
+
+  .demo-btn-ctrl:hover {
+    border-color: var(--color-cyan);
+    color: var(--color-cyan);
+  }
+
+  .demo-timer {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-cyan);
+    min-width: 90px;
+  }
+
+  .demo-scrubber-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  .demo-stage-chips {
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+  }
+
+  .stage-chip {
+    flex: 1;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    padding: 3px 4px;
+    text-align: center;
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    color: var(--color-muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .stage-chip.active {
+    border-color: var(--color-cyan);
+    color: #fff;
+    background: rgba(0, 229, 255, 0.15);
+    font-weight: 700;
+  }
+
+  .stage-chip.completed {
+    border-color: var(--color-green);
+    color: var(--color-green);
+  }
+
+  .demo-progress-track {
+    height: 4px;
+    background: #111722;
+    border-radius: 2px;
+    overflow: hidden;
+    position: relative;
+    cursor: pointer;
+  }
+
+  .demo-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--color-red), var(--color-cyan), var(--color-green));
+    transition: width 0.1s linear;
+  }
+
+  /* Topology Flow Map */
+  .demo-topo-bar {
+    background: #04060A;
+    border-bottom: 1px solid var(--color-border);
+    padding: 10px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .topo-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .topo-title {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-muted);
+    letter-spacing: 1px;
+  }
+
+  .topo-svg-canvas {
+    width: 100%;
+    height: 70px;
+  }
+
+  /* Dual Terminal Panels */
+  .demo-terminals-split {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: 0;
+    overflow: hidden;
+    background: #020408;
+  }
+
+  .demo-terminal-pane {
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border-right: 1px solid var(--color-border);
+  }
+
+  .demo-terminal-pane:last-child {
+    border-right: none;
+  }
+
+  .demo-term-header {
+    background: #06090e;
+    border-bottom: 1px solid var(--color-border);
+    padding: 8px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .demo-term-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+  }
+
+  .demo-term-title.red { color: var(--color-red); }
+  .demo-term-title.blue { color: var(--color-cyan); }
+
+  .demo-term-output {
+    flex: 1;
+    overflow-y: auto;
+    padding: 14px;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    line-height: 1.5;
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #020408;
+    color: #e2e8f0;
+  }
+
+  /* Stage Context Banner Footer */
+  .demo-stage-footer {
+    background: #06090e;
+    border-top: 1px solid var(--color-border);
+    padding: 10px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .demo-stage-info {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .demo-tech-badge {
+    background: rgba(0, 229, 255, 0.15);
+    border: 1px solid var(--color-cyan);
+    color: var(--color-cyan);
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 8px;
+  }
+
+  .demo-stage-text {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: var(--color-text);
+  }
+
   .json-highlight {
     background: #04060A;
     border: 1px solid var(--color-border);
@@ -336,6 +640,11 @@
       CORRELATION: SIGMA ACTIVE<br>
       <span style="color:var(--color-muted); font-size:10px;">LATENCY: 0.28 ms</span>
     </div>
+
+    <button id="btnLaunchLiveAttack" class="btn btn-red" style="font-family:var(--font-mono); font-size:11px; font-weight:700; padding:6px 14px; display:inline-flex; align-items:center; gap:6px; box-shadow:0 0 16px rgba(255,31,61,0.4); cursor:pointer;">
+      <span>⚡</span>
+      <span>WATCH LIVE ATTACK (60s DEMO)</span>
+    </button>
   </div>
 
   <!-- Threat Hunt Query Panel -->
@@ -451,6 +760,130 @@
     <div class="drawer-actions">
       <button id="drawerBlockIpBtn" class="btn btn-red" style="flex:1; font-size:11px;">BLOCK IP</button>
       <button id="drawerIsolateHostBtn" class="btn btn-outline" style="flex:1; font-size:11px;">ISOLATE HOST</button>
+    </div>
+  </div>
+</div>
+
+<!-- =========================================================================
+     60-SECOND LIVE CYBER ATTACK REPLAY MODAL (DUAL TERMINAL & SVG TOPOLOGY)
+     ========================================================================= -->
+<div id="liveAttackModal" class="live-attack-overlay" style="display:none;">
+  <div class="live-attack-window corner-brackets">
+    <!-- Header -->
+    <div class="live-attack-header">
+      <div class="live-attack-title-group">
+        <span class="live-attack-badge">
+          <span class="live-attack-pulse-dot"></span>
+          LIVE SIMULATION // SAFE REPLAY
+        </span>
+        <h2 class="live-attack-title">60-SECOND FULL-SPECTRUM CYBER ENGAGEMENT</h2>
+      </div>
+      <button id="btnCloseLiveAttack" class="btn-close-demo">✕ CLOSE DEMO</button>
+    </div>
+
+    <!-- Controls Bar & 8-Stage Scrubber -->
+    <div class="demo-controls-bar">
+      <button id="btnDemoPlayPause" class="demo-btn-ctrl">❚❚ PAUSE</button>
+      <button id="btnDemoSpeed" class="demo-btn-ctrl">1x SPEED</button>
+      <button id="btnDemoReplay" class="demo-btn-ctrl">↺ REPLAY</button>
+      <span class="demo-timer" id="demoTimerText">00:00 / 01:00</span>
+
+      <div class="demo-scrubber-wrap">
+        <div class="demo-stage-chips" id="demoStageChips">
+          <div class="stage-chip active" data-stage="0">1. RECON</div>
+          <div class="stage-chip" data-stage="1">2. FOOTHOLD</div>
+          <div class="stage-chip" data-stage="2">3. DISCOVERY</div>
+          <div class="stage-chip" data-stage="3">4. PRIVESC</div>
+          <div class="stage-chip" data-stage="4">5. TELEMETRY</div>
+          <div class="stage-chip" data-stage="5">6. SIEM ALERT</div>
+          <div class="stage-chip" data-stage="6">7. SOC TRIAGE</div>
+          <div class="stage-chip" data-stage="7">8. CONTAINMENT</div>
+        </div>
+        <div class="demo-progress-track" id="demoProgressTrack">
+          <div class="demo-progress-fill" id="demoProgressFill"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Network Topology Flow Diagram -->
+    <div class="demo-topo-bar">
+      <div class="topo-header">
+        <span class="topo-title">NETWORK TOPOLOGY &amp; PACKET TRAVERSAL PATH</span>
+        <span id="topoStatusText" style="font-family:var(--font-mono);font-size:10px;color:var(--color-cyan);">INBOUND PROBES ACTIVE</span>
+      </div>
+      <svg class="topo-svg-canvas" id="topoSvg" viewBox="0 0 1000 70">
+        <!-- Lines connecting nodes -->
+        <line x1="120" y1="35" x2="320" y2="35" stroke="#1E293B" stroke-width="2" id="topoLine1" />
+        <line x1="320" y1="35" x2="520" y2="35" stroke="#1E293B" stroke-width="2" id="topoLine2" />
+        <line x1="520" y1="35" x2="720" y2="35" stroke="#1E293B" stroke-width="2" id="topoLine3" />
+        <line x1="520" y1="35" x2="880" y2="35" stroke="#1E293B" stroke-width="2" id="topoLine4" />
+
+        <!-- Nodes -->
+        <g id="nodeAttacker" transform="translate(120, 35)">
+          <circle r="16" fill="#180B0F" stroke="#FF1F3D" stroke-width="2" />
+          <text y="4" text-anchor="middle" fill="#FF1F3D" font-family="monospace" font-size="9" font-weight="bold">ATK</text>
+          <text y="28" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="8">198.51.100.42</text>
+        </g>
+
+        <g id="nodeFirewall" transform="translate(320, 35)">
+          <polygon points="-12,-12 12,-12 0,16" fill="#0C1420" stroke="#00E5FF" stroke-width="2" id="fwPoly" />
+          <text y="4" text-anchor="middle" fill="#00E5FF" font-family="monospace" font-size="8" font-weight="bold">FW</text>
+          <text y="28" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="8">PERIMETER</text>
+        </g>
+
+        <g id="nodeWeb" transform="translate(520, 35)">
+          <rect x="-14" y="-14" width="28" height="28" fill="#0A1826" stroke="#00E5FF" stroke-width="2" id="webRect" />
+          <text y="4" text-anchor="middle" fill="#00E5FF" font-family="monospace" font-size="8" font-weight="bold">WEB</text>
+          <text y="28" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="8">10.10.14.90</text>
+        </g>
+
+        <g id="nodeDb" transform="translate(720, 35)">
+          <circle r="14" fill="#0A1826" stroke="#A855F7" stroke-width="2" />
+          <text y="4" text-anchor="middle" fill="#A855F7" font-family="monospace" font-size="8" font-weight="bold">DC</text>
+          <text y="28" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="8">10.10.14.200</text>
+        </g>
+
+        <g id="nodeSiem" transform="translate(880, 35)">
+          <rect x="-16" y="-12" width="32" height="24" rx="3" fill="#061A14" stroke="#00FF6A" stroke-width="2" />
+          <text y="4" text-anchor="middle" fill="#00FF6A" font-family="monospace" font-size="8" font-weight="bold">SIEM</text>
+          <text y="28" text-anchor="middle" fill="#94A3B8" font-family="monospace" font-size="8">CORRELATION</text>
+        </g>
+
+        <!-- Animated packet pulse dot -->
+        <circle id="topoPacketDot" r="5" fill="#FF1F3D" cx="120" cy="35" opacity="0" />
+      </svg>
+    </div>
+
+    <!-- Dual Terminals Split Pane -->
+    <div class="demo-terminals-split">
+      <!-- Left: Red Attacker Terminal -->
+      <div class="demo-terminal-pane">
+        <div class="demo-term-header">
+          <span class="demo-term-title red">🔴 ATTACKER WORKSTATION // KALI LINUX [198.51.100.42]</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--color-muted);">TTY: pts/3</span>
+        </div>
+        <div class="demo-term-output" id="demoRedTerm"></div>
+      </div>
+
+      <!-- Right: Blue SOC SIEM Stream -->
+      <div class="demo-terminal-pane">
+        <div class="demo-term-header">
+          <span class="demo-term-title blue">🔵 DEFENDER SOC // SIEM &amp; EDR TELEMETRY STREAM</span>
+          <span style="font-family:var(--font-mono);font-size:10px;color:var(--color-green);">STATUS: INGESTING</span>
+        </div>
+        <div class="demo-term-output" id="demoBlueTerm"></div>
+      </div>
+    </div>
+
+    <!-- Footer Stage Info -->
+    <div class="demo-stage-footer">
+      <div class="demo-stage-info">
+        <span class="demo-tech-badge" id="demoTechBadge">T1595.001</span>
+        <span class="demo-stage-text" id="demoStageDesc">Active network reconnaissance and port scanning against public DMZ interface.</span>
+      </div>
+      <div style="font-family:var(--font-mono);font-size:10px;color:var(--color-muted);">
+        NO ENTRY SANDBOX LAB SIMULATOR
+      </div>
     </div>
   </div>
 </div>

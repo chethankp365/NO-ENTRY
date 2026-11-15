@@ -81,6 +81,26 @@
   --z-glitch: 90;
   --z-cursor: 100;
   --z-toast: 110;
+
+  /* Track-Specific Identity Variables */
+  --track-red: #FF1F3D;
+  --track-red-glow: rgba(255, 31, 61, 0.4);
+  --track-blue: #00E5FF;
+  --track-blue-glow: rgba(0, 229, 255, 0.4);
+  --track-purple: #A855F7;
+  --track-purple-glow: rgba(168, 85, 247, 0.4);
+  --track-detection: #10B981;
+  --track-detection-glow: rgba(16, 185, 129, 0.4);
+}
+
+/* Reduced Motion Preference Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Optional User-Selected Visual Themes (from /docs Settings) */

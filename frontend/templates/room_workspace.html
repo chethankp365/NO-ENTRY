@@ -6,12 +6,44 @@
 <!-- xterm.js styling -->
 <link rel="stylesheet" href="/static/vendor/xterm/xterm.css">
 <style>
+  :root {
+    --track-accent: var(--color-cyan);
+    --track-accent-dim: rgba(0, 229, 255, 0.15);
+    --track-glow: rgba(0, 229, 255, 0.4);
+  }
+
+  .workspace-container.theme-red {
+    --track-accent: var(--color-red);
+    --track-accent-dim: rgba(255, 31, 61, 0.15);
+    --track-glow: rgba(255, 31, 61, 0.4);
+  }
+
+  .workspace-container.theme-blue {
+    --track-accent: var(--color-cyan);
+    --track-accent-dim: rgba(0, 229, 255, 0.15);
+    --track-glow: rgba(0, 229, 255, 0.4);
+  }
+
+  .workspace-container.theme-purple {
+    --track-accent: #A855F7;
+    --track-accent-dim: rgba(168, 85, 247, 0.15);
+    --track-glow: rgba(168, 85, 247, 0.4);
+  }
+
+  .workspace-container.theme-detection {
+    --track-accent: #10B981;
+    --track-accent-dim: rgba(16, 185, 129, 0.15);
+    --track-glow: rgba(16, 185, 129, 0.4);
+  }
+
   .workspace-container {
     display: flex;
     height: calc(100vh - 65px);
     overflow: hidden;
-    background: var(--color-background);
+    background: var(--color-bg);
+    position: relative;
   }
+
   .left-pane {
     flex: 1;
     min-width: 480px;
@@ -20,7 +52,9 @@
     overflow-y: auto;
     padding: 24px;
     background: #06090e;
+    position: relative;
   }
+
   .right-pane {
     flex: 1.2;
     display: flex;
@@ -29,27 +63,62 @@
     overflow: hidden;
   }
 
+  /* Breadcrumb & Track Banner */
+  .top-meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+  }
+
   .breadcrumb {
     font-family: var(--font-mono);
     font-size: 11px;
-    color: var(--color-text-muted);
-    margin-bottom: 12px;
+    color: var(--color-muted);
   }
+
   .breadcrumb a {
-    color: var(--color-cyan);
+    color: var(--track-accent);
     text-decoration: none;
+    transition: color 0.2s;
   }
+
+  .breadcrumb a:hover {
+    text-decoration: underline;
+  }
+
+  .track-hud-pill {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 2px;
+    background: var(--track-accent-dim);
+    border: 1px solid var(--track-accent);
+    color: var(--track-accent);
+    text-transform: uppercase;
+  }
+
   .room-header h1 {
+    font-family: var(--font-display);
     font-size: 22px;
-    color: var(--color-text-main);
+    letter-spacing: 0.5px;
+    color: var(--color-text);
     margin: 0 0 10px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
   }
+
   .room-tags {
     display: flex;
     gap: 8px;
     margin-bottom: 16px;
     flex-wrap: wrap;
+    align-items: center;
   }
+
   .badge-tag {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -57,15 +126,38 @@
     border-radius: 3px;
     background: rgba(255, 255, 255, 0.05);
     border: 1px solid var(--color-border);
-    color: var(--color-text-muted);
+    color: var(--color-muted);
   }
+
   .badge-tag.highlight {
-    background: rgba(0, 229, 255, 0.12);
-    border-color: var(--color-cyan);
-    color: var(--color-cyan);
+    background: var(--track-accent-dim);
+    border-color: var(--track-accent);
+    color: var(--track-accent);
     font-weight: 700;
   }
 
+  .btn-hud-action {
+    background: #0d121c;
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 3px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+  }
+
+  .btn-hud-action:hover {
+    border-color: var(--track-accent);
+    color: var(--track-accent);
+    background: var(--track-accent-dim);
+  }
+
+  /* Progress Bar */
   .progress-bar-container {
     background: rgba(255, 255, 255, 0.05);
     border-radius: 3px;
@@ -73,14 +165,18 @@
     width: 100%;
     margin-bottom: 20px;
     overflow: hidden;
-  }
-  .progress-bar-fill {
-    height: 100%;
-    background: var(--color-cyan);
-    width: 0%;
-    transition: width 0.3s ease;
+    position: relative;
   }
 
+  .progress-bar-fill {
+    height: 100%;
+    background: var(--track-accent);
+    width: 0%;
+    transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 0 0 10px var(--track-accent);
+  }
+
+  /* Theory Card */
   .collapsible-card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
@@ -88,6 +184,7 @@
     margin-bottom: 16px;
     overflow: hidden;
   }
+
   .collapsible-header {
     padding: 12px 16px;
     background: #0f1520;
@@ -98,33 +195,43 @@
     font-family: var(--font-mono);
     font-size: 13px;
     font-weight: 700;
-    color: var(--color-cyan);
+    color: var(--track-accent);
     border-bottom: 1px solid var(--color-border);
     user-select: none;
+    transition: background 0.2s;
   }
+
+  .collapsible-header:hover {
+    background: #141c2b;
+  }
+
   .collapsible-content {
     padding: 16px;
     font-size: 13px;
     line-height: 1.6;
-    color: var(--color-text-main);
+    color: var(--color-text);
   }
+
   .concept-section {
     margin-bottom: 14px;
   }
+
   .concept-section h4 {
     margin: 0 0 4px 0;
-    color: var(--color-cyan);
+    color: var(--track-accent);
     font-size: 11px;
     letter-spacing: 1px;
     text-transform: uppercase;
   }
+
   .concept-box {
     background: #080c12;
-    border-left: 3px solid var(--color-cyan);
+    border-left: 3px solid var(--track-accent);
     padding: 10px 14px;
     margin: 6px 0;
     font-size: 12px;
   }
+
   .code-demo {
     background: #05080c;
     border: 1px solid #1e293b;
@@ -138,48 +245,88 @@
     margin: 8px 0;
   }
 
+  /* Task Cards */
   .task-card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: 4px;
     margin-bottom: 16px;
     padding: 16px;
-    transition: border-color 0.2s ease;
+    transition: all 0.25s ease;
+    position: relative;
   }
+
+  .task-card.active-focus {
+    border-color: var(--track-accent);
+    box-shadow: 0 0 12px var(--track-glow);
+  }
+
   .task-card.completed {
     border-color: rgba(0, 255, 106, 0.4);
     background: rgba(0, 255, 106, 0.02);
   }
+
   .task-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
     margin-bottom: 8px;
   }
-  .task-title {
-    font-size: 14px;
-    font-weight: 700;
-    color: var(--color-text-main);
+
+  .task-title-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
   }
+
+  .task-status-icon {
+    font-size: 12px;
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--color-border);
+  }
+
+  .task-card.completed .task-status-icon {
+    background: rgba(0, 255, 106, 0.15);
+    border-color: var(--color-green);
+    color: var(--color-green);
+  }
+
+  .task-title {
+    font-family: var(--font-ui);
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
   .task-xp-pill {
     font-family: var(--font-mono);
     font-size: 11px;
     color: var(--color-yellow);
-    background: rgba(255, 193, 7, 0.1);
+    background: rgba(255, 214, 0, 0.1);
+    border: 1px solid rgba(255, 214, 0, 0.3);
     padding: 2px 6px;
     border-radius: 3px;
   }
+
   .task-instructions {
-    font-size: 12px;
-    color: var(--color-text-muted);
-    line-height: 1.5;
+    font-size: 12.5px;
+    color: var(--color-muted);
+    line-height: 1.55;
     margin-bottom: 14px;
   }
+
   .task-input-row {
     display: flex;
     gap: 8px;
     margin-top: 10px;
   }
+
   .task-input {
     flex: 1;
     background: #080c12;
@@ -189,13 +336,17 @@
     color: #fff;
     font-family: var(--font-mono);
     font-size: 12px;
+    transition: border-color 0.2s, box-shadow 0.2s;
   }
+
   .task-input:focus {
-    border-color: var(--color-cyan);
+    border-color: var(--track-accent);
     outline: none;
+    box-shadow: 0 0 8px var(--track-glow);
   }
+
   .btn-submit-task {
-    background: var(--color-cyan);
+    background: var(--track-accent);
     color: #000;
     border: none;
     border-radius: 3px;
@@ -206,9 +357,19 @@
     cursor: pointer;
     transition: all 0.2s;
   }
+
   .btn-submit-task:hover {
-    background: #4df0ff;
+    filter: brightness(1.2);
+    box-shadow: 0 0 10px var(--track-glow);
   }
+
+  .btn-submit-task:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    background: var(--color-green);
+    color: #000;
+  }
+
   .feedback-box {
     margin-top: 10px;
     padding: 8px 12px;
@@ -217,25 +378,31 @@
     font-family: var(--font-mono);
     display: none;
   }
+
   .feedback-box.success {
     background: rgba(0, 255, 106, 0.1);
     border: 1px solid var(--color-green);
     color: var(--color-green);
     display: block;
+    animation: fadeIn 0.3s ease;
   }
+
   .feedback-box.error {
     background: rgba(255, 31, 61, 0.1);
     border: 1px solid var(--color-red);
     color: #ff6b81;
     display: block;
+    animation: fadeIn 0.3s ease;
   }
+
   .mistake-box {
     margin-top: 6px;
-    background: rgba(255, 193, 7, 0.08);
+    background: rgba(255, 214, 0, 0.08);
     border-left: 3px solid var(--color-yellow);
-    padding: 6px 10px;
-    font-size: 11px;
+    padding: 8px 12px;
+    font-size: 11.5px;
     color: #ffe082;
+    line-height: 1.45;
   }
 
   /* Quiz questions styling */
@@ -243,25 +410,31 @@
     background: #080c12;
     border: 1px solid #1e293b;
     border-radius: 3px;
-    padding: 10px;
+    padding: 12px;
     margin-bottom: 10px;
   }
+
   .quiz-q-text {
     font-weight: 600;
-    font-size: 12px;
+    font-size: 12.5px;
     margin-bottom: 8px;
     color: #e2e8f0;
   }
+
   .quiz-option {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 4px 0;
+    padding: 6px 4px;
     font-size: 12px;
     color: #94a3b8;
     cursor: pointer;
+    border-radius: 3px;
+    transition: background 0.15s;
   }
+
   .quiz-option:hover {
+    background: rgba(255, 255, 255, 0.03);
     color: #fff;
   }
 
@@ -276,11 +449,13 @@
     flex-wrap: wrap;
     gap: 12px;
   }
+
   .lab-info-left {
     display: flex;
     align-items: center;
     gap: 12px;
   }
+
   .target-badge {
     font-family: var(--font-mono);
     font-size: 12px;
@@ -292,6 +467,7 @@
     align-items: center;
     gap: 6px;
   }
+
   .runner-badge {
     font-family: var(--font-mono);
     font-size: 10px;
@@ -299,21 +475,24 @@
     border-radius: 3px;
     font-weight: 700;
   }
+
   .runner-badge.docker {
     background: rgba(0, 255, 106, 0.15);
     color: var(--color-green);
     border: 1px solid rgba(0, 255, 106, 0.4);
   }
+
   .runner-badge.emulated {
-    background: rgba(255, 193, 7, 0.15);
+    background: rgba(255, 214, 0, 0.15);
     color: var(--color-yellow);
-    border: 1px solid rgba(255, 193, 7, 0.4);
+    border: 1px solid rgba(255, 214, 0, 0.4);
   }
 
   .lab-actions {
     display: flex;
     gap: 8px;
   }
+
   .btn-lab {
     font-family: var(--font-mono);
     font-size: 11px;
@@ -324,33 +503,41 @@
     border: 1px solid transparent;
     transition: all 0.2s;
   }
+
   .btn-lab-start {
     background: var(--color-green);
     color: #000;
   }
+
   .btn-lab-start:hover {
     background: #38ef7d;
+    box-shadow: 0 0 10px rgba(0, 255, 106, 0.4);
   }
+
   .btn-lab-reset {
     background: transparent;
     border-color: #475569;
     color: #cbd5e1;
   }
+
   .btn-lab-reset:hover {
     border-color: #94a3b8;
   }
+
   .btn-lab-stop {
     background: transparent;
     border-color: var(--color-red);
     color: var(--color-red);
   }
+
   .btn-lab-stop:hover {
     background: rgba(255, 31, 61, 0.1);
   }
+
   .btn-lab-target-link {
-    background: rgba(0, 229, 255, 0.12);
-    border-color: var(--color-cyan);
-    color: var(--color-cyan);
+    background: var(--track-accent-dim);
+    border-color: var(--track-accent);
+    color: var(--track-accent);
     text-decoration: none;
     display: inline-flex;
     align-items: center;
@@ -359,6 +546,11 @@
     font-family: var(--font-mono);
     font-size: 11px;
     font-weight: 700;
+    transition: all 0.2s;
+  }
+
+  .btn-lab-target-link:hover {
+    box-shadow: 0 0 10px var(--track-glow);
   }
 
   .terminal-wrapper {
@@ -369,12 +561,15 @@
     background: #020408;
     overflow: hidden;
   }
+
   .quick-cmd-bar {
     display: flex;
     gap: 6px;
     margin-bottom: 6px;
     flex-wrap: wrap;
+    align-items: center;
   }
+
   .btn-quick-cmd {
     background: #0f172a;
     border: 1px solid #1e293b;
@@ -384,11 +579,15 @@
     padding: 3px 8px;
     border-radius: 3px;
     cursor: pointer;
+    transition: all 0.15s;
   }
+
   .btn-quick-cmd:hover {
-    color: var(--color-cyan);
-    border-color: var(--color-cyan);
+    color: var(--track-accent);
+    border-color: var(--track-accent);
+    background: var(--track-accent-dim);
   }
+
   #terminalContainer {
     flex: 1;
     width: 100%;
@@ -396,24 +595,489 @@
     min-height: 300px;
     background: #020408;
   }
+
+  /* =========================================================================
+     CINEMATIC MODALS: Mission Briefing, Accomplished, Evidence, XP Toast
+     ========================================================================= */
+
+  /* Mission Briefing Overlay */
+  .briefing-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(4, 6, 10, 0.88);
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .briefing-card {
+    width: 90%;
+    max-width: 680px;
+    background: #080B10;
+    border: 1px solid var(--track-accent);
+    box-shadow: 0 0 35px var(--track-glow);
+    padding: 28px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .briefing-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+
+  .briefing-track-badge {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--track-accent);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+  }
+
+  .briefing-classification {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-muted);
+    letter-spacing: 1px;
+  }
+
+  .briefing-title-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 10px;
+  }
+
+  .briefing-id-chip {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 8px;
+    background: var(--track-accent);
+    color: #000;
+    border-radius: 2px;
+  }
+
+  .briefing-title {
+    font-family: var(--font-display);
+    font-size: 22px;
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .briefing-desc {
+    font-size: 13.5px;
+    line-height: 1.55;
+    color: #cbd5e1;
+    margin-bottom: 20px;
+  }
+
+  .briefing-meta-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    padding: 12px;
+    margin-bottom: 20px;
+  }
+
+  .briefing-meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .meta-label {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: var(--color-muted);
+    letter-spacing: 1px;
+  }
+
+  .meta-val {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-text);
+  }
+
+  .meta-val.highlight {
+    color: var(--color-yellow);
+  }
+
+  .briefing-section h3 {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--track-accent);
+    margin: 0 0 10px 0;
+  }
+
+  .briefing-objectives-list {
+    margin: 0 0 24px 0;
+    padding-left: 20px;
+    color: #94a3b8;
+    font-size: 12.5px;
+    line-height: 1.6;
+  }
+
+  .briefing-actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+
+  .btn-commence {
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 12px 28px;
+    background: var(--track-accent);
+    color: #000;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+    box-shadow: 0 0 16px var(--track-glow);
+    transition: all 0.2s;
+  }
+
+  .btn-commence:hover {
+    filter: brightness(1.2);
+    box-shadow: 0 0 24px var(--track-accent);
+  }
+
+  /* Mission Accomplished Celebration Overlay */
+  .accomplished-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    background: rgba(4, 6, 10, 0.92);
+    backdrop-filter: blur(8px);
+    z-index: 105;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.4s ease;
+  }
+
+  .accomplished-card {
+    width: 90%;
+    max-width: 620px;
+    background: #080B10;
+    border: 1px solid var(--color-green);
+    box-shadow: 0 0 40px rgba(0, 255, 106, 0.4);
+    padding: 32px;
+    text-align: center;
+    position: relative;
+  }
+
+  .accomplished-emblem {
+    font-size: 48px;
+    margin-bottom: 10px;
+    animation: popBounce 0.5s ease;
+  }
+
+  .accomplished-subtitle {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 2px;
+    color: var(--color-green);
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+
+  .accomplished-title {
+    font-family: var(--font-display);
+    font-size: 26px;
+    color: #fff;
+    margin: 0 0 8px 0;
+  }
+
+  .accomplished-room-title {
+    font-size: 14px;
+    color: var(--color-muted);
+    margin: 0 0 24px 0;
+  }
+
+  .accomplished-stats-row {
+    display: flex;
+    justify-content: space-around;
+    background: #04060A;
+    border: 1px solid var(--color-border);
+    padding: 16px;
+    margin-bottom: 28px;
+  }
+
+  .accomplished-stat {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .stat-number {
+    font-family: var(--font-display);
+    font-size: 20px;
+    color: #fff;
+  }
+
+  .stat-number.highlight {
+    color: var(--color-yellow);
+    text-shadow: 0 0 10px rgba(255, 214, 0, 0.5);
+  }
+
+  .stat-label {
+    font-family: var(--font-mono);
+    font-size: 9.5px;
+    color: var(--color-muted);
+    letter-spacing: 1px;
+  }
+
+  .accomplished-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .btn-accomplished {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 10px 20px;
+    border-radius: 3px;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.2s;
+  }
+
+  .btn-accomplished.btn-cyan {
+    background: var(--track-accent);
+    color: #000;
+    border: none;
+    box-shadow: 0 0 16px var(--track-glow);
+  }
+
+  .btn-accomplished.btn-outline {
+    background: transparent;
+    border: 1px solid var(--color-border);
+    color: var(--color-text);
+  }
+
+  .btn-accomplished.btn-outline:hover {
+    border-color: #fff;
+  }
+
+  .btn-accomplished.btn-ghost {
+    background: transparent;
+    border: none;
+    color: var(--color-muted);
+  }
+
+  .btn-accomplished.btn-ghost:hover {
+    color: #fff;
+  }
+
+  /* Evidence Dataset Drawer */
+  .evidence-drawer {
+    position: fixed;
+    top: 65px;
+    right: 0;
+    width: 520px;
+    max-width: 90vw;
+    height: calc(100vh - 65px);
+    background: #080B10;
+    border-left: 1px solid var(--track-accent);
+    box-shadow: -10px 0 30px rgba(0, 0, 0, 0.8);
+    z-index: 90;
+    display: flex;
+    flex-direction: column;
+    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .evidence-header {
+    padding: 14px 18px;
+    background: #04060A;
+    border-bottom: 1px solid var(--color-border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .evidence-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--track-accent);
+    letter-spacing: 1px;
+  }
+
+  .btn-close-evidence {
+    background: transparent;
+    border: none;
+    color: var(--color-muted);
+    font-size: 20px;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .btn-close-evidence:hover {
+    color: #fff;
+  }
+
+  .evidence-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .evidence-file-info {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #94a3b8;
+    background: #04060A;
+    padding: 8px 12px;
+    border: 1px solid var(--color-border);
+  }
+
+  .evidence-pre {
+    flex: 1;
+    background: #030508;
+    border: 1px solid var(--color-border);
+    padding: 14px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    color: #38bdf8;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    margin: 0;
+  }
+
+  /* Floating XP Toast */
+  .xp-toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: #080B10;
+    border: 1px solid var(--color-green);
+    box-shadow: 0 0 20px rgba(0, 255, 106, 0.4);
+    padding: 10px 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: var(--font-mono);
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--color-green);
+    border-radius: 3px;
+    z-index: 120;
+    animation: toastPop 0.3s ease;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+  }
+
+  @keyframes popBounce {
+    0% { transform: scale(0.6); }
+    70% { transform: scale(1.15); }
+    100% { transform: scale(1); }
+  }
+
+  @keyframes toastPop {
+    from { transform: translateY(20px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+
+  /* Responsive Mobile/Tablet Breakpoints */
+  @media (max-width: 1024px) {
+    .workspace-container {
+      flex-direction: column;
+      height: auto;
+      overflow-y: auto;
+    }
+    .left-pane {
+      max-width: 100%;
+      min-width: 0;
+      border-right: none;
+      border-bottom: 1px solid var(--color-border);
+      height: auto;
+      overflow-y: visible;
+    }
+    .right-pane {
+      min-height: 550px;
+      height: auto;
+    }
+    .evidence-drawer {
+      width: 100vw;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .left-pane {
+      padding: 16px;
+    }
+    .briefing-card, .accomplished-card {
+      width: 95vw;
+      padding: 20px 16px;
+    }
+    .briefing-meta-grid {
+      grid-template-columns: 1fr 1fr;
+    }
+    .accomplished-stats-row {
+      flex-direction: column;
+      gap: 12px;
+      align-items: center;
+    }
+  }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="workspace-container" data-room-id="{{ room_id }}">
+<div class="workspace-container theme-cyan" data-room-id="{{ room_id }}" id="workspaceContainer">
   <!-- LEFT PANE: Concept, Guide & Tasks -->
   <div class="left-pane">
-    <div class="breadcrumb">
-      <a href="/academy">&lt; ACADEMY</a> / <span id="roomTrackBreadcrumb">RED TEAM</span> / <span id="roomNumberBreadcrumb">ROOM 09</span>
+    <div class="top-meta-row">
+      <div class="breadcrumb">
+        <a href="/academy">&lt; ACADEMY</a> / <span id="roomTrackBreadcrumb">TRACK</span> / <span id="roomNumberBreadcrumb">ROOM</span>
+      </div>
+      <div class="track-hud-pill" id="trackHudPill">SECURITY TRACK</div>
     </div>
 
     <div class="room-header">
-      <h1 id="roomTitleText">SQL Injection Fundamentals</h1>
+      <h1 id="roomTitleText">Loading Mission Objectives...</h1>
       <div class="room-tags">
         <span class="badge-tag highlight" id="roomDifficultyBadge">Beginner</span>
         <span class="badge-tag" id="roomDurationBadge">45 min</span>
         <span class="badge-tag" id="roomXpBadge">+350 XP</span>
         <span class="badge-tag" id="roomStatusBadge">STATUS: READY</span>
+        <button class="btn-hud-action" id="btnOpenBriefing">📜 BRIEFING</button>
+        <button class="btn-hud-action" id="btnOpenEvidence">📂 EVIDENCE</button>
       </div>
     </div>
 
@@ -465,7 +1129,7 @@
       <div class="lab-info-left">
         <div class="target-badge">
           <span style="color:#64748b;">TARGET:</span>
-          <span style="color:var(--color-red);font-weight:700;" id="labTargetIpText">10.10.14.90:8089</span>
+          <span style="color:var(--track-accent);font-weight:700;" id="labTargetIpText">10.10.14.90:8089</span>
         </div>
         <span class="runner-badge emulated" id="labRunnerBadge">PROCESS EMULATION</span>
         <span style="font-family:var(--font-mono);font-size:11px;color:#94a3b8;" id="labTimerText">60:00</span>
@@ -481,18 +1145,125 @@
 
     <!-- Terminal -->
     <div class="terminal-wrapper">
-      <div class="quick-cmd-bar">
+      <div class="quick-cmd-bar" id="quickCmdBar">
         <span style="font-family:var(--font-mono);font-size:10px;color:#64748b;align-self:center;">QUICK PROBES:</span>
-        <button class="btn-quick-cmd" data-cmd="curl -s http://10.10.14.90:8089/">curl index</button>
-        <button class="btn-quick-cmd" data-cmd="curl -s &quot;http://10.10.14.90:8089/search?q=' OR 1=1 --&quot;">search error probe</button>
-        <button class="btn-quick-cmd" data-cmd="curl -s &quot;http://10.10.14.90:8089/search?q=' UNION SELECT 1,flag_name,flag_value,4 FROM hidden_flags --&quot;">union exfil</button>
-        <button class="btn-quick-cmd" data-cmd="curl -s -X POST -d &quot;username=admin' OR 1=1 --&amp;password=x&quot; http://10.10.14.90:8089/login">auth bypass</button>
-        <button class="btn-quick-cmd" data-cmd="curl -s &quot;http://10.10.14.90:8089/filter?category=1 OR 1=1&quot;">numeric filter probe</button>
+        <button class="btn-quick-cmd" data-cmd="curl -s http://10.10.14.90:8089/">curl target</button>
         <button class="btn-quick-cmd" data-cmd="clear">clear</button>
       </div>
       <div id="terminalContainer"></div>
     </div>
   </div>
+</div>
+
+<!-- =========================================================================
+     MODALS: Mission Briefing, Accomplished Celebration, Evidence Inspector
+     ========================================================================= -->
+
+<!-- 1. Mission Briefing Holographic Modal -->
+<div id="missionBriefingModal" class="briefing-overlay" style="display:none;">
+  <div class="briefing-card corner-brackets">
+    <div class="briefing-header">
+      <div class="briefing-track-badge" id="briefingTrackBadge">CYBERSECURITY OPERATION</div>
+      <div class="briefing-classification">CLEARANCE: RESTRICTED // TOP SECRET</div>
+    </div>
+    <div class="briefing-title-wrap">
+      <div class="briefing-id-chip" id="briefingIdChip">ROOM</div>
+      <h2 class="briefing-title" id="briefingTitleText">Mission Briefing</h2>
+    </div>
+    <p class="briefing-desc" id="briefingDescText">Loading mission operational parameters...</p>
+
+    <div class="briefing-meta-grid">
+      <div class="briefing-meta-item">
+        <span class="meta-label">DIFFICULTY</span>
+        <span class="meta-val" id="briefingDifficulty">Beginner</span>
+      </div>
+      <div class="briefing-meta-item">
+        <span class="meta-label">DURATION</span>
+        <span class="meta-val" id="briefingDuration">45 min</span>
+      </div>
+      <div class="briefing-meta-item">
+        <span class="meta-label">MISSION REWARD</span>
+        <span class="meta-val highlight" id="briefingXp">+350 XP</span>
+      </div>
+      <div class="briefing-meta-item">
+        <span class="meta-label">TARGET VECTOR</span>
+        <span class="meta-val" id="briefingTarget">10.10.14.90</span>
+      </div>
+    </div>
+
+    <div class="briefing-section">
+      <h3>// OPERATIONAL OBJECTIVES</h3>
+      <ul class="briefing-objectives-list" id="briefingObjectivesList">
+        <li>Review foundational theory and architectural principles.</li>
+        <li>Execute hands-on commands inside the isolated attacker workstation.</li>
+        <li>Pass the 4-question technical assessment to secure mission completion.</li>
+      </ul>
+    </div>
+
+    <div class="briefing-actions">
+      <button id="btnCommenceMission" class="btn-commence">
+        INITIALIZE OPERATION // COMMENCE MISSION &gt;&gt;
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 2. Mission Accomplished Celebration Modal -->
+<div id="missionAccomplishedModal" class="accomplished-overlay" style="display:none;">
+  <div class="accomplished-card corner-brackets">
+    <div class="accomplished-emblem" id="accomplishedEmblem">🏆</div>
+    <div class="accomplished-subtitle">NO ENTRY ACADEMY // OPERATION CLEARED</div>
+    <h2 class="accomplished-title" id="accomplishedTitle">OPERATION ACCOMPLISHED</h2>
+    <p class="accomplished-room-title" id="accomplishedRoomTitle">SQL Injection Fundamentals</p>
+
+    <div class="accomplished-stats-row">
+      <div class="accomplished-stat">
+        <span class="stat-number">6 / 6</span>
+        <span class="stat-label">TASKS RESOLVED</span>
+      </div>
+      <div class="accomplished-stat">
+        <span class="stat-number highlight" id="accomplishedXpEarned">+350 XP</span>
+        <span class="stat-label">CLEARANCE XP AWARDED</span>
+      </div>
+      <div class="accomplished-stat">
+        <span class="stat-number">100%</span>
+        <span class="stat-label">ASSESSMENT SCORE</span>
+      </div>
+    </div>
+
+    <div class="accomplished-actions">
+      <button id="btnNextRoom" class="btn-accomplished btn-cyan">
+        PROCEED TO NEXT MISSION &gt;&gt;
+      </button>
+      <a href="/academy" class="btn-accomplished btn-outline">
+        RETURN TO CURRICULUM CATALOG
+      </a>
+      <button id="btnReviewWorkspace" class="btn-accomplished btn-ghost">
+        REVIEW LAB WORKSPACE
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- 3. Evidence Dataset Inspector Drawer -->
+<div id="evidenceDrawerModal" class="evidence-drawer" style="display:none;">
+  <div class="evidence-header">
+    <span class="evidence-title">📂 EVIDENCE &amp; TELEMETRY DATASET INSPECTOR</span>
+    <button id="btnCloseEvidence" class="btn-close-evidence">&times;</button>
+  </div>
+  <div class="evidence-body">
+    <div class="evidence-file-info">
+      <span id="evidenceFilePath">/var/log/detection/evidence.json</span>
+      <button id="btnCopyEvidenceCmd" class="btn btn-outline" style="font-size:10px;padding:3px 8px;cursor:pointer;">📋 COPY CAT CMD</button>
+    </div>
+    <pre id="evidenceContentPre" class="evidence-pre">Loading dataset telemetry...</pre>
+  </div>
+</div>
+
+<!-- 4. Floating XP Award Toast -->
+<div id="xpToastNotification" class="xp-toast" style="display:none;">
+  <span style="font-size:16px;">⚡</span>
+  <span id="xpToastText">+70 XP EARNED</span>
 </div>
 
 <!-- xterm.js bundle -->

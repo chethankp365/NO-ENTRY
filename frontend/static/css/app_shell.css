@@ -341,3 +341,30 @@ body.app-shell-body {
   border: 1px solid var(--color-border);
   padding: 2px 6px;
 }
+
+/* ==========================================================================
+   Retro CRT Mode (Konami Code Easter Egg)
+   ========================================================================== */
+body.crt-retro-mode {
+  filter: contrast(1.15) brightness(1.1) saturate(1.2);
+  text-shadow: 0 0 2px rgba(0, 255, 106, 0.6);
+}
+
+body.crt-retro-mode::before {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0; left: 0; bottom: 0; right: 0;
+  background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.35) 50%),
+              linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
+  z-index: 99999;
+  background-size: 100% 3px, 4px 100%;
+  pointer-events: none;
+  animation: crtScanlineFlicker 0.15s infinite;
+}
+
+@keyframes crtScanlineFlicker {
+  0% { opacity: 0.85; }
+  50% { opacity: 0.95; }
+  100% { opacity: 0.85; }
+}

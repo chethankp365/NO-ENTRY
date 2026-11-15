@@ -1920,6 +1920,17 @@ class CurriculumRegistry:
         mapped_id = aliases.get(room_id)
         if mapped_id and mapped_id in self._rooms:
             return self._rooms[mapped_id]
+
+        # Dynamic prefix fallback (e.g. 'red-09' -> 'red-09-sql-injection')
+        clean_id = room_id.strip().lower()
+        for r_id, r_def in self._rooms.items():
+            if r_id == clean_id or r_id.startswith(f"{clean_id}-"):
+                return r_def
+            # Support track-01 matching e.g. 'red-01' or 'detection-01'
+            short_slug = f"{r_def.track.value}-{r_def.room_number:02d}"
+            if short_slug == clean_id or (clean_id.startswith('detect-') and f"detection-{r_def.room_number:02d}" == clean_id.replace('detect-', 'detection-')):
+                return r_def
+
         return None
 
     def list_rooms(self, track: Optional[TrackEnum] = None) -> List[RoomDefinition]:

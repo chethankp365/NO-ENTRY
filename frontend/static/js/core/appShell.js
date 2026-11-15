@@ -45,6 +45,9 @@ export function initAppShell(activeRouteKey) {
 
   // 8. Unified Floating Ghost AI Mentor Assistant
   ghostAssistant.mount(activeRouteKey);
+
+  // 9. Konami Code Easter Egg Listener
+  setupKonamiCode();
 }
 
 function bindThreatLevel() {
@@ -119,6 +122,8 @@ const COMMAND_PALETTE_ITEMS = [
   { label: 'Jump to: Learning & Leaderboard', action: () => navigateWithGlitch('/learn'), shortcut: 'G L' },
   { label: 'Jump to: Purple Team View', action: () => navigateWithGlitch('/purple-team'), shortcut: 'G U' },
   { label: 'Jump to: Docs & Ethics', action: () => navigateWithGlitch('/docs'), shortcut: 'G D' },
+  { label: 'Demonstration: 60-Second Full-Spectrum Live Attack Replay', action: () => navigateWithGlitch('/watch?demo=1'), shortcut: 'DEMO' },
+  { label: 'Easter Egg: Toggle 1980s Retro CRT Filter', action: () => triggerRetroCrtMode(), shortcut: 'CRT' },
   {
     label: 'Action: Run Web App Breach Attack',
     action: async () => {
@@ -252,5 +257,46 @@ function setupCommandPalette() {
 
   palette.addEventListener('click', (e) => {
     if (e.target === palette) closePalette();
+  });
+}
+
+// ---------------------------------------------------------------------------
+// KONAMI CODE EASTER EGG (CRT SCANLINE EFFECT & AUDIO CHIME)
+// ---------------------------------------------------------------------------
+
+export function triggerRetroCrtMode() {
+  const isCrt = document.body.classList.toggle('crt-retro-mode');
+  if (isCrt) {
+    sound.victoryChime();
+    toast('[ACHIEVEMENT UNLOCKED: RETRO RUNNER // 1980s CYBERSPACE ENGAGED]', 'success');
+  } else {
+    sound.alertBlip();
+    toast('[RETRO CRT MODE DEACTIVATED]', 'info');
+  }
+}
+
+function setupKonamiCode() {
+  const KONAMI_SEQUENCE = [
+    'ArrowUp', 'ArrowUp',
+    'ArrowDown', 'ArrowDown',
+    'ArrowLeft', 'ArrowRight',
+    'ArrowLeft', 'ArrowRight',
+    'b', 'a'
+  ];
+  let konamiIndex = 0;
+
+  window.addEventListener('keydown', (e) => {
+    const key = e.key;
+    const required = KONAMI_SEQUENCE[konamiIndex];
+
+    if (key.toLowerCase() === required.toLowerCase()) {
+      konamiIndex++;
+      if (konamiIndex === KONAMI_SEQUENCE.length) {
+        konamiIndex = 0;
+        triggerRetroCrtMode();
+      }
+    } else {
+      konamiIndex = 0;
+    }
   });
 }
