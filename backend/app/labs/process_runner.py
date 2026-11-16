@@ -462,6 +462,11 @@ class ProcessLabRunner(LabRunner):
 
 
 
+        open_ports = [22, 80]
+        if target_port not in open_ports:
+            open_ports.append(target_port)
+        open_ports.sort()
+
         info = LabSessionInfo(
             session_id=session_id,
             room_id=room_id,
@@ -472,6 +477,11 @@ class ProcessLabRunner(LabRunner):
             target_url=f"http://127.0.0.1:{target_port}",
             target_ip="10.10.14.90",
             target_port=target_port,
+            target_hostname="target",
+            attacker_ip="10.10.14.10",
+            attacker_hostname="attacker",
+            open_ports=open_ports,
+            active_sessions_count=1,
             created_at=datetime.utcnow(),
             expires_at=datetime.utcnow() + timedelta(minutes=60),
         )
@@ -4349,39 +4359,36 @@ class ProcessLabRunner(LabRunner):
 
         # 8. Nmap Network Scanning & Host Discovery
         if cmd.startswith("nmap"):
+            target_host = info.target_ip or "10.10.15.90"
+            ports_to_show = list(info.open_ports) if info.open_ports else [22, 80, 443]
+            if 22 not in ports_to_show:
+                ports_to_show.insert(0, 22)
+            if 80 not in ports_to_show:
+                ports_to_show.insert(1, 80)
+            if 443 not in ports_to_show:
+                ports_to_show.insert(2, 443)
+            ports_to_show.sort()
+
+            ports_lines = ""
+            for p in ports_to_show:
+                if p == 22:
+                    svc, ver = "ssh", "OpenSSH 8.9p1 Ubuntu (protocol 2.0)"
+                elif p == 443:
+                    svc, ver = "https", "nginx 1.24.0"
+                elif p == 80:
+                    svc, ver = "http", "Apache httpd 2.4.58"
+                else:
+                    svc, ver = "http", f"VoltDefense Target Service (:{p})"
+                ports_lines += f"{p}/tcp open  {svc:<8} {ver}\n"
+
             return (
-                "Starting Nmap 7.94 ( https://nmap.org ) at 2026-11-14 12:00 UTC\n"
-                "Nmap scan report for target.noentry.internal (10.10.14.90)\n"
-                "Host is up (0.00042s latency).\n"
-                "Not shown: 990 closed tcp ports (reset)\n"
-                "PORT     STATE SERVICE       VERSION\n"
-                "2121/tcp open  ftp           VoltCorp FTP v1.4.2\n"
-                "2222/tcp open  ssh           OpenSSH 8.4p1 (protocol 2.0)\n"
-                "8080/tcp open  http          Network Diagnostic Gateway\n"
-                "8081/tcp open  http          VoltCorp Asset Inventory\n"
-                "8085/tcp open  http          VoltCorp Network Scanning Target\n"
-                "8086/tcp open  http          VoltCorp Service Enumeration API\n"
-                "8087/tcp open  http          VoltCorp Vulnerability Assessment Gateway\n"
-                "8088/tcp open  http          VoltCommerce Web Application\n"
-                "8089/tcp open  http          VoltGear Equipment Store\n"
-                "8090/tcp open  http          VoltCorp Web Infrastructure\n"
-                "8091/tcp open  http          VoltCorp Community & Search Portal\n"
-                "8092/tcp open  http          VoltCorp Secure Authentication Portal\n"
-                "8093/tcp open  http          VoltCorp Access Control Portal\n"
-                "8094/tcp open  http          VoltCorp File Storage Gateway\n"
-                "8095/tcp open  http          VoltCorp Diagnostics & System Health\n"
-                "8096/tcp open  http          VoltCorp Document & File Gateway\n"
-                "8097/tcp open  http          VoltCorp Identity & Password Management\n"
-                "8098/tcp open  http          VoltCorp System Privilege & Security Gateway\n"
-                "8099/tcp open  http          VoltCorp Active Directory Directory Service\n"
-                "8100/tcp open  http          VoltCorp Operations Dispatcher (Exploitation Lab)\n"
-                "8101/tcp open  http          VoltDefense Systems Capstone Gateway\n"
-                "8201/tcp open  http          VoltDefense SOC Gateway\n"
-                "8202/tcp open  http          VoltDefense Windows Security Gateway\n"
-                "8203/tcp open  http          VoltDefense Linux Monitoring Gateway\n"
-                "8204/tcp open  http          VoltDefense Traffic Analysis Gateway\n"
-                "9001/tcp open  unknown       NO ENTRY Raw TCP Socket\n"
-                "\nNmap done: 1 IP address (1 host up) scanned in 0.85 seconds\n"
+                f"Starting Nmap 7.95 ( https://nmap.org ) at {datetime.utcnow().strftime('%Y-%m-%d %H:%M')} UTC\n"
+                f"Nmap scan report for {target_host}\n"
+                "Host is up (0.00065s latency).\n"
+                f"Not shown: {1000 - len(ports_to_show)} closed tcp ports (reset)\n"
+                "PORT   STATE SERVICE  VERSION\n"
+                f"{ports_lines}"
+                "Nmap done: 1 IP address (1 host up) scanned in 1.23 seconds\n"
             )
 
         if cmd == "clear":

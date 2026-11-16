@@ -23,6 +23,14 @@ class LabSessionManager:
         self._process_runner = ProcessLabRunner()
         self._active_sessions: Dict[str, LabSessionInfo] = {}
 
+    def _normalize_room_id(self, room_id: str) -> str:
+        try:
+            from backend.app.academy.curriculum import curriculum_registry
+            r = curriculum_registry.get_room(room_id)
+            return r.room_id if r else room_id
+        except Exception:
+            return room_id
+
     def get_docker_status(self) -> Tuple[DockerStatus, str, str]:
         """Query Docker daemon status directly."""
         return self._docker_runner.check_docker_status()
@@ -49,6 +57,7 @@ class LabSessionManager:
         room_id: str,
         allow_emulation: bool = False,
     ) -> LabSessionInfo:
+        room_id = self._normalize_room_id(room_id)
         # Check if user already has an active, non-expired session for this room
         existing_info = self.get_user_session(user.operator_id, room_id)
         if existing_info and not existing_info.is_expired() and existing_info.status == "RUNNING":
@@ -92,6 +101,7 @@ class LabSessionManager:
         operator_id: str,
         room_id: str,
     ) -> bool:
+        room_id = self._normalize_room_id(room_id)
         session_info = self.get_user_session(operator_id, room_id)
         if not session_info:
             return False
@@ -100,6 +110,11 @@ class LabSessionManager:
         runner = self._docker_runner if session_info.runner_mode == "docker" else self._process_runner
         await runner.stop_session(session_info.session_id)
         self._active_sessions.pop(session_info.session_id, None)
+        try:
+            from backend.app.labs.terminal import academy_terminal_handler
+            academy_terminal_handler.cleanup_session(session_info.session_id)
+        except Exception:
+            pass
 
         # Update database record
         record = db_session.exec(
@@ -120,6 +135,7 @@ class LabSessionManager:
         operator_id: str,
         room_id: str,
     ) -> LabSessionInfo:
+        room_id = self._normalize_room_id(room_id)
         session_info = self.get_user_session(operator_id, room_id)
         if not session_info:
             user = db_session.exec(
@@ -134,6 +150,7 @@ class LabSessionManager:
     def get_user_session(
         self, operator_id: str, room_id: str
     ) -> Optional[LabSessionInfo]:
+        room_id = self._normalize_room_id(room_id)
         for s in list(self._active_sessions.values()):
             if s.operator_id == operator_id and s.room_id == room_id:
                 if s.is_expired():

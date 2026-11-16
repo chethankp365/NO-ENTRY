@@ -51,11 +51,38 @@
     .access-card {
       background: #080B10;
       border: 1px solid var(--color-border);
-      padding: 40px 36px 32px 36px;
+      padding: 30px 30px 24px 30px;
       text-align: center;
       box-shadow: 0 10px 40px rgba(0, 0, 0, 0.85);
       position: relative;
       transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    .auth-tabs-bar {
+      display: flex;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--color-border);
+    }
+
+    .auth-tab {
+      flex: 1;
+      background: transparent;
+      border: none;
+      border-bottom: 2px solid transparent;
+      padding: 8px 12px;
+      color: var(--color-muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .auth-tab.active {
+      color: var(--color-cyan);
+      border-bottom-color: var(--color-cyan);
+      background: rgba(0, 229, 255, 0.05);
     }
 
     .access-card.denied-shake {
@@ -250,16 +277,22 @@
       <h1 class="access-title">ACCESS TERMINAL</h1>
       <p class="access-subtitle">Identify yourself, operator.</p>
 
-      <!-- Login Form -->
+      <!-- Auth Mode Tabs -->
+      <div class="auth-tabs-bar">
+        <button type="button" class="auth-tab active" id="tabSignIn">SIGN IN</button>
+        <button type="button" class="auth-tab" id="tabRegister">REGISTER</button>
+      </div>
+
+      <!-- 1. Sign In Form -->
       <form id="accessForm" autocomplete="off">
         <div class="form-group">
-          <label for="operatorId" class="form-label">OPERATOR ID</label>
+          <label for="operatorId" class="form-label">OPERATOR ID OR EMAIL</label>
           <input
             type="text"
             id="operatorId"
             name="operator_id"
             class="form-input"
-            placeholder="op-0x7f3a"
+            placeholder="op-0x7f3a or operator@corp.local"
             required
             spellcheck="false"
           >
@@ -277,6 +310,10 @@
           >
         </div>
 
+        <div style="text-align:right; margin:-10px 0 14px 0;">
+          <span id="btnToggleForgot" style="font-family:var(--font-mono); font-size:10px; color:var(--color-muted); cursor:pointer;">Forgot passphrase?</span>
+        </div>
+
         <!-- Handshake / Status Line -->
         <div id="handshakeStatus" class="handshake-status"></div>
 
@@ -284,6 +321,59 @@
         <button type="submit" id="btnRequestAccess" class="btn btn-red btn-submit-access">
           REQUEST ACCESS
         </button>
+      </form>
+
+      <!-- 2. Registration Form (Initially Hidden) -->
+      <form id="registerForm" autocomplete="off" style="display:none;">
+        <div class="form-group">
+          <label for="regFullName" class="form-label">FULL NAME</label>
+          <input type="text" id="regFullName" class="form-input" placeholder="Alex Mercer" required spellcheck="false">
+        </div>
+
+        <div class="form-group">
+          <label for="regEmail" class="form-label">EMAIL ADDRESS</label>
+          <input type="email" id="regEmail" class="form-input" placeholder="alex@noentry.local" required spellcheck="false">
+        </div>
+
+        <div class="form-group">
+          <label for="regOpId" class="form-label">OPERATOR ID (OPTIONAL)</label>
+          <input type="text" id="regOpId" class="form-input" placeholder="op-custom (leave blank to auto-generate)" spellcheck="false">
+        </div>
+
+        <div class="form-group">
+          <label for="regPassphrase" class="form-label">PASSPHRASE (MIN 6 CHARS)</label>
+          <input type="password" id="regPassphrase" class="form-input" placeholder="••••••••" required>
+        </div>
+
+        <div class="form-group">
+          <label for="regConfirmPassphrase" class="form-label">CONFIRM PASSPHRASE</label>
+          <input type="password" id="regConfirmPassphrase" class="form-input" placeholder="••••••••" required>
+        </div>
+
+        <div id="regStatus" class="handshake-status"></div>
+
+        <button type="submit" id="btnSubmitRegister" class="btn btn-red btn-submit-access">
+          CREATE OPERATOR PROFILE &gt;&gt;
+        </button>
+      </form>
+
+      <!-- 3. Password Recovery Form (Initially Hidden) -->
+      <form id="forgotForm" autocomplete="off" style="display:none;">
+        <p style="font-size:12px; color:#94a3b8; margin-bottom:14px; text-align:left;">Enter your registered email address to receive an account recovery reset token.</p>
+        <div class="form-group">
+          <label for="forgotEmail" class="form-label">REGISTERED EMAIL</label>
+          <input type="email" id="forgotEmail" class="form-input" placeholder="alex@noentry.local" required spellcheck="false">
+        </div>
+
+        <div id="forgotStatus" class="handshake-status"></div>
+
+        <button type="submit" id="btnSubmitForgot" class="btn btn-red btn-submit-access">
+          GENERATE RECOVERY TOKEN
+        </button>
+
+        <div style="margin-top:12px;">
+          <span id="btnBackToLogin" style="font-family:var(--font-mono); font-size:11px; color:var(--color-cyan); cursor:pointer;">&larr; Back to Sign In</span>
+        </div>
       </form>
 
       <!-- Footer matching reference screenshot 3 -->

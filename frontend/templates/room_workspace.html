@@ -245,6 +245,87 @@
     margin: 8px 0;
   }
 
+  /* 8-Part Concept Educational Elements */
+  .part-badge {
+    display: inline-block;
+    background: var(--track-accent);
+    color: #000;
+    font-size: 9px;
+    font-weight: 800;
+    border-radius: 2px;
+    padding: 1px 5px;
+    margin-right: 6px;
+  }
+
+  .concept-diagram-wrapper {
+    background: #04070e;
+    border: 1px solid #1e293b;
+    border-radius: 4px;
+    padding: 12px;
+    margin: 8px 0;
+    text-align: center;
+    overflow-x: auto;
+  }
+
+  .concept-steps-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin: 8px 0;
+  }
+
+  .concept-step-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    background: #080c14;
+    border: 1px solid #162032;
+    border-radius: 4px;
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .step-num {
+    background: rgba(0, 229, 255, 0.15);
+    color: #00e5ff;
+    font-family: var(--font-mono);
+    font-size: 10px;
+    font-weight: 700;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+
+  .takeaway-pill {
+    background: rgba(0, 255, 106, 0.1);
+    border: 1px solid rgba(0, 255, 106, 0.35);
+    border-radius: 4px;
+    padding: 8px 12px;
+    color: #a7f3d0;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 8px;
+  }
+
+  .part-analogy {
+    border-left-color: #f59e0b;
+    background: rgba(245, 158, 11, 0.05);
+    color: #fde68a;
+  }
+
+  .part-observe {
+    border-left-color: #38bdf8;
+    background: rgba(56, 189, 248, 0.05);
+    color: #bae6fd;
+  }
+
   /* Task Cards */
   .task-card {
     background: var(--color-surface);
@@ -562,10 +643,96 @@
     overflow: hidden;
   }
 
+  .terminal-titlebar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #080d1a;
+    border: 1px solid #1e293b;
+    border-bottom: none;
+    padding: 6px 10px;
+    border-radius: 4px 4px 0 0;
+  }
+
+  .terminal-titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .terminal-titlebar-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .term-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #f59e0b;
+    box-shadow: 0 0 6px rgba(245, 158, 11, 0.6);
+    transition: all 0.3s ease;
+  }
+
+  .term-dot.online {
+    background: #00ff6a;
+    box-shadow: 0 0 8px rgba(0, 255, 106, 0.8);
+  }
+
+  .term-title {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    color: #94a3b8;
+    letter-spacing: 0.5px;
+  }
+
+  .term-status-badge {
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    text-transform: uppercase;
+  }
+
+  .term-status-badge.standby {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  .term-status-badge.online {
+    background: rgba(0, 255, 106, 0.15);
+    color: #00ff6a;
+    border: 1px solid rgba(0, 255, 106, 0.4);
+  }
+
+  .term-tool-btn {
+    background: #0f172a;
+    border: 1px solid #1e293b;
+    color: #64748b;
+    font-family: var(--font-mono);
+    font-size: 9px;
+    font-weight: 600;
+    padding: 2px 7px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .term-tool-btn:hover {
+    color: #00e5ff;
+    border-color: #00e5ff;
+    background: rgba(0, 229, 255, 0.1);
+  }
+
   .quick-cmd-bar {
     display: flex;
     gap: 6px;
     margin-bottom: 6px;
+    margin-top: 6px;
     flex-wrap: wrap;
     align-items: center;
   }
@@ -994,24 +1161,49 @@
   }
 
   @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
   }
 
   @keyframes slideInRight {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
+    from {
+      transform: translateX(100%);
+    }
+
+    to {
+      transform: translateX(0);
+    }
   }
 
   @keyframes popBounce {
-    0% { transform: scale(0.6); }
-    70% { transform: scale(1.15); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(0.6);
+    }
+
+    70% {
+      transform: scale(1.15);
+    }
+
+    100% {
+      transform: scale(1);
+    }
   }
 
   @keyframes toastPop {
-    from { transform: translateY(20px); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+      transform: translateY(20px);
+      opacity: 0;
+    }
+
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
 
   /* Responsive Mobile/Tablet Breakpoints */
@@ -1021,6 +1213,7 @@
       height: auto;
       overflow-y: auto;
     }
+
     .left-pane {
       max-width: 100%;
       min-width: 0;
@@ -1029,10 +1222,12 @@
       height: auto;
       overflow-y: visible;
     }
+
     .right-pane {
       min-height: 550px;
       height: auto;
     }
+
     .evidence-drawer {
       width: 100vw;
     }
@@ -1042,17 +1237,1204 @@
     .left-pane {
       padding: 16px;
     }
-    .briefing-card, .accomplished-card {
+
+    .briefing-card,
+    .accomplished-card {
       width: 95vw;
       padding: 20px 16px;
     }
+
     .briefing-meta-grid {
       grid-template-columns: 1fr 1fr;
     }
+
     .accomplished-stats-row {
       flex-direction: column;
       gap: 12px;
       align-items: center;
+    }
+  }
+
+  /* =========================================================================
+     FULL-SCREEN OPERATOR WORKSTATION & IMMERSIVE LAB UPGRADE
+     ========================================================================= */
+
+  /* Normal Mode Workstation Trigger Button */
+  .btn-maximize-ws {
+    background: linear-gradient(135deg, rgba(255, 31, 61, 0.25), rgba(0, 229, 255, 0.25)) !important;
+    border: 1px solid #00e5ff !important;
+    color: #ffffff !important;
+    font-weight: 800 !important;
+    letter-spacing: 0.8px !important;
+    padding: 3px 12px !important;
+    font-size: 11px !important;
+    border-radius: 4px !important;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.35) !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+  }
+  .btn-maximize-ws:hover {
+    background: linear-gradient(135deg, rgba(255, 31, 61, 0.5), rgba(0, 229, 255, 0.5)) !important;
+    border-color: #ffffff !important;
+    box-shadow: 0 0 18px rgba(0, 229, 255, 0.7), 0 0 25px rgba(255, 31, 61, 0.4) !important;
+    transform: translateY(-1px) !important;
+  }
+
+  /* Full-Screen Workstation Overlay */
+  .fs-workstation-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 999999;
+    background: #020408;
+    color: #e2e8f0;
+    display: none;
+    flex-direction: column;
+    overflow: hidden;
+    font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+    box-sizing: border-box;
+  }
+  .fs-workstation-overlay.active {
+    display: flex;
+  }
+
+  /* 1. TOP COMMAND BAR */
+  .fs-top-bar {
+    height: 50px;
+    background: #040810;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 14px rgba(0, 0, 0, 0.8);
+    position: relative;
+    z-index: 10;
+  }
+  .fs-top-bar-left, .fs-top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .fs-brand-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .fs-brand-text {
+    display: flex;
+    flex-direction: column;
+    line-height: 1.1;
+  }
+  .fs-brand-main {
+    font-family: var(--font-mono, monospace);
+    font-weight: 900;
+    font-size: 15px;
+    letter-spacing: 2.2px;
+    color: #ffffff;
+    text-shadow: 0 0 12px rgba(255, 255, 255, 0.5);
+  }
+  .fs-brand-sub {
+    font-family: var(--font-mono, monospace);
+    font-size: 8px;
+    letter-spacing: 1.6px;
+    color: #FF1F3D;
+    font-weight: 800;
+    text-shadow: 0 0 8px rgba(255, 31, 61, 0.6);
+  }
+  .fs-room-pill {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    border-radius: 999px;
+    padding: 5px 16px;
+    font-family: var(--font-mono, monospace);
+    font-size: 12px;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.15);
+  }
+  .fs-room-badge {
+    color: #00E5FF;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+  }
+  .fs-room-divider {
+    color: rgba(255, 255, 255, 0.3);
+  }
+  .fs-room-title {
+    color: #ffffff;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+  }
+  .fs-status-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 255, 106, 0.1);
+    border: 1px solid rgba(0, 255, 106, 0.45);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 700;
+    color: #00FF6A;
+  }
+  .fs-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #00FF6A;
+    box-shadow: 0 0 8px #00FF6A;
+    animation: fsDotPulse 2s infinite ease-in-out;
+  }
+  @keyframes fsDotPulse {
+    0%, 100% { opacity: 0.6; transform: scale(0.9); }
+    50% { opacity: 1; transform: scale(1.25); box-shadow: 0 0 12px #00FF6A; }
+  }
+  .fs-xp-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255, 230, 0, 0.08);
+    border: 1px solid rgba(255, 230, 0, 0.35);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 700;
+    color: #FFE600;
+  }
+  .fs-xp-star {
+    color: #FFE600;
+    filter: drop-shadow(0 0 6px rgba(255, 230, 0, 0.6));
+  }
+  .fs-timer-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    border-radius: 999px;
+    padding: 4px 12px;
+    font-family: var(--font-mono, monospace);
+    font-size: 12px;
+    font-weight: 700;
+    color: #cbd5e1;
+  }
+  .fs-exit-btn {
+    background: rgba(255, 31, 61, 0.12);
+    border: 1px solid #FF1F3D;
+    color: #FF1F3D;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    padding: 6px 16px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 10px rgba(255, 31, 61, 0.3);
+    transition: all 0.2s ease;
+  }
+  .fs-exit-btn:hover {
+    background: #FF1F3D;
+    color: #ffffff;
+    box-shadow: 0 0 20px rgba(255, 31, 61, 0.8);
+    transform: translateY(-1px);
+  }
+
+  /* 2. TOP SECONDARY HUD (3-COLUMN GRID) */
+  .fs-hud-row {
+    display: grid;
+    grid-template-columns: 1fr 1.35fr 1fr;
+    gap: 12px;
+    padding: 10px 14px 4px 14px;
+    flex-shrink: 0;
+    box-sizing: border-box;
+  }
+  .fs-hud-card {
+    background: linear-gradient(180deg, #070e1b 0%, #03060c 100%);
+    border: 1px solid rgba(0, 229, 255, 0.22);
+    border-radius: 6px;
+    padding: 10px 14px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: inset 0 0 20px rgba(0, 229, 255, 0.04), 0 4px 12px rgba(0, 0, 0, 0.5);
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    height: 155px;
+    box-sizing: border-box;
+  }
+  .fs-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 6px;
+  }
+  .fs-card-icon {
+    font-size: 14px;
+  }
+  .fs-card-title {
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1.4px;
+  }
+  .fs-card-title.red, .fs-card-icon.red { color: #FF1F3D; }
+  .fs-card-title.cyan, .fs-card-icon.cyan { color: #00E5FF; }
+  .fs-card-title.green, .fs-card-icon.green { color: #00FF6A; }
+  .fs-card-title.gold, .fs-card-icon.gold { color: #FFE600; }
+
+  /* Mission Briefing Card */
+  .fs-briefing-card {
+    border-color: rgba(255, 31, 61, 0.35);
+  }
+  .fs-briefing-body {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex: 1;
+  }
+  .fs-avatar-silhouette {
+    width: 62px;
+    height: 62px;
+    flex-shrink: 0;
+    border-radius: 6px;
+    background: #020408;
+    border: 1px solid rgba(255, 31, 61, 0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 0 12px rgba(255, 31, 61, 0.2);
+  }
+  .fs-hoodie-svg {
+    width: 52px;
+    height: 52px;
+  }
+  .fs-briefing-info {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 0;
+  }
+  .fs-briefing-desc {
+    font-size: 11.5px;
+    color: #cbd5e1;
+    line-height: 1.35;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .fs-briefing-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .fs-chip {
+    font-family: var(--font-mono, monospace);
+    font-size: 9.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 4px;
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+  }
+  .fs-chip.red { color: #FF1F3D; border-color: rgba(255, 31, 61, 0.4); background: rgba(255, 31, 61, 0.08); }
+  .fs-chip.blue { color: #00E5FF; border-color: rgba(0, 229, 255, 0.4); background: rgba(0, 229, 255, 0.08); }
+  .fs-chip.purple { color: #c084fc; border-color: rgba(192, 132, 252, 0.4); background: rgba(192, 132, 252, 0.08); }
+  .fs-chip.gold { color: #FFE600; border-color: rgba(255, 230, 0, 0.4); background: rgba(255, 230, 0, 0.08); }
+  .fs-details-btn {
+    align-self: flex-start;
+    background: rgba(255, 31, 61, 0.1);
+    border: 1px solid rgba(255, 31, 61, 0.5);
+    color: #ff8090;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .fs-details-btn:hover {
+    background: #FF1F3D;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(255, 31, 61, 0.6);
+  }
+
+  /* Threat Topology Card */
+  .fs-threat-card {
+    padding: 6px 10px;
+    position: relative;
+    border-color: rgba(0, 229, 255, 0.35);
+  }
+  .fs-threat-header-overlay {
+    position: absolute;
+    top: 6px;
+    left: 12px;
+    z-index: 5;
+  }
+  .fs-threat-tag {
+    font-family: var(--font-mono, monospace);
+    font-size: 9.5px;
+    letter-spacing: 1.2px;
+    color: #00E5FF;
+    font-weight: 800;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.6);
+  }
+  .fs-threat-map-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fs-world-svg {
+    width: 100%;
+    height: 135px;
+    display: block;
+  }
+  .fs-continent {
+    fill: #0d2238;
+    stroke: #00E5FF;
+    stroke-width: 1.2;
+    stroke-opacity: 0.65;
+    filter: drop-shadow(0 0 4px rgba(0, 229, 255, 0.35));
+    transition: fill 0.3s ease;
+  }
+  .fs-continent:hover {
+    fill: #14355a;
+  }
+  .fs-threat-arc {
+    fill: none;
+    stroke: url(#arcGrad);
+    stroke-width: 1.4;
+    stroke-linecap: round;
+    stroke-dasharray: 6 3;
+    animation: fsArcFlow 4s infinite linear;
+  }
+  .fs-threat-arc.arc-2 { animation-duration: 3.2s; animation-direction: reverse; }
+  .fs-threat-arc.arc-3 { animation-duration: 4.8s; }
+  .fs-threat-arc.arc-4 { animation-duration: 3.6s; }
+  .fs-threat-arc.arc-5 { animation-duration: 5s; animation-direction: reverse; }
+  @keyframes fsArcFlow {
+    from { stroke-dashoffset: 60; }
+    to { stroke-dashoffset: 0; }
+  }
+  .fs-threat-node .node-center {
+    fill: #FF1F3D;
+    filter: drop-shadow(0 0 6px #FF1F3D);
+  }
+  .fs-threat-node .node-ring {
+    fill: none;
+    stroke: #FF1F3D;
+    stroke-width: 1;
+    animation: fsNodePulse 2.4s infinite ease-in-out;
+    transform-origin: center;
+  }
+  .fs-threat-node .node-ring.pulse-fast {
+    animation-duration: 1.6s;
+    stroke-width: 1.5;
+  }
+  @keyframes fsNodePulse {
+    0%, 100% { transform: scale(0.6); opacity: 0.3; stroke-width: 1; }
+    50% { transform: scale(1.4); opacity: 0.9; stroke-width: 1.8; filter: drop-shadow(0 0 8px #FF1F3D); }
+  }
+
+  /* Lab Intelligence Card */
+  .fs-intel-card {
+    border-color: rgba(0, 255, 106, 0.3);
+  }
+  .fs-intel-body {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex: 1;
+    gap: 12px;
+  }
+  .fs-intel-rows {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    flex: 1;
+  }
+  .fs-intel-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    padding-bottom: 2px;
+    border-bottom: 1px dashed rgba(255, 255, 255, 0.08);
+  }
+  .fs-intel-label {
+    color: #94a3b8;
+  }
+  .fs-intel-val {
+    font-weight: 700;
+    color: #f1f5f9;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .fs-intel-val.highlight-cyan {
+    color: #00E5FF;
+    text-shadow: 0 0 8px rgba(0, 229, 255, 0.5);
+  }
+  .fs-intel-val .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+  }
+  .fs-intel-val .dot.green {
+    background: #00FF6A;
+    box-shadow: 0 0 6px #00FF6A;
+  }
+  .fs-copy-inline {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    cursor: pointer;
+    font-size: 11px;
+    padding: 0 2px;
+  }
+  .fs-copy-inline:hover {
+    color: #00E5FF;
+  }
+  .fs-server-rack-wrap {
+    width: 90px;
+    height: 95px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .fs-rack-svg {
+    width: 100%;
+    height: 100%;
+    filter: drop-shadow(0 0 10px rgba(0, 255, 106, 0.35));
+  }
+  .rack-led-fast {
+    animation: fsRackLed 0.6s infinite alternate steps(2);
+  }
+  .rack-led-blink {
+    animation: fsRackLed 1.2s infinite alternate steps(2);
+  }
+  @keyframes fsRackLed {
+    from { opacity: 0.3; }
+    to { opacity: 1; filter: drop-shadow(0 0 4px #00FF6A); }
+  }
+
+  /* 3. MAIN WORKSPACE (LEFT RAIL + TERMINAL + RIGHT PANELS) */
+  .fs-main-workspace {
+    display: flex;
+    flex: 1;
+    gap: 12px;
+    padding: 8px 14px;
+    min-height: 0;
+    box-sizing: border-box;
+  }
+
+  /* Left Navigation Rail */
+  .fs-left-rail {
+    width: 120px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .fs-rail-btns {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .fs-rail-btn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #050a14;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-radius: 4px;
+    color: #94a3b8;
+    padding: 8px 10px;
+    font-family: var(--font-mono, monospace);
+    font-size: 10.5px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+  }
+  .fs-rail-btn:hover {
+    background: rgba(0, 229, 255, 0.08);
+    border-color: #00E5FF;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.3);
+  }
+  .fs-rail-btn.active {
+    background: rgba(255, 31, 61, 0.12);
+    border-color: #FF1F3D;
+    color: #ffffff;
+    box-shadow: 0 0 12px rgba(255, 31, 61, 0.4), inset 3px 0 0 #FF1F3D;
+  }
+  .fs-rail-btn.warning:hover {
+    background: rgba(255, 230, 0, 0.1);
+    border-color: #FFE600;
+    color: #FFE600;
+    box-shadow: 0 0 10px rgba(255, 230, 0, 0.3);
+  }
+  .fs-rail-icon {
+    font-size: 12px;
+    width: 16px;
+    text-align: center;
+  }
+  .fs-rail-btn.active .fs-rail-icon {
+    color: #FF1F3D;
+    font-weight: 900;
+  }
+
+  /* Track Progress Gauge */
+  .fs-rail-progress-card {
+    background: #050a14;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-radius: 6px;
+    padding: 8px 6px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .fs-progress-header {
+    font-family: var(--font-mono, monospace);
+    font-size: 8.5px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    color: #00E5FF;
+  }
+  .fs-gauge-wrap {
+    width: 60px;
+    height: 60px;
+  }
+  .fs-gauge-svg {
+    width: 100%;
+    height: 100%;
+    transform: rotate(-90deg);
+  }
+  .gauge-bg {
+    fill: none;
+    stroke: rgba(255, 255, 255, 0.08);
+    stroke-width: 6;
+  }
+  .gauge-bar {
+    fill: none;
+    stroke: #00E5FF;
+    stroke-width: 6;
+    stroke-linecap: round;
+    filter: drop-shadow(0 0 6px #00E5FF);
+    transition: stroke-dashoffset 0.6s ease;
+  }
+  .gauge-val {
+    fill: #ffffff;
+    font-family: var(--font-mono, monospace);
+    font-size: 14px;
+    font-weight: 900;
+    transform: rotate(90deg);
+    transform-origin: center;
+  }
+  .fs-progress-sub {
+    font-family: var(--font-mono, monospace);
+    font-size: 9px;
+    color: #94a3b8;
+  }
+
+  /* Central Operator Terminal */
+  .fs-center-terminal {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .fs-term-window {
+    flex: 1;
+    background: #020408;
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    border-radius: 6px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-shadow: 0 0 20px rgba(0, 229, 255, 0.1);
+  }
+  .fs-term-titlebar {
+    height: 38px;
+    background: #060b16;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.25);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 12px;
+    flex-shrink: 0;
+  }
+  .fs-term-title-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .fs-term-icon {
+    font-size: 13px;
+  }
+  .fs-term-heading {
+    font-family: var(--font-mono, monospace);
+    font-size: 11.5px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    color: #e2e8f0;
+  }
+  .fs-term-ready-badge {
+    background: rgba(0, 255, 106, 0.12);
+    border: 1px solid rgba(0, 255, 106, 0.45);
+    color: #00FF6A;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    font-weight: 800;
+    padding: 2px 7px;
+    border-radius: 4px;
+    letter-spacing: 0.8px;
+  }
+  .fs-term-title-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .fs-term-btn {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #cbd5e1;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 3px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+  .fs-term-btn:hover {
+    background: rgba(0, 229, 255, 0.15);
+    border-color: #00E5FF;
+    color: #ffffff;
+  }
+  .fs-term-btn.highlight {
+    background: rgba(0, 229, 255, 0.18);
+    border-color: #00E5FF;
+    color: #00E5FF;
+    font-weight: 800;
+  }
+  .fs-term-btn.highlight:hover {
+    background: #00E5FF;
+    color: #020408;
+    box-shadow: 0 0 10px rgba(0, 229, 255, 0.7);
+  }
+  .fs-term-btn.danger:hover {
+    background: #FF1F3D;
+    border-color: #FF1F3D;
+    color: #ffffff;
+    box-shadow: 0 0 10px rgba(255, 31, 61, 0.7);
+  }
+
+  .fs-term-mount-area {
+    flex: 1;
+    position: relative;
+    background: #020408;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+  .fs-term-mount-area #terminalContainer {
+    width: 100% !important;
+    height: 100% !important;
+    flex: 1 !important;
+  }
+  .fs-term-mount-area #terminalContainer .xterm {
+    height: 100% !important;
+    padding: 8px 12px !important;
+    box-sizing: border-box !important;
+  }
+
+  .fs-restore-float-btn {
+    position: absolute;
+    top: 10px;
+    right: 18px;
+    z-index: 100;
+    background: linear-gradient(135deg, rgba(0, 229, 255, 0.3), rgba(255, 230, 0, 0.3));
+    border: 1px solid #00E5FF;
+    color: #ffffff;
+    font-family: var(--font-mono, monospace);
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 6px 14px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.5);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s ease;
+  }
+  .fs-restore-float-btn:hover {
+    background: #00E5FF;
+    color: #020408;
+    box-shadow: 0 0 24px rgba(0, 229, 255, 0.9);
+    transform: translateY(-1px);
+  }
+
+  /* Right Intelligence Panels */
+  .fs-right-panels {
+    width: 250px;
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .fs-side-card {
+    background: #050a14;
+    border: 1px solid rgba(0, 229, 255, 0.2);
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .fs-card-badge {
+    margin-left: auto;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    color: #00FF6A;
+    font-weight: 700;
+  }
+  .fs-pulse-badge {
+    margin-left: auto;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-mono, monospace);
+    font-size: 9.5px;
+    color: #FF1F3D;
+    font-weight: 700;
+  }
+  .fs-pulse-badge .dot.red {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #FF1F3D;
+    box-shadow: 0 0 6px #FF1F3D;
+    animation: fsDotPulse 1.5s infinite ease-in-out;
+  }
+  .fs-session-list {
+    display: flex;
+    flex-direction: column;
+  }
+  .fs-session-item {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    padding: 4px 6px;
+    background: rgba(15, 23, 42, 0.6);
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  .fs-session-item .dot.green {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #00FF6A;
+    box-shadow: 0 0 6px #00FF6A;
+  }
+  .fs-session-user {
+    color: #f1f5f9;
+    font-weight: 700;
+  }
+  .fs-session-ip {
+    color: #94a3b8;
+    margin-left: auto;
+  }
+  .badge-active {
+    background: rgba(0, 255, 106, 0.15);
+    color: #00FF6A;
+    font-size: 9px;
+    padding: 1px 5px;
+    border-radius: 3px;
+    font-weight: 700;
+  }
+
+  /* Quick Commands Grid (2x4) */
+  .fs-quick-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+  .fs-cmd-btn {
+    background: rgba(15, 23, 42, 0.85);
+    border: 1px solid rgba(0, 229, 255, 0.22);
+    border-radius: 4px;
+    color: #cbd5e1;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 5px 6px;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.15s ease;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .fs-cmd-btn:hover {
+    background: rgba(0, 229, 255, 0.15);
+    border-color: #00E5FF;
+    color: #00E5FF;
+    box-shadow: 0 0 8px rgba(0, 229, 255, 0.35);
+  }
+
+  /* Live Activity Feed */
+  .fs-activity-card {
+    flex: 1;
+    min-height: 0;
+  }
+  .fs-activity-feed {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    font-family: var(--font-mono, monospace);
+    font-size: 9.5px;
+    padding-right: 2px;
+  }
+  .fs-log-entry {
+    display: flex;
+    gap: 5px;
+    line-height: 1.3;
+    padding: 2px 4px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 2px;
+  }
+  .fs-log-time {
+    color: #64748b;
+    flex-shrink: 0;
+  }
+  .fs-log-tag {
+    font-weight: 800;
+    flex-shrink: 0;
+  }
+  .fs-log-tag.info { color: #00FF6A; }
+  .fs-log-tag.warn { color: #FFE600; }
+  .fs-log-tag.cmd { color: #00E5FF; }
+  .fs-log-msg {
+    color: #cbd5e1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* 4. BOTTOM INTELLIGENCE BAR */
+  .fs-bottom-bar {
+    height: 60px;
+    background: #040810;
+    border-top: 1px solid rgba(0, 229, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    flex-shrink: 0;
+    box-shadow: 0 -2px 14px rgba(0, 0, 0, 0.6);
+  }
+  .fs-timeline-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex: 1;
+  }
+  .fs-timeline-tag {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 229, 255, 0.08);
+    border: 1px solid rgba(0, 229, 255, 0.3);
+    border-radius: 999px;
+    padding: 4px 10px;
+    flex-shrink: 0;
+  }
+  .fs-clock-icon {
+    font-size: 14px;
+    color: #00E5FF;
+  }
+  .fs-tag-text {
+    font-family: var(--font-mono, monospace);
+    font-size: 8.5px;
+    font-weight: 900;
+    letter-spacing: 1px;
+    color: #00E5FF;
+    line-height: 1.1;
+  }
+  .fs-timeline-track {
+    display: flex;
+    align-items: flex-start;
+    flex: 1;
+    max-width: 750px;
+  }
+  .fs-step {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    min-width: 72px;
+  }
+  .fs-step-indicator {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #070e1b;
+    border: 1.5px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    color: #94a3b8;
+    transition: all 0.3s ease;
+  }
+  .fs-step.completed .fs-step-indicator {
+    background: rgba(0, 255, 106, 0.15);
+    border-color: #00FF6A;
+    color: #00FF6A;
+    box-shadow: 0 0 8px rgba(0, 255, 106, 0.5);
+  }
+  .fs-step.active .fs-step-indicator {
+    background: rgba(255, 31, 61, 0.2);
+    border-color: #FF1F3D;
+    color: #FF1F3D;
+    box-shadow: 0 0 12px rgba(255, 31, 61, 0.7);
+    transform: scale(1.15);
+  }
+  .fs-step-indicator.pulse-ring {
+    animation: fsTargetPulse 1.8s infinite ease-in-out;
+  }
+  @keyframes fsTargetPulse {
+    0%, 100% { box-shadow: 0 0 8px rgba(255, 31, 61, 0.5); }
+    50% { box-shadow: 0 0 18px rgba(255, 31, 61, 0.9), 0 0 0 4px rgba(255, 31, 61, 0.2); }
+  }
+  .fs-step-dot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.3);
+  }
+  .fs-step-label {
+    font-family: var(--font-mono, monospace);
+    font-size: 8.5px;
+    color: #94a3b8;
+    line-height: 1.1;
+    white-space: nowrap;
+  }
+  .fs-step.completed .fs-step-label { color: #00FF6A; font-weight: 700; }
+  .fs-step.active .fs-step-label { color: #FF1F3D; font-weight: 800; text-shadow: 0 0 6px rgba(255, 31, 61, 0.5); }
+  .fs-step-connector {
+    flex: 1;
+    height: 2px;
+    background: rgba(255, 255, 255, 0.12);
+    margin: 10px -2px 0 -2px;
+    position: relative;
+    z-index: 1;
+  }
+  .fs-step-connector.completed {
+    background: #00FF6A;
+    box-shadow: 0 0 6px rgba(0, 255, 106, 0.6);
+  }
+  .fs-step-connector.active {
+    background: linear-gradient(90deg, #00FF6A, #FF1F3D);
+    box-shadow: 0 0 8px rgba(255, 31, 61, 0.6);
+  }
+
+  /* Mission Objectives Card */
+  .fs-objectives-card {
+    background: #050a14;
+    border: 1px solid rgba(255, 230, 0, 0.3);
+    border-radius: 6px;
+    padding: 6px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 220px;
+    flex-shrink: 0;
+  }
+  .fs-obj-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .fs-obj-title {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-family: var(--font-mono, monospace);
+    font-size: 10px;
+    font-weight: 800;
+    color: #FFE600;
+    letter-spacing: 1px;
+  }
+  .fs-star-icon {
+    font-size: 11px;
+    filter: drop-shadow(0 0 4px #FFE600);
+  }
+  .fs-obj-count {
+    font-family: var(--font-mono, monospace);
+    font-size: 10.5px;
+    font-weight: 800;
+    color: #00FF6A;
+  }
+  .fs-obj-bar-wrap {
+    height: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 999px;
+    overflow: hidden;
+  }
+  .fs-obj-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #00FF6A, #00E5FF);
+    box-shadow: 0 0 8px #00FF6A;
+    border-radius: 999px;
+    transition: width 0.4s ease;
+  }
+
+  /* 5. TERMINAL-FOCUS MODE (95%+ SCREEN) */
+  .fs-workstation-overlay.terminal-focus-active .fs-hud-row,
+  .fs-workstation-overlay.terminal-focus-active .fs-left-rail,
+  .fs-workstation-overlay.terminal-focus-active .fs-right-panels,
+  .fs-workstation-overlay.terminal-focus-active .fs-bottom-bar {
+    display: none !important;
+  }
+  .fs-workstation-overlay.terminal-focus-active .fs-main-workspace {
+    padding: 6px 12px;
+    height: calc(100vh - 50px);
+  }
+  .fs-workstation-overlay.terminal-focus-active .fs-center-terminal {
+    height: 100%;
+    width: 100%;
+  }
+  .fs-workstation-overlay.terminal-focus-active .fs-restore-float-btn {
+    display: flex !important;
+  }
+
+  /* Full-Screen Drawer Overlay (Concept / Evidence / Hints) */
+  .fs-drawer-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(2, 4, 8, 0.85);
+    backdrop-filter: blur(4px);
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    box-sizing: border-box;
+  }
+  .fs-drawer-content {
+    background: #040914;
+    border: 1px solid #00E5FF;
+    border-radius: 8px;
+    width: 820px;
+    max-width: 95vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 0 30px rgba(0, 229, 255, 0.25);
+    overflow: hidden;
+  }
+  .fs-drawer-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    background: #060d1e;
+    border-bottom: 1px solid rgba(0, 229, 255, 0.3);
+  }
+  .fs-drawer-title {
+    font-family: var(--font-mono, monospace);
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    color: #00E5FF;
+  }
+  .fs-drawer-close {
+    background: transparent;
+    border: none;
+    color: #94a3b8;
+    font-size: 20px;
+    cursor: pointer;
+  }
+  .fs-drawer-close:hover {
+    color: #FF1F3D;
+  }
+  .fs-drawer-body {
+    padding: 18px;
+    overflow-y: auto;
+    font-size: 13px;
+    color: #cbd5e1;
+    line-height: 1.5;
+  }
+
+  /* Responsive / Narrow Viewports */
+  @media (max-width: 1024px) {
+    .fs-hud-row {
+      grid-template-columns: 1fr 1fr;
+    }
+    .fs-threat-card {
+      display: none;
+    }
+    .fs-right-panels {
+      width: 200px;
+    }
+  }
+
+  @media (max-width: 768px) {
+    .fs-top-bar {
+      padding: 0 10px;
+    }
+    .fs-room-pill, .fs-xp-pill {
+      display: none;
+    }
+    .fs-hud-row {
+      grid-template-columns: 1fr;
+      height: auto;
+    }
+    .fs-hud-card {
+      height: auto;
+    }
+    .fs-left-rail {
+      width: 44px;
+    }
+    .fs-rail-text, .fs-rail-progress-card {
+      display: none;
+    }
+    .fs-right-panels {
+      display: none;
+    }
+    .fs-timeline-track {
+      display: none;
     }
   }
 </style>
@@ -1064,7 +2446,8 @@
   <div class="left-pane">
     <div class="top-meta-row">
       <div class="breadcrumb">
-        <a href="/academy">&lt; ACADEMY</a> / <span id="roomTrackBreadcrumb">TRACK</span> / <span id="roomNumberBreadcrumb">ROOM</span>
+        <a href="/academy">&lt; ACADEMY</a> / <span id="roomTrackBreadcrumb">TRACK</span> / <span
+          id="roomNumberBreadcrumb">ROOM</span>
       </div>
       <div class="track-hud-pill" id="trackHudPill">SECURITY TRACK</div>
     </div>
@@ -1111,8 +2494,65 @@
         </div>
         <div class="concept-section">
           <h4>HOW DEFENDERS PREVENT IT</h4>
-          <div class="concept-box" style="border-left-color: var(--color-green);" id="conceptRemediationText">Loading remediation...</div>
+          <div class="concept-box" style="border-left-color: var(--color-green);" id="conceptRemediationText">Loading
+            remediation...</div>
         </div>
+      </div>
+    </div>
+
+    <!-- Section 1.5: GHOST AI Mentor Step-by-Step Guide & Progressive Hints -->
+    <div class="collapsible-card ghost-mentor-card" style="border: 1px solid rgba(0, 229, 255, 0.3); background: #070c14; margin-bottom: 20px;">
+      <div class="collapsible-header" id="ghostMentorHeader" style="border-left: 3px solid #00E5FF; display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 12px 16px; background: rgba(0, 229, 255, 0.05);">
+        <span style="display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:12px;font-weight:700;color:#00E5FF;">
+          <span>🤖</span>
+          <span>GHOST AI MENTOR // STEP-BY-STEP MISSION GUIDE</span>
+        </span>
+        <span id="ghostMentorToggleIcon" style="color:#00E5FF;">&#9660;</span>
+      </div>
+      <div class="collapsible-content" id="ghostMentorContent" style="padding: 14px 16px;">
+        <!-- Active Guided Step Card -->
+        <div class="ghost-active-step-box" style="background:#090d16;border:1px solid #1e293b;border-radius:4px;padding:12px;margin-bottom:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+            <span style="font-family:var(--font-mono);font-size:11px;color:#00E5FF;font-weight:700;" id="ghostStepBadge">STEP 1 / 6: UNDERSTAND ENVIRONMENT</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:#64748b;" id="ghostToolBadge">TOOL: whoami / id</span>
+          </div>
+          <p style="font-size:12px;color:#cbd5e1;margin:4px 0 8px 0;" id="ghostStepGoal">Verify operator identity and local workstation privileges.</p>
+          <div style="display:flex;align-items:center;background:#030712;border:1px solid #1e293b;border-radius:3px;padding:6px 10px;gap:8px;">
+            <code style="font-family:var(--font-mono);font-size:11px;color:#00FF6A;flex:1;" id="ghostStepCmd">whoami &amp;&amp; id &amp;&amp; pwd</code>
+            <button class="btn-hud-action" id="btnGhostCopyCmd" title="Copy command to clipboard" style="padding:2px 8px;font-size:10px;">📋 COPY</button>
+            <button class="btn-hud-action" id="btnGhostRunCmd" title="Execute directly in terminal" style="padding:2px 8px;font-size:10px;color:#00E5FF;border-color:#00E5FF;">▶ RUN</button>
+          </div>
+          <p style="font-size:11px;color:#94a3b8;margin:6px 0 0 0;" id="ghostStepExpl">Confirms you are executing as the unprivileged 'operator' user on the isolated attacker workstation.</p>
+        </div>
+
+        <!-- Step Navigation Stepper Buttons -->
+        <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap;" id="ghostStepsList">
+          <!-- Step pills dynamically populated -->
+        </div>
+
+        <!-- Progressive Hint System -->
+        <div style="background:#0b111e;border:1px solid #1e293b;border-radius:4px;padding:12px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+            <span style="font-family:var(--font-mono);font-size:11px;font-weight:700;color:#FBBF24;">💡 PROGRESSIVE HINT SYSTEM</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:#94a3b8;" id="ghostHintLevelBadge">LEVEL 1 / 4</span>
+          </div>
+          <p style="font-size:11px;color:#cbd5e1;margin:0 0 8px 0;" id="ghostHintText">Click 'REQUEST HINT' for progressive clues without giving away the complete solution.</p>
+          <div id="ghostHintCmdBox" style="display:none;background:#030712;border:1px solid #1e293b;border-radius:3px;padding:6px 10px;margin-bottom:8px;">
+            <code style="font-family:var(--font-mono);font-size:11px;color:#00FF6A;" id="ghostHintCmdCode"></code>
+            <button class="btn-hud-action" id="btnGhostHintCopyCmd" style="margin-left:8px;padding:2px 6px;font-size:9px;">📋 COPY</button>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn-hud-action" id="btnGhostRequestHint" style="color:#FBBF24;border-color:#FBBF24;font-size:10px;">💡 REQUEST NEXT HINT</button>
+            <button class="btn-hud-action" id="btnGhostResetHint" style="font-size:10px;">↺ RESET HINTS</button>
+          </div>
+        </div>
+
+        <!-- Ask GHOST Input -->
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <input type="text" id="inputGhostAsk" placeholder="Ask GHOST AI Mentor about this room..." style="flex:1;background:#030712;border:1px solid #1e293b;border-radius:3px;padding:6px 10px;color:#fff;font-family:var(--font-mono);font-size:11px;">
+          <button class="btn-hud-action" id="btnGhostAsk" style="color:#00E5FF;border-color:#00E5FF;font-size:10px;">ASK GHOST</button>
+        </div>
+        <div id="ghostAskReplyBox" style="display:none;background:#030712;border:1px solid #00E5FF;border-radius:4px;padding:10px;margin-top:8px;font-size:11px;color:#cbd5e1;line-height:1.4;"></div>
       </div>
     </div>
 
@@ -1126,12 +2566,16 @@
   <div class="right-pane">
     <!-- Lab Controls Bar -->
     <div class="lab-controls-bar">
-      <div class="lab-info-left">
+      <div class="lab-info-left" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <div class="target-badge">
           <span style="color:#64748b;">TARGET:</span>
           <span style="color:var(--track-accent);font-weight:700;" id="labTargetIpText">10.10.14.90:8089</span>
         </div>
-        <span class="runner-badge emulated" id="labRunnerBadge">PROCESS EMULATION</span>
+        <div class="target-badge">
+          <span style="color:#64748b;">OPERATOR:</span>
+          <span style="color:#00FF6A;font-weight:700;" id="labAttackerIpText">10.10.14.10</span>
+        </div>
+        <span class="runner-badge emulated" id="labRunnerBadge">STOPPED</span>
         <span style="font-family:var(--font-mono);font-size:11px;color:#94a3b8;" id="labTimerText">60:00</span>
       </div>
 
@@ -1139,18 +2583,31 @@
         <button class="btn-lab btn-lab-start" id="btnStartLab">&#9654; START LAB</button>
         <button class="btn-lab btn-lab-reset" id="btnResetLab">&#8634; RESET DB</button>
         <button class="btn-lab btn-lab-stop" id="btnStopLab">&#9632; STOP</button>
-        <a class="btn-lab-target-link" id="btnTargetAppWebLink" href="http://127.0.0.1:8089" target="_blank">&#8599; OPEN TARGET APP</a>
+        <a class="btn-lab-target-link" id="btnTargetAppWebLink" href="http://127.0.0.1:8089" target="_blank">&#8599;
+          OPEN TARGET APP</a>
       </div>
     </div>
 
     <!-- Terminal -->
     <div class="terminal-wrapper">
+      <div class="terminal-titlebar">
+        <div class="terminal-titlebar-left">
+          <span id="termDotIndicator" class="term-dot"></span>
+          <span class="term-title">OPERATOR WORKSTATION // tty0</span>
+          <span id="termStatusBadge" class="term-status-badge standby">STANDBY</span>
+        </div>
+        <div class="terminal-titlebar-right">
+          <button id="btnTermClear" class="term-tool-btn" title="Clear screen">CLEAR</button>
+          <button id="btnTermReset" class="term-tool-btn" title="Reset shell session">RESET</button>
+          <button id="btnMaximizeWorkstation" class="term-tool-btn btn-maximize-ws" title="Expand Full-Screen Operator Workstation">⛶ MAXIMIZE LAB</button>
+        </div>
+      </div>
       <div class="quick-cmd-bar" id="quickCmdBar">
         <span style="font-family:var(--font-mono);font-size:10px;color:#64748b;align-self:center;">QUICK PROBES:</span>
         <button class="btn-quick-cmd" data-cmd="curl -s http://10.10.14.90:8089/">curl target</button>
         <button class="btn-quick-cmd" data-cmd="clear">clear</button>
       </div>
-      <div id="terminalContainer"></div>
+      <div id="normalTerminalMount" style="display:none;"></div>
     </div>
   </div>
 </div>
@@ -1254,7 +2711,8 @@
   <div class="evidence-body">
     <div class="evidence-file-info">
       <span id="evidenceFilePath">/var/log/detection/evidence.json</span>
-      <button id="btnCopyEvidenceCmd" class="btn btn-outline" style="font-size:10px;padding:3px 8px;cursor:pointer;">📋 COPY CAT CMD</button>
+      <button id="btnCopyEvidenceCmd" class="btn btn-outline" style="font-size:10px;padding:3px 8px;cursor:pointer;">📋
+        COPY CAT CMD</button>
     </div>
     <pre id="evidenceContentPre" class="evidence-pre">Loading dataset telemetry...</pre>
   </div>
@@ -1266,7 +2724,485 @@
   <span id="xpToastText">+70 XP EARNED</span>
 </div>
 
+<!-- =========================================================================
+     CINEMATIC OPERATOR WORKSTATION
+     ========================================================================= -->
+<div id="fullscreenWorkstation" class="fs-workstation-overlay active" style="display:flex;">
+  <!-- 1. TOP COMMAND BAR -->
+  <header class="fs-top-bar">
+    <div class="fs-top-bar-left">
+      <div class="fs-brand-wrap">
+        <ne-logo size="32" pulse></ne-logo>
+        <div class="fs-brand-text">
+          <div class="fs-brand-main">NO ENTRY</div>
+          <div class="fs-brand-sub">CYBERSECURITY ACADEMY</div>
+        </div>
+      </div>
+      <div class="fs-room-pill" id="fsRoomPill">
+        <span class="fs-room-badge" id="fsRoomBadge">ROOM 13</span>
+        <span class="fs-room-divider">•</span>
+        <span class="fs-room-title" id="fsRoomTitle">BASELINE PROFILING &amp; THRESHOLD DETECTIONS</span>
+      </div>
+    </div>
+    <div class="fs-top-bar-right">
+      <div class="fs-status-pill offline" id="fsStatusPill">
+        <span class="fs-status-dot"></span>
+        <span class="fs-status-label" id="fsStatusText">STOPPED</span>
+      </div>
+      <div class="fs-xp-pill">
+        <span class="fs-xp-star">★</span>
+        <span class="fs-xp-val" id="fsXpText">XP 350</span>
+      </div>
+      <div class="fs-timer-pill">
+        <span class="fs-timer-icon">⏱</span>
+        <span class="fs-timer-val" id="fsTimerVal">--:--</span>
+      </div>
+      <button id="btnExitFsLab" class="fs-exit-btn" title="Exit Lab to Academy (ESC)">
+        &lt; EXIT LAB
+      </button>
+    </div>
+  </header>
+
+  <!-- 2. TOP SECONDARY HUD (3-COLUMN BALANCED GRID) -->
+  <section class="fs-hud-row">
+    <!-- Card 1: Mission Briefing -->
+    <div class="fs-hud-card fs-briefing-card">
+      <div class="fs-card-header">
+        <span class="fs-card-icon red">🎯</span>
+        <span class="fs-card-title red">MISSION BRIEFING</span>
+      </div>
+      <div class="fs-briefing-body">
+        <div class="fs-avatar-silhouette">
+          <svg viewBox="0 0 80 80" class="fs-hoodie-svg">
+            <!-- Hacker Hoodie Silhouette -->
+            <path d="M40 8 C25 8 16 22 16 42 C16 52 20 62 26 72 L54 72 C60 62 64 52 64 42 C64 22 55 8 40 8 Z" fill="#0d1117" stroke="#FF1F3D" stroke-width="1.5"/>
+            <!-- Inner Hood fold -->
+            <path d="M40 16 C30 16 24 26 24 44 C24 54 28 64 33 68 L47 68 C52 64 56 54 56 44 C56 26 50 16 40 16 Z" fill="#020408"/>
+            <!-- Glowing Red Visor / Cyber Eyes -->
+            <ellipse cx="34" cy="42" rx="4" ry="1.5" fill="#FF1F3D" filter="drop-shadow(0 0 4px #FF1F3D)"/>
+            <ellipse cx="46" cy="42" rx="4" ry="1.5" fill="#FF1F3D" filter="drop-shadow(0 0 4px #FF1F3D)"/>
+            <!-- Cyber line accents -->
+            <line x1="20" y1="58" x2="30" y2="64" stroke="#FF1F3D" stroke-width="1" stroke-opacity="0.6"/>
+            <line x1="60" y1="58" x2="50" y2="64" stroke="#FF1F3D" stroke-width="1" stroke-opacity="0.6"/>
+          </svg>
+        </div>
+        <div class="fs-briefing-info">
+          <p class="fs-briefing-desc" id="fsBriefingDesc">Profile system behavior and set effective thresholds to detect anomalous activity.</p>
+          <div class="fs-briefing-chips">
+            <span class="fs-chip red" id="fsChipTrack">🛡️ Red Team</span>
+            <span class="fs-chip blue" id="fsChipDiff">📶 Medium</span>
+            <span class="fs-chip purple" id="fsChipDuration">⏱ ~ 30 min</span>
+            <span class="fs-chip gold" id="fsChipXp">★ 350 XP</span>
+          </div>
+          <button id="btnFsViewDetails" class="fs-details-btn">
+            📖 View Details
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Card 2: Global Threat Topology (Interactive SVG World Map) -->
+    <div class="fs-hud-card fs-threat-card">
+      <div class="fs-threat-header-overlay">
+        <span class="fs-threat-tag">GLOBAL THREAT TOPOLOGY // ACTIVE TELEMETRY</span>
+      </div>
+      <div class="fs-threat-map-container" id="fsThreatMap">
+        <svg viewBox="0 0 600 240" class="fs-world-svg">
+          <defs>
+            <linearGradient id="arcGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+              <stop offset="0%" stop-color="#00E5FF" stop-opacity="0.8"/>
+              <stop offset="50%" stop-color="#FF1F3D" stop-opacity="0.95"/>
+              <stop offset="100%" stop-color="#00FF6A" stop-opacity="0.8"/>
+            </linearGradient>
+            <pattern id="gridDots" width="14" height="14" patternUnits="userSpaceOnUse">
+              <circle cx="1.5" cy="1.5" r="0.8" fill="#1e293b" fill-opacity="0.7"/>
+            </pattern>
+          </defs>
+          <!-- Background Cyber Dot Grid -->
+          <rect width="600" height="240" fill="url(#gridDots)"/>
+          
+          <!-- Continent Vector Paths -->
+          <!-- North America -->
+          <path class="fs-continent" d="M60 45 L95 38 L140 40 L160 55 L150 75 L170 85 L145 110 L115 125 L90 95 L65 80 Z" />
+          <path class="fs-continent" d="M110 25 L145 20 L165 35 L125 35 Z" />
+          <!-- South America -->
+          <path class="fs-continent" d="M140 135 L180 145 L200 170 L185 210 L155 220 L145 180 L130 150 Z" />
+          <!-- Europe -->
+          <path class="fs-continent" d="M260 50 L310 45 L320 70 L285 85 L255 70 Z" />
+          <path class="fs-continent" d="M250 40 L265 30 L275 42 L258 50 Z" />
+          <!-- Africa -->
+          <path class="fs-continent" d="M260 90 L320 90 L345 120 L330 170 L300 195 L270 170 L255 120 Z" />
+          <!-- Asia -->
+          <path class="fs-continent" d="M325 45 L420 40 L490 55 L500 85 L445 105 L420 120 L380 110 L340 70 Z" />
+          <!-- East Asia / Japan -->
+          <path class="fs-continent" d="M510 70 L525 65 L520 85 L505 90 Z" />
+          <!-- India -->
+          <path class="fs-continent" d="M375 110 L415 115 L405 150 L385 155 L375 125 Z" />
+          <!-- Australia -->
+          <path class="fs-continent" d="M470 160 L530 165 L540 195 L490 205 L465 180 Z" />
+
+          <!-- Threat Arcs (Pulsating curved ballistic lines) -->
+          <path class="fs-threat-arc arc-1" d="M140 75 Q210 25 285 60" />
+          <path class="fs-threat-arc arc-2" d="M285 60 Q380 20 460 75" />
+          <path class="fs-threat-arc arc-3" d="M460 75 Q420 120 395 135" />
+          <path class="fs-threat-arc arc-4" d="M160 170 Q240 120 285 60" />
+          <path class="fs-threat-arc arc-5" d="M460 75 Q520 120 500 180" />
+
+          <!-- Threat Nodes (Glowing Pulsating Rings & Dots) -->
+          <g class="fs-threat-node" transform="translate(100, 75)">
+            <circle class="node-ring" r="8"/>
+            <circle class="node-center" r="3"/>
+          </g>
+          <g class="fs-threat-node" transform="translate(140, 75)">
+            <circle class="node-ring" r="9"/>
+            <circle class="node-center" r="3.5"/>
+          </g>
+          <g class="fs-threat-node" transform="translate(285, 60)">
+            <circle class="node-ring pulse-fast" r="11"/>
+            <circle class="node-center" r="4"/>
+          </g>
+          <g class="fs-threat-node" transform="translate(515, 75)">
+            <circle class="node-ring" r="9"/>
+            <circle class="node-center" r="3.5"/>
+          </g>
+          <g class="fs-threat-node" transform="translate(440, 130)">
+            <circle class="node-ring pulse-fast" r="8"/>
+            <circle class="node-center" r="3"/>
+          </g>
+          <g class="fs-threat-node" transform="translate(395, 135)">
+            <circle class="node-ring" r="7"/>
+            <circle class="node-center" r="3"/>
+          </g>
+          <g class="fs-threat-node" transform="translate(505, 185)">
+            <circle class="node-ring" r="8"/>
+            <circle class="node-center" r="3"/>
+          </g>
+          <g class="fs-threat-node" transform="translate(170, 180)">
+            <circle class="node-ring" r="7"/>
+            <circle class="node-center" r="2.5"/>
+          </g>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Card 3: Lab Intelligence (Target IP, Ports, Container, 3D Server Rack) -->
+    <div class="fs-hud-card fs-intel-card">
+      <div class="fs-card-header">
+        <span class="fs-card-icon cyan">📊</span>
+        <span class="fs-card-title cyan">LAB INTELLIGENCE</span>
+      </div>
+      <div class="fs-intel-body">
+        <div class="fs-intel-rows">
+          <div class="fs-intel-row">
+            <span class="fs-intel-label">Target IP</span>
+            <span class="fs-intel-val highlight-cyan" id="fsIntelIp">
+              OFFLINE
+              <button id="btnFsCopyIp" class="fs-copy-inline" title="Copy Target IP" style="display:none;">📋</button>
+            </span>
+          </div>
+          <div class="fs-intel-row">
+            <span class="fs-intel-label">Operator IP</span>
+            <span class="fs-intel-val" id="fsIntelOperatorIp" style="color:#94a3b8;font-weight:700;">
+              OFFLINE
+            </span>
+          </div>
+          <div class="fs-intel-row">
+            <span class="fs-intel-label">Lab Status</span>
+            <span class="fs-intel-val offline" id="fsIntelStatus">
+              <span class="dot red"></span> STOPPED
+            </span>
+          </div>
+          <div class="fs-intel-row">
+            <span class="fs-intel-label">Open Ports</span>
+            <span class="fs-intel-val" id="fsIntelPorts">
+              <span class="dot red"></span> OFFLINE
+            </span>
+          </div>
+          <div class="fs-intel-row">
+            <span class="fs-intel-label">Container</span>
+            <span class="fs-intel-val" id="fsIntelContainer">
+              <span class="dot red"></span> stopped
+            </span>
+          </div>
+          <div class="fs-intel-actions" id="fsIntelActions" style="display:flex;gap:6px;margin-top:10px;">
+            <button id="btnFsStartLab" class="btn-lab btn-lab-start" style="flex:1;padding:6px 12px;font-size:11px;font-weight:800;background:rgba(0,255,106,0.15);border:1px solid #00FF6A;color:#00FF6A;border-radius:4px;cursor:pointer;">&#9654; START LAB</button>
+            <button id="btnFsStopLab" class="btn-lab btn-lab-stop" style="display:none;flex:1;padding:6px 12px;font-size:11px;font-weight:800;background:rgba(255,31,61,0.15);border:1px solid #FF1F3D;color:#FF1F3D;border-radius:4px;cursor:pointer;">&#9632; STOP LAB</button>
+            <button id="btnFsResetLab" class="btn-lab btn-lab-reset" style="display:none;padding:6px 10px;font-size:11px;font-weight:800;background:rgba(255,230,0,0.15);border:1px solid #FFE600;color:#FFE600;border-radius:4px;cursor:pointer;">&#8634; RESET</button>
+          </div>
+        </div>
+
+        <!-- 3D Glowing Server Rack Illustration -->
+        <div class="fs-server-rack-wrap">
+          <svg viewBox="0 0 120 120" class="fs-rack-svg">
+            <!-- 3D Cabinet Top & Side Perspective -->
+            <polygon points="15,25 35,12 85,12 65,25" fill="#047857" fill-opacity="0.3" stroke="#00FF6A" stroke-width="1"/>
+            <polygon points="65,25 85,12 85,95 65,110" fill="#064e3b" fill-opacity="0.4" stroke="#00FF6A" stroke-width="1"/>
+            <rect x="15" y="25" width="50" height="85" fill="#021a13" stroke="#00FF6A" stroke-width="1.2"/>
+            
+            <!-- Blade Unit 1 -->
+            <rect x="19" y="30" width="42" height="10" rx="1" fill="#032b1e" stroke="#00FF6A" stroke-width="0.8"/>
+            <circle cx="24" cy="35" r="1.5" fill="#00FF6A" class="rack-led-fast"/>
+            <circle cx="28" cy="35" r="1.5" fill="#00E5FF"/>
+            <line x1="34" y1="35" x2="56" y2="35" stroke="#00FF6A" stroke-width="1" stroke-dasharray="2 2"/>
+
+            <!-- Blade Unit 2 -->
+            <rect x="19" y="44" width="42" height="10" rx="1" fill="#032b1e" stroke="#00FF6A" stroke-width="0.8"/>
+            <circle cx="24" cy="49" r="1.5" fill="#00FF6A"/>
+            <circle cx="28" cy="49" r="1.5" fill="#FFE600" class="rack-led-blink"/>
+            <line x1="34" y1="49" x2="56" y2="49" stroke="#00FF6A" stroke-width="1" stroke-dasharray="2 2"/>
+
+            <!-- Blade Unit 3 -->
+            <rect x="19" y="58" width="42" height="10" rx="1" fill="#032b1e" stroke="#00FF6A" stroke-width="0.8"/>
+            <circle cx="24" cy="63" r="1.5" fill="#00FF6A" class="rack-led-fast"/>
+            <circle cx="28" cy="63" r="1.5" fill="#00FF6A"/>
+            <line x1="34" y1="63" x2="56" y2="63" stroke="#00FF6A" stroke-width="1" stroke-dasharray="2 2"/>
+
+            <!-- Blade Unit 4 -->
+            <rect x="19" y="72" width="42" height="10" rx="1" fill="#032b1e" stroke="#00FF6A" stroke-width="0.8"/>
+            <circle cx="24" cy="77" r="1.5" fill="#00FF6A"/>
+            <circle cx="28" cy="77" r="1.5" fill="#00E5FF" class="rack-led-blink"/>
+            <line x1="34" y1="77" x2="56" y2="77" stroke="#00FF6A" stroke-width="1" stroke-dasharray="2 2"/>
+
+            <!-- Blade Unit 5 -->
+            <rect x="19" y="86" width="42" height="10" rx="1" fill="#032b1e" stroke="#00FF6A" stroke-width="0.8"/>
+            <circle cx="24" cy="91" r="1.5" fill="#00FF6A" class="rack-led-fast"/>
+            <circle cx="28" cy="91" r="1.5" fill="#00FF6A"/>
+            <line x1="34" y1="91" x2="56" y2="91" stroke="#00FF6A" stroke-width="1" stroke-dasharray="2 2"/>
+
+            <!-- Secondary Cabinet Right Side -->
+            <polygon points="72,32 86,22 110,22 96,32" fill="#047857" fill-opacity="0.2" stroke="#00FF6A" stroke-width="0.8"/>
+            <polygon points="96,32 110,22 110,88 96,98" fill="#064e3b" fill-opacity="0.3" stroke="#00FF6A" stroke-width="0.8"/>
+            <rect x="72" y="32" width="24" height="66" fill="#021a13" stroke="#00FF6A" stroke-width="0.8"/>
+          </svg>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3. MAIN WORKSPACE (3-COLUMN: LEFT RAIL + CENTRAL TERMINAL + RIGHT PANELS) -->
+  <main class="fs-main-workspace" id="fsMainWorkspace">
+    <!-- LEFT NAVIGATION RAIL -->
+    <nav class="fs-left-rail" id="fsLeftRail">
+      <div class="fs-rail-btns">
+        <button id="btnFsRailTerm" class="fs-rail-btn active" data-tab="term" title="Focus Operator Terminal">
+          <span class="fs-rail-icon">&gt;_</span>
+          <span class="fs-rail-text">TERMINAL</span>
+        </button>
+        <button id="btnFsRailConcept" class="fs-rail-btn" data-tab="concept" title="Open Learning Concept &amp; Architectural Theory">
+          <span class="fs-rail-icon">📖</span>
+          <span class="fs-rail-text">CONCEPT</span>
+        </button>
+        <button id="btnFsRailEvidence" class="fs-rail-btn" data-tab="evidence" title="Inspect Evidence &amp; Telemetry Datasets">
+          <span class="fs-rail-icon">💾</span>
+          <span class="fs-rail-text">EVIDENCE</span>
+        </button>
+        <button id="btnFsRailHints" class="fs-rail-btn" data-tab="hints" title="Reveal Tactical Mission Hints">
+          <span class="fs-rail-icon">💡</span>
+          <span class="fs-rail-text">HINTS</span>
+        </button>
+        <button id="btnFsRailProbes" class="fs-rail-btn" data-tab="probes" title="Trigger Pre-configured Quick Probes">
+          <span class="fs-rail-icon">⚡</span>
+          <span class="fs-rail-text">PROBES</span>
+        </button>
+        <button id="btnFsRailGhost" class="fs-rail-btn" data-tab="ghost" title="GHOST AI Step-by-Step Mentor">
+          <span class="fs-rail-icon">🤖</span>
+          <span class="fs-rail-text">GHOST AI</span>
+        </button>
+        <button id="btnFsRailStartToggle" class="fs-rail-btn success" title="Start or Stop Lab Environment">
+          <span class="fs-rail-icon" id="fsRailStartIcon">▶</span>
+          <span class="fs-rail-text" id="fsRailStartText">START LAB</span>
+        </button>
+        <button id="btnFsRailReset" class="fs-rail-btn warning" title="Reset Docker Container &amp; Session">
+          <span class="fs-rail-icon">🔄</span>
+          <span class="fs-rail-text">RESET LAB</span>
+        </button>
+      </div>
+
+      <!-- Track Progress Circular Gauge -->
+      <div class="fs-rail-progress-card">
+        <div class="fs-progress-header">TRACK PROGRESS</div>
+        <div class="fs-gauge-wrap">
+          <svg viewBox="0 0 80 80" class="fs-gauge-svg">
+            <circle cx="40" cy="40" r="32" class="gauge-bg"/>
+            <circle cx="40" cy="40" r="32" class="gauge-bar" id="fsGaugeBar" stroke-dasharray="201" stroke-dashoffset="50"/>
+            <text x="40" y="44" text-anchor="middle" class="gauge-val" id="fsGaugeVal">75%</text>
+          </svg>
+        </div>
+        <div class="fs-progress-sub" id="fsProgressRooms">15 / 20 Rooms</div>
+      </div>
+    </nav>
+
+    <!-- CENTRAL OPERATOR TERMINAL -->
+    <div class="fs-center-terminal" id="fsCenterTerminal">
+      <div class="fs-term-window corner-brackets">
+        <!-- Terminal Header -->
+        <div class="fs-term-titlebar">
+          <div class="fs-term-title-left">
+            <span class="fs-term-icon">⌨️</span>
+            <span class="fs-term-heading">OPERATOR WORKSTATION // tty0</span>
+            <span class="fs-term-ready-badge standby" id="fsTermReadyBadge" style="color:#ef4444;">⏸ STANDBY</span>
+          </div>
+          <div class="fs-term-title-right">
+            <button id="btnFsClear" class="fs-term-btn" title="Clear terminal screen">🗑 CLEAR</button>
+            <button id="btnFsCopy" class="fs-term-btn" title="Copy terminal selection">📋 COPY</button>
+            <button id="btnFsMin" class="fs-term-btn" title="Toggle compact terminal">🗕 MIN</button>
+            <button id="btnFsFocus" class="fs-term-btn highlight" title="Expand Terminal to 95%+ Screen (Focus Mode)">🗖 FOCUS</button>
+            <button id="btnFsClose" class="fs-term-btn danger" title="Exit Lab to Academy">✕ CLOSE</button>
+          </div>
+        </div>
+
+        <!-- Terminal Mount Point (Permanent stable mount for xterm.js) -->
+        <div class="fs-term-mount-area" id="fsTerminalMount">
+          <div id="terminalContainer" style="width:100%;height:100%;"></div>
+          <!-- Floating Restore Button in Focus Mode -->
+          <button id="btnFsRestoreWorkstation" class="fs-restore-float-btn" style="display:none;" title="Restore Full Multi-Panel Workstation">
+            🗗 RESTORE WORKSTATION
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT INTELLIGENCE PANELS -->
+    <aside class="fs-right-panels" id="fsRightPanels">
+      <!-- Panel 1: ACTIVE SESSIONS -->
+      <div class="fs-side-card">
+        <div class="fs-card-header">
+          <span class="fs-card-icon green">👤</span>
+          <span class="fs-card-title green">ACTIVE SESSIONS</span>
+          <span class="fs-card-badge" id="fsSessionCount">0 / 1</span>
+        </div>
+        <div class="fs-session-list">
+          <div class="fs-session-item" id="fsSessionItem">
+            <span class="dot red" id="fsSessionDot"></span>
+            <span class="fs-session-user">operator-001</span>
+            <span class="fs-session-ip" id="fsSessionIp">Standby</span>
+            <span class="fs-session-status badge-stopped" id="fsSessionStatus">Stopped</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Panel 2: QUICK COMMANDS (2x4 Grid) -->
+      <div class="fs-side-card">
+        <div class="fs-card-header">
+          <span class="fs-card-icon gold">⚡</span>
+          <span class="fs-card-title gold">QUICK COMMANDS</span>
+        </div>
+        <div class="fs-quick-grid" id="fsQuickCmdGrid">
+          <button class="fs-cmd-btn" data-cmd="nmap -sV -F 10.10.15.90">nmap scan</button>
+          <button class="fs-cmd-btn" data-cmd="whoami">whoami</button>
+          <button class="fs-cmd-btn" data-cmd="id">id</button>
+          <button class="fs-cmd-btn" data-cmd="ls -la">ls -la</button>
+          <button class="fs-cmd-btn" data-cmd="netstat -tulpn">netstat</button>
+          <button class="fs-cmd-btn" data-cmd="ps aux">ps aux</button>
+          <button class="fs-cmd-btn" data-cmd="curl -s http://10.10.15.90/">curl</button>
+          <button class="fs-cmd-btn" data-cmd="clear">clear</button>
+        </div>
+      </div>
+
+      <!-- Panel 3: LIVE ACTIVITY -->
+      <div class="fs-side-card fs-activity-card">
+        <div class="fs-card-header">
+          <span class="fs-card-icon red">📈</span>
+          <span class="fs-card-title red">LIVE ACTIVITY</span>
+          <span class="fs-pulse-badge"><span class="dot red pulse"></span> Live</span>
+        </div>
+        <div class="fs-activity-feed" id="fsActivityFeed">
+          <div class="fs-log-entry">
+            <span class="fs-log-time">[00:45:12]</span>
+            <span class="fs-log-tag info">INFO</span>
+            <span class="fs-log-msg">Lab container started</span>
+          </div>
+          <div class="fs-log-entry">
+            <span class="fs-log-time">[00:45:15]</span>
+            <span class="fs-log-tag info">INFO</span>
+            <span class="fs-log-msg">Network analysis active</span>
+          </div>
+          <div class="fs-log-entry">
+            <span class="fs-log-time">[00:45:18]</span>
+            <span class="fs-log-tag info">INFO</span>
+            <span class="fs-log-msg">Ready for commands...</span>
+          </div>
+        </div>
+      </div>
+    </aside>
+  </main>
+
+  <!-- 4. BOTTOM INTELLIGENCE BAR -->
+  <footer class="fs-bottom-bar" id="fsBottomBar">
+    <!-- MISSION TIMELINE (5 PHASES) -->
+    <div class="fs-timeline-wrap">
+      <div class="fs-timeline-tag">
+        <span class="fs-clock-icon">⏱</span>
+        <span class="fs-tag-text">MISSION<br>TIMELINE</span>
+      </div>
+      <div class="fs-timeline-track">
+        <!-- Step 1: Setup Environment -->
+        <div class="fs-step completed" id="fsStep1">
+          <div class="fs-step-indicator"><span class="fs-step-check">✔</span></div>
+          <span class="fs-step-label">Setup<br>Environment</span>
+        </div>
+        <div class="fs-step-connector completed" id="fsConn1"></div>
+
+        <!-- Step 2: Analyze Target -->
+        <div class="fs-step completed" id="fsStep2">
+          <div class="fs-step-indicator"><span class="fs-step-check">✔</span></div>
+          <span class="fs-step-label">Analyze<br>Target</span>
+        </div>
+        <div class="fs-step-connector active" id="fsConn2"></div>
+
+        <!-- Step 3: Find Vulnerabilities (Active) -->
+        <div class="fs-step active" id="fsStep3">
+          <div class="fs-step-indicator pulse-ring"><span class="fs-step-target">🎯</span></div>
+          <span class="fs-step-label highlight-red">Find<br>Vulnerabilities</span>
+        </div>
+        <div class="fs-step-connector" id="fsConn3"></div>
+
+        <!-- Step 4: Exploit -->
+        <div class="fs-step" id="fsStep4">
+          <div class="fs-step-indicator"><span class="fs-step-dot"></span></div>
+          <span class="fs-step-label">Exploit<br>(Optional)</span>
+        </div>
+        <div class="fs-step-connector" id="fsConn4"></div>
+
+        <!-- Step 5: Report Findings -->
+        <div class="fs-step" id="fsStep5">
+          <div class="fs-step-indicator"><span class="fs-step-dot"></span></div>
+          <span class="fs-step-label">Report<br>Findings</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- MISSION OBJECTIVES PROGRESS -->
+    <div class="fs-objectives-card">
+      <div class="fs-obj-header">
+        <div class="fs-obj-title">
+          <span class="fs-star-icon">⭐</span>
+          <span>MISSION OBJECTIVES</span>
+        </div>
+        <span class="fs-obj-count" id="fsObjCount">1 / 4</span>
+      </div>
+      <div class="fs-obj-bar-wrap">
+        <div class="fs-obj-bar-fill" id="fsObjBarFill" style="width: 25%;"></div>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Concept & Evidence Modal Drawer for Full-Screen Mode -->
+  <div id="fsDrawerOverlay" class="fs-drawer-overlay" style="display:none;">
+    <div class="fs-drawer-content corner-brackets">
+      <div class="fs-drawer-header">
+        <span class="fs-drawer-title" id="fsDrawerTitle">THEORY &amp; ARCHITECTURAL PRINCIPLES</span>
+        <button id="btnFsCloseDrawer" class="fs-drawer-close">&times;</button>
+      </div>
+      <div class="fs-drawer-body" id="fsDrawerBody">
+        <!-- Dynamically populated from room concept / evidence / hints -->
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- xterm.js bundle -->
 <script src="/static/vendor/xterm/xterm.js"></script>
+<script type="module" src="/static/js/core/logo.js"></script>
 <script type="module" src="/static/js/screens/roomWorkspace.js"></script>
 {% endblock %}

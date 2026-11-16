@@ -694,6 +694,12 @@
         </div>
       </div>
 
+      <!-- Active Hunt Filter Indicator -->
+      <div id="huntActiveBanner" style="display:none; padding: 6px 12px; background: rgba(0, 229, 255, 0.12); border-left: 3px solid var(--color-cyan); margin: 6px 10px; font-family: var(--font-mono); font-size: 11px; align-items: center; justify-content: space-between;">
+        <span>🔍 HUNT ACTIVE: <strong id="huntBannerQuery" style="color:var(--color-cyan);">...</strong> (<span id="huntBannerHits">0</span> hits)</span>
+        <button id="clearHuntBtn" class="btn btn-outline" style="padding: 2px 8px; font-size: 10px; cursor:pointer;">RESET STREAM</button>
+      </div>
+
       <div class="stream-table-scroll">
         <table class="table-mono">
           <thead>

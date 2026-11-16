@@ -6,6 +6,8 @@ class User(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     username: str = Field(index=True, unique=True)
     operator_id: str = Field(default="op-0x7f3a", index=True)
+    full_name: Optional[str] = Field(default=None)
+    email: Optional[str] = Field(default=None, index=True)
     hashed_password: str
     role: str = Field(default="operator") # operator, admin, analyst
     xp: int = Field(default=1240)
@@ -14,6 +16,10 @@ class User(SQLModel, table=True):
     ethics_accepted_at: Optional[datetime] = Field(default=None)
     streak_days: int = Field(default=3)
     last_active_date: Optional[str] = Field(default=None)
+    is_verified: bool = Field(default=True)
+    verification_token: Optional[str] = Field(default=None)
+    reset_token: Optional[str] = Field(default=None)
+    reset_token_expires_at: Optional[datetime] = Field(default=None)
     created_at: datetime = Field(default_factory=datetime.utcnow)
 
 class MissionProgress(SQLModel, table=True):

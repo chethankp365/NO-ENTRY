@@ -40,6 +40,12 @@ def _ensure_sqlite_columns():
             "ethics_accepted_at": "DATETIME",
             "streak_days": "INTEGER DEFAULT 3",
             "last_active_date": "TEXT",
+            "full_name": "TEXT",
+            "email": "TEXT",
+            "is_verified": "BOOLEAN DEFAULT 1",
+            "verification_token": "TEXT",
+            "reset_token": "TEXT",
+            "reset_token_expires_at": "DATETIME",
         },
         "missionprogress": {
             "stage": "TEXT DEFAULT 'briefing'",

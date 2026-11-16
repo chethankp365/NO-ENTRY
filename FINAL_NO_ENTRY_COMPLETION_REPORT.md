@@ -166,3 +166,4 @@ collected 380 items / 95 deselected / 285 selected
 | **Documentation** | README.md and DEMO_SCRIPT.md | ✅ VERIFIED | Created and formatted |
 | **Test Suite** | Full non-Docker regression test suite | ✅ VERIFIED | 279 / 279 tests passing |
 | **Live API Endpoints** | Port 8000 REST & HTML routes | ✅ VERIFIED | Health, catalog, rooms, and templates 200 OK |
+

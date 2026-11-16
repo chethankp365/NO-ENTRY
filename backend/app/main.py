@@ -13,6 +13,7 @@ from fastapi.templating import Jinja2Templates
 
 from backend.app.config import settings
 from backend.app.db.database import init_db
+from backend.app.db.models import User
 from backend.app.sim.engine import sim_engine
 from backend.app.api.routes import api_router
 from backend.app.api.auth import auth_router
@@ -262,12 +263,23 @@ def academy_catalog_page(request: Request):
 
 @app.get("/academy/rooms/{room_id}", response_class=HTMLResponse)
 @app.get("/academy/{room_id}", response_class=HTMLResponse)
+@app.get("/room/{room_id}", response_class=HTMLResponse)
 def academy_room_page(request: Request, room_id: str):
     """TryHackMe-style Hands-On Practical Room Workspace."""
     return templates.TemplateResponse(
         request=request,
         name="room_workspace.html",
         context={"app_name": settings.APP_NAME, "room_id": room_id}
+    )
+
+
+@app.get("/profile", response_class=HTMLResponse)
+def profile_page(request: Request, user: User = Depends(resolve_operator)):
+    """Operator Profile & Progress Overview."""
+    return templates.TemplateResponse(
+        request=request,
+        name="profile.html",
+        context={"app_name": settings.APP_NAME, "user": user}
     )
 
 

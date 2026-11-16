@@ -91,6 +91,12 @@ class RoomConcept(BaseModel):
     why_it_matters: str
     demonstration: str
     remediation_guide: str
+    what_is_this: Optional[str] = None
+    how_it_works: Optional[List[str]] = None
+    real_world_application: Optional[str] = None
+    what_to_observe: Optional[str] = None
+    common_mistakes: Optional[str] = None
+    key_takeaway: Optional[str] = None
 
 
 class RoomDefinition(BaseModel):

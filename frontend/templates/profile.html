@@ -1,0 +1,368 @@
+{% extends "base_app.html" %}
+
+{% block title %}NO ENTRY // OPERATOR PROFILE{% endblock %}
+{% block page_title %}OPERATOR PROFILE{% endblock %}
+{% block page_subtitle %}identity credentials, clearance level &amp; academy progression{% endblock %}
+
+{% block extra_head %}
+<style>
+  .profile-grid {
+    display: grid;
+    grid-template-columns: 360px 1fr;
+    gap: 20px;
+    height: 100%;
+  }
+
+  @media (max-width: 960px) {
+    .profile-grid {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .profile-card {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 24px;
+    position: relative;
+    border-radius: 4px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
+  }
+
+  .profile-avatar-wrap {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--color-border);
+    margin-bottom: 20px;
+  }
+
+  .profile-emblem {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(0, 229, 255, 0.1);
+    border: 2px solid var(--color-cyan);
+    box-shadow: 0 0 16px rgba(0, 229, 255, 0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 28px;
+    flex-shrink: 0;
+  }
+
+  .profile-name {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 800;
+    color: var(--color-text);
+    margin: 0;
+  }
+
+  .profile-op-id {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--color-cyan);
+    margin-top: 4px;
+    letter-spacing: 0.5px;
+  }
+
+  .profile-meta-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 8px 0;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    font-family: var(--font-mono);
+    font-size: 12px;
+  }
+
+  .profile-meta-label {
+    color: var(--color-muted);
+  }
+
+  .profile-meta-val {
+    color: var(--color-text);
+    font-weight: 600;
+  }
+
+  .profile-meta-val.cyan {
+    color: var(--color-cyan);
+  }
+
+  .profile-meta-val.green {
+    color: var(--color-green);
+  }
+
+  .track-stat-box {
+    background: #05080c;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+
+  .track-stat-header {
+    display: flex;
+    justify-content: space-between;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    margin-bottom: 8px;
+  }
+
+  .track-stat-bar {
+    height: 6px;
+    background: #1e293b;
+    border-radius: 3px;
+    overflow: hidden;
+  }
+
+  .track-stat-fill {
+    height: 100%;
+    transition: width 0.6s ease;
+  }
+
+  .fill-red { background: var(--color-red); box-shadow: 0 0 8px var(--color-red); }
+  .fill-blue { background: #38bdf8; box-shadow: 0 0 8px #38bdf8; }
+  .fill-purple { background: #a855f7; box-shadow: 0 0 8px #a855f7; }
+  .fill-detection { background: var(--color-green); box-shadow: 0 0 8px var(--color-green); }
+
+  .stats-banner {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+    margin-bottom: 20px;
+  }
+
+  .stat-mini-card {
+    background: #080B10;
+    border: 1px solid var(--color-border);
+    padding: 14px;
+    border-radius: 4px;
+    text-align: center;
+  }
+
+  .stat-mini-val {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--color-text);
+  }
+
+  .stat-mini-label {
+    font-family: var(--font-mono);
+    font-size: 10px;
+    color: var(--color-muted);
+    letter-spacing: 1px;
+    margin-top: 4px;
+  }
+
+  .btn-logout {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--color-red);
+    color: var(--color-red);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 10px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 20px;
+  }
+
+  .btn-logout:hover {
+    background: rgba(255, 31, 61, 0.15);
+    box-shadow: 0 0 12px rgba(255, 31, 61, 0.4);
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="profile-grid">
+  <!-- Left Column: Operator Identity Card -->
+  <div class="profile-card corner-brackets">
+    <div class="profile-avatar-wrap">
+      <div class="profile-emblem">⚡</div>
+      <div>
+        <h2 id="profFullName" class="profile-name">Operator</h2>
+        <div id="profOpId" class="profile-op-id">op-0x7f3a</div>
+      </div>
+    </div>
+
+    <div class="profile-meta-row">
+      <span class="profile-meta-label">EMAIL:</span>
+      <span id="profEmail" class="profile-meta-val">operator@noentry.local</span>
+    </div>
+    <div class="profile-meta-row">
+      <span class="profile-meta-label">ROLE:</span>
+      <span id="profRole" class="profile-meta-val cyan">SECURITY OPERATOR</span>
+    </div>
+    <div class="profile-meta-row">
+      <span class="profile-meta-label">CLEARANCE:</span>
+      <span class="profile-meta-val green">ZERO-TRUST LEVEL 3</span>
+    </div>
+    <div class="profile-meta-row">
+      <span class="profile-meta-label">STATUS:</span>
+      <span class="profile-meta-val green">● ACTIVE / VERIFIED</span>
+    </div>
+    <div class="profile-meta-row">
+      <span class="profile-meta-label">STREAK:</span>
+      <span id="profStreak" class="profile-meta-val">3 DAYS</span>
+    </div>
+    <div class="profile-meta-row">
+      <span class="profile-meta-label">OPERATOR SINCE:</span>
+      <span id="profCreated" class="profile-meta-val">2026-11-16</span>
+    </div>
+
+    <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--color-border);">
+      <span style="font-family:var(--font-mono); font-size:11px; color:var(--color-muted); font-weight:700;">SECURITY &amp; CREDENTIALS</span>
+      <p style="font-size:12px; color:#94a3b8; margin:6px 0 14px 0;">Authentication tokens are signed via PyJWT and sealed in secure HTTP-only cookies.</p>
+      <a href="/access" class="btn btn-outline" style="width:100%; display:block; text-align:center; padding:8px 0; font-size:11px;">SWITCH OPERATOR</a>
+      <button id="btnProfileLogout" class="btn-logout">SEVER UPLINK // SIGN OUT</button>
+    </div>
+  </div>
+
+  <!-- Right Column: Academy Progression & Analytics -->
+  <div style="display:flex; flex-direction:column; gap:20px;">
+    <!-- Top 4 Stats Banner -->
+    <div class="stats-banner">
+      <div class="stat-mini-card corner-brackets">
+        <div id="profXpVal" class="stat-mini-val" style="color:var(--color-yellow);">1,240</div>
+        <div class="stat-mini-label">TOTAL XP</div>
+      </div>
+      <div class="stat-mini-card corner-brackets">
+        <div id="profRankVal" class="stat-mini-val" style="color:var(--color-cyan); font-size:18px; padding-top:4px;">SCRIPT RUNNER</div>
+        <div class="stat-mini-label">ACADEMY RANK</div>
+      </div>
+      <div class="stat-mini-card corner-brackets">
+        <div id="profRoomsDoneVal" class="stat-mini-val" style="color:var(--color-green);">0 / 80</div>
+        <div class="stat-mini-label">ROOMS CLEARED</div>
+      </div>
+      <div class="stat-mini-card corner-brackets">
+        <div class="stat-mini-val" style="color:#a855f7;">4 / 4</div>
+        <div class="stat-mini-label">TRACKS ACTIVE</div>
+      </div>
+    </div>
+
+    <!-- 4 Track Breakdown Cards -->
+    <div class="profile-card corner-brackets" style="flex:1;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+        <span class="sidebar-brand-title" style="font-size:13px;">ACADEMY TRACK PROGRESS (80 ROOMS)</span>
+        <a href="/academy" class="btn btn-outline" style="font-size:10px; padding:3px 10px;">ENTER ACADEMY &rarr;</a>
+      </div>
+
+      <!-- Red Team -->
+      <div class="track-stat-box">
+        <div class="track-stat-header">
+          <span style="color:var(--color-red); font-weight:700;">RED TEAM (OFFENSIVE OPERATIONS)</span>
+          <span id="trackRedCount" style="color:#94a3b8;">0 / 20 COMPLETED</span>
+        </div>
+        <div class="track-stat-bar">
+          <div id="trackRedBar" class="track-stat-fill fill-red" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Blue Team -->
+      <div class="track-stat-box">
+        <div class="track-stat-header">
+          <span style="color:#38bdf8; font-weight:700;">BLUE TEAM (DEFENSIVE ANALYSIS)</span>
+          <span id="trackBlueCount" style="color:#94a3b8;">0 / 20 COMPLETED</span>
+        </div>
+        <div class="track-stat-bar">
+          <div id="trackBlueBar" class="track-stat-fill fill-blue" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Purple Team -->
+      <div class="track-stat-box">
+        <div class="track-stat-header">
+          <span style="color:#a855f7; font-weight:700;">PURPLE TEAM (COLLABORATIVE RANGE)</span>
+          <span id="trackPurpleCount" style="color:#94a3b8;">0 / 20 COMPLETED</span>
+        </div>
+        <div class="track-stat-bar">
+          <div id="trackPurpleBar" class="track-stat-fill fill-purple" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Detection Engineering -->
+      <div class="track-stat-box">
+        <div class="track-stat-header">
+          <span style="color:var(--color-green); font-weight:700;">DETECTION ENGINEERING (RULE AUTHORING)</span>
+          <span id="trackDetectionCount" style="color:#94a3b8;">0 / 20 COMPLETED</span>
+        </div>
+        <div class="track-stat-bar">
+          <div id="trackDetectionBar" class="track-stat-fill fill-detection" style="width: 0%;"></div>
+        </div>
+      </div>
+
+      <!-- Zero-Trust Architecture Footnote -->
+      <div style="margin-top:20px; padding:12px; background:rgba(0, 229, 255, 0.05); border:1px solid rgba(0, 229, 255, 0.2); border-radius:4px; font-family:var(--font-mono); font-size:11px; color:#94a3b8;">
+        <span style="color:var(--color-cyan); font-weight:700;">DATA ISOLATION:</span> All task completions, XP accumulation, and challenge verification tokens are strictly bound to your authenticated Operator ID in SQLite. Progress is completely isolated between operators.
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+  import { api } from '/static/js/core/api.js';
+  import { sound } from '/static/js/core/sound.js';
+  import { toast } from '/static/js/core/ui.js';
+
+  async function loadProfile() {
+    try {
+      const res = await api.get('/auth/profile');
+      if (!res) return;
+
+      document.getElementById('profFullName').innerText = res.full_name || res.username || 'Operator';
+      document.getElementById('profOpId').innerText = res.operator_id;
+      document.getElementById('profEmail').innerText = res.email || `${res.operator_id}@noentry.local`;
+      document.getElementById('profRole').innerText = (res.role || 'OPERATOR').toUpperCase();
+      document.getElementById('profStreak').innerText = `${res.streak_days || 1} DAYS`;
+      document.getElementById('profCreated').innerText = (res.created_at || '').slice(0, 10) || '2026-11-16';
+
+      document.getElementById('profXpVal').innerText = (res.xp || 0).toLocaleString();
+      document.getElementById('profRankVal').innerText = res.rank || 'SCRIPT RUNNER';
+      document.getElementById('profRoomsDoneVal').innerText = `${res.completed_rooms_count || 0} / 80`;
+
+      // Track breakdown
+      const stats = res.track_stats || {};
+      const red = stats.red || { completed: 0, total: 20 };
+      const blue = stats.blue || { completed: 0, total: 20 };
+      const purple = stats.purple || { completed: 0, total: 20 };
+      const det = stats.detection || { completed: 0, total: 20 };
+
+      document.getElementById('trackRedCount').innerText = `${red.completed} / ${red.total} COMPLETED`;
+      document.getElementById('trackRedBar').style.width = `${Math.min(100, Math.round((red.completed / red.total) * 100))}%`;
+
+      document.getElementById('trackBlueCount').innerText = `${blue.completed} / ${blue.total} COMPLETED`;
+      document.getElementById('trackBlueBar').style.width = `${Math.min(100, Math.round((blue.completed / blue.total) * 100))}%`;
+
+      document.getElementById('trackPurpleCount').innerText = `${purple.completed} / ${purple.total} COMPLETED`;
+      document.getElementById('trackPurpleBar').style.width = `${Math.min(100, Math.round((purple.completed / purple.total) * 100))}%`;
+
+      document.getElementById('trackDetectionCount').innerText = `${det.completed} / ${det.total} COMPLETED`;
+      document.getElementById('trackDetectionBar').style.width = `${Math.min(100, Math.round((det.completed / det.total) * 100))}%`;
+    } catch (err) {
+      console.warn('Profile fetch note:', err);
+    }
+  }
+
+  const btnLogout = document.getElementById('btnProfileLogout');
+  if (btnLogout) {
+    btnLogout.addEventListener('click', async () => {
+      sound.keyClick();
+      try {
+        await api.post('/auth/logout');
+        toast('Session terminated. Uplink severed.', 'info');
+        setTimeout(() => { window.location.href = '/access'; }, 500);
+      } catch (err) {
+        window.location.href = '/access';
+      }
+    });
+  }
+
+  loadProfile();
+</script>
+{% endblock %}
+

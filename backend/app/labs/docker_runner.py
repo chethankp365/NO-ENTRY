@@ -179,6 +179,7 @@ class DockerLabRunner(LabRunner):
 
         # 1. Create dedicated internal bridge network (no internet egress)
         net_created = False
+        attacker_ip = "10.10.14.10"
         target_ip = "10.10.14.90"
         port_map = {
             "red-01-cybersecurity-foundations": 8081,
@@ -457,13 +458,15 @@ class DockerLabRunner(LabRunner):
 
         for octet in [14, 15, 16, 17, 18, 19, 20]:
             candidate_subnet = f"10.10.{octet}.0/24"
-            candidate_ip = f"10.10.{octet}.90"
+            candidate_target_ip = f"10.10.{octet}.90"
+            candidate_attacker_ip = f"10.10.{octet}.10"
             code, out = await self._run_cmd(
                 ["docker", "network", "create", "--internal", f"--subnet={candidate_subnet}", net_name],
                 ignore_errors=True,
             )
             if code == 0:
-                target_ip = candidate_ip
+                target_ip = candidate_target_ip
+                attacker_ip = candidate_attacker_ip
                 net_created = True
                 break
 
@@ -486,6 +489,7 @@ class DockerLabRunner(LabRunner):
             target_cmd = [
                 "docker", "run", "-d",
                 "--name", target_name,
+                "--hostname", "target",
                 "--network", net_name,
                 "--network-alias", "target",
                 "--network-alias", "target.noentry.internal",
@@ -515,7 +519,10 @@ class DockerLabRunner(LabRunner):
             attacker_cmd = [
                 "docker", "run", "-d",
                 "--name", attacker_name,
+                "--hostname", "attacker",
                 "--network", net_name,
+                "--network-alias", "attacker",
+                "--network-alias", "attacker.noentry.internal",
                 "--memory=256m",
                 "--cpus=0.5",
                 "--pids-limit=64",
@@ -525,9 +532,11 @@ class DockerLabRunner(LabRunner):
                 "-e", f"NOENTRY_SESSION_ID={session_id}",
                 "-e", f"NOENTRY_OPERATOR_ID={operator_id}",
                 "--restart=no",
-                "noentry/attacker:latest",
-                "tail", "-f", "/dev/null",
             ]
+            if net_created:
+                attacker_cmd.extend(["--ip", attacker_ip])
+            attacker_cmd.extend(["noentry/attacker:latest", "tail", "-f", "/dev/null"])
+
             code, out = await self._run_cmd(attacker_cmd, ignore_errors=True)
             if code != 0:
                 raise DockerRuntimeError(
@@ -535,6 +544,21 @@ class DockerLabRunner(LabRunner):
                     f"Failed to start attacker container: {out.strip()}",
                     "Check container execution permissions in Docker Desktop.",
                 )
+
+            # Query authoritative assigned IPs from Docker inspect
+            c_code, c_out = await self._run_cmd(
+                ["docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", target_name],
+                ignore_errors=True,
+            )
+            if c_code == 0 and c_out.strip():
+                target_ip = c_out.strip()
+
+            c_code, c_out = await self._run_cmd(
+                ["docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", attacker_name],
+                ignore_errors=True,
+            )
+            if c_code == 0 and c_out.strip():
+                attacker_ip = c_out.strip()
 
             # 4. Wait briefly for target application readiness inside the network
             for _ in range(12):
@@ -559,6 +583,11 @@ class DockerLabRunner(LabRunner):
                 "Check Docker daemon resource utilization and container logs.",
             )
 
+        open_ports = [22, 80]
+        if target_port not in open_ports:
+            open_ports.append(target_port)
+        open_ports.sort()
+
         info = LabSessionInfo(
             session_id=session_id,
             room_id=room_id,
@@ -570,6 +599,11 @@ class DockerLabRunner(LabRunner):
             target_url=f"http://{target_ip}:{target_port}",
             target_ip=target_ip,
             target_port=target_port,
+            target_hostname="target",
+            attacker_ip=attacker_ip,
+            attacker_hostname="attacker",
+            open_ports=open_ports,
+            active_sessions_count=1,
             network_id=net_name,
             attacker_container_id=attacker_name,
             target_container_id=target_name,
@@ -609,6 +643,14 @@ class DockerLabRunner(LabRunner):
             ],
             ignore_errors=True,
         )
+        if info.attacker_container_id:
+            await self._run_cmd(
+                [
+                    "docker", "exec", "-u", "operator", "-w", "/home/operator", info.attacker_container_id,
+                    "/bin/sh", "-c", "rm -f /home/operator/loot/* /home/operator/*.tmp /home/operator/*.log 2>/dev/null || true",
+                ],
+                ignore_errors=True,
+            )
         return info
 
     @staticmethod
@@ -965,7 +1007,13 @@ class DockerLabRunner(LabRunner):
         if not info or not info.attacker_container_id:
             raise KeyError(f"Active container for session {session_id} not found.")
 
-        cmd_args = ["docker", "exec", "-i", info.attacker_container_id, "/bin/sh", "-c", command]
+        cmd_args = [
+            "docker", "exec", "-i",
+            "-u", "operator",
+            "-w", "/home/operator",
+            info.attacker_container_id,
+            "/bin/sh", "-c", command,
+        ]
         try:
             proc = await self._spawn_cmd(cmd_args)
             stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=15.0)

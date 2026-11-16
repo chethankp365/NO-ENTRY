@@ -88,57 +88,180 @@ function init3DBackdrop() {
 
 function setupFormHandlers() {
   const form = document.getElementById('accessForm');
+  const regForm = document.getElementById('registerForm');
+  const forgotForm = document.getElementById('forgotForm');
   const card = document.getElementById('accessCard');
+
+  const tabSignIn = document.getElementById('tabSignIn');
+  const tabRegister = document.getElementById('tabRegister');
+  const btnToggleForgot = document.getElementById('btnToggleForgot');
+  const btnBackToLogin = document.getElementById('btnBackToLogin');
+
   const opInput = document.getElementById('operatorId');
   const passInput = document.getElementById('passphrase');
   const submitBtn = document.getElementById('btnRequestAccess');
   const statusEl = document.getElementById('handshakeStatus');
   const guestBtn = document.getElementById('btnGuestAccess');
 
+  // Tab switching
+  if (tabSignIn && tabRegister) {
+    tabSignIn.addEventListener('click', () => {
+      sound.keyClick();
+      tabSignIn.classList.add('active');
+      tabRegister.classList.remove('active');
+      if (form) form.style.display = 'block';
+      if (regForm) regForm.style.display = 'none';
+      if (forgotForm) forgotForm.style.display = 'none';
+    });
+
+    tabRegister.addEventListener('click', () => {
+      sound.keyClick();
+      tabRegister.classList.add('active');
+      tabSignIn.classList.remove('active');
+      if (form) form.style.display = 'none';
+      if (regForm) regForm.style.display = 'block';
+      if (forgotForm) forgotForm.style.display = 'none';
+    });
+  }
+
+  // Forgot password toggle
+  if (btnToggleForgot) {
+    btnToggleForgot.addEventListener('click', () => {
+      sound.keyClick();
+      if (form) form.style.display = 'none';
+      if (regForm) regForm.style.display = 'none';
+      if (forgotForm) forgotForm.style.display = 'block';
+    });
+  }
+
+  if (btnBackToLogin) {
+    btnBackToLogin.addEventListener('click', () => {
+      sound.keyClick();
+      if (tabSignIn) tabSignIn.click();
+    });
+  }
+
   // Keystroke sound feedback
-  [opInput, passInput].forEach(inp => {
+  const allInputs = document.querySelectorAll('.form-input');
+  allInputs.forEach(inp => {
     inp.addEventListener('input', () => {
       sound.keyClick();
     });
   });
 
-  // Login Form Submission
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const operatorId = opInput.value.trim();
-    const passphrase = passInput.value;
+  // 1. Sign In Form Submission
+  if (form) {
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const identifier = opInput.value.trim();
+      const passphrase = passInput.value;
 
-    if (!operatorId || !passphrase) {
-      triggerAccessDenied('OPERATOR ID AND PASSPHRASE REQUIRED');
-      return;
-    }
+      if (!identifier || !passphrase) {
+        triggerAccessDenied('OPERATOR ID AND PASSPHRASE REQUIRED');
+        return;
+      }
 
-    // Handshake animation
-    submitBtn.classList.add('scanning');
-    submitBtn.innerText = 'VERIFYING OPERATOR...';
-    statusEl.style.color = 'var(--color-cyan)';
-    statusEl.innerText = '> negotiating cryptographic session...';
-    sound.keyClick();
+      submitBtn.classList.add('scanning');
+      submitBtn.innerText = 'VERIFYING CREDENTIALS...';
+      statusEl.style.color = 'var(--color-cyan)';
+      statusEl.innerText = '> negotiating cryptographic session...';
+      sound.keyClick();
 
-    try {
-      const res = await api.post('/auth/login', {
-        operator_id: operatorId,
-        passphrase: passphrase
-      });
+      try {
+        const res = await api.post('/auth/login', {
+          identifier: identifier,
+          passphrase: passphrase
+        });
 
-      handleAccessSuccess(res);
-    } catch (err) {
-      triggerAccessDenied(err.message || 'ACCESS DENIED');
-    }
-  });
+        handleAccessSuccess(res);
+      } catch (err) {
+        triggerAccessDenied(err.message || 'ACCESS DENIED');
+      }
+    });
+  }
 
-  // Guest Access
+  // 2. Register Form Submission
+  if (regForm) {
+    regForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const btnReg = document.getElementById('btnSubmitRegister');
+      const regStatus = document.getElementById('regStatus');
+      const fullName = document.getElementById('regFullName').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const opId = document.getElementById('regOpId').value.trim();
+      const pass = document.getElementById('regPassphrase').value;
+      const confirmPass = document.getElementById('regConfirmPassphrase').value;
+
+      if (pass !== confirmPass) {
+        triggerAccessDenied('PASSWORDS DO NOT MATCH', regStatus);
+        return;
+      }
+
+      if (btnReg) {
+        btnReg.classList.add('scanning');
+        btnReg.innerText = 'CREATING OPERATOR PROFILE...';
+      }
+      regStatus.style.color = 'var(--color-cyan)';
+      regStatus.innerText = '> generating zero-trust operator identity...';
+      sound.keyClick();
+
+      try {
+        const res = await api.post('/auth/register', {
+          full_name: fullName,
+          email: email,
+          operator_id: opId || null,
+          password: pass,
+          confirm_password: confirmPass
+        });
+
+        handleAccessSuccess(res);
+      } catch (err) {
+        triggerAccessDenied(err.message || 'REGISTRATION FAILED', regStatus, btnReg, 'CREATE OPERATOR PROFILE >>');
+      }
+    });
+  }
+
+  // 3. Forgot Password Form Submission
+  if (forgotForm) {
+    forgotForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const email = document.getElementById('forgotEmail').value.trim();
+      const forgotStatus = document.getElementById('forgotStatus');
+      const btnForgot = document.getElementById('btnSubmitForgot');
+
+      if (!email) return;
+
+      btnForgot.innerText = 'QUERYING REGISTRY...';
+      sound.keyClick();
+
+      try {
+        const res = await api.post('/auth/forgot-password', { email });
+        forgotStatus.style.color = 'var(--color-green)';
+        if (res.reset_token) {
+          forgotStatus.innerHTML = `[OK] TOKEN GENERATED: <code style="color:var(--color-cyan);">${res.reset_token}</code><br>Use this token with /api/auth/reset-password`;
+        } else {
+          forgotStatus.innerText = res.message || 'Recovery instructions generated.';
+        }
+      } catch (err) {
+        forgotStatus.style.color = 'var(--color-red)';
+        forgotStatus.innerText = `[!] ${err.message}`;
+      } finally {
+        btnForgot.innerText = 'GENERATE RECOVERY TOKEN';
+      }
+    });
+  }
+
+  // 4. Guest Access
   if (guestBtn) {
     guestBtn.addEventListener('click', async () => {
-      submitBtn.classList.add('scanning');
-      submitBtn.innerText = 'PROVISIONING GUEST...';
-      statusEl.style.color = 'var(--color-cyan)';
-      statusEl.innerText = '> provisioning ephemeral guest credentials...';
+      if (submitBtn) {
+        submitBtn.classList.add('scanning');
+        submitBtn.innerText = 'PROVISIONING GUEST...';
+      }
+      if (statusEl) {
+        statusEl.style.color = 'var(--color-cyan)';
+        statusEl.innerText = '> provisioning ephemeral guest credentials...';
+      }
       sound.keyClick();
 
       try {
@@ -151,10 +274,10 @@ function setupFormHandlers() {
   }
 }
 
-function triggerAccessDenied(errorMsg) {
+function triggerAccessDenied(errorMsg, targetStatusEl = null, targetBtn = null, resetBtnText = 'REQUEST ACCESS') {
   const card = document.getElementById('accessCard');
-  const submitBtn = document.getElementById('btnRequestAccess');
-  const statusEl = document.getElementById('handshakeStatus');
+  const submitBtn = targetBtn || document.getElementById('btnRequestAccess');
+  const statusEl = targetStatusEl || document.getElementById('handshakeStatus');
   const stamp = document.getElementById('accessStopStamp');
   const logo = document.getElementById('accessLogo');
 
@@ -165,16 +288,20 @@ function triggerAccessDenied(errorMsg) {
   if (stamp) stamp.classList.add('stamp-active');
   if (logo) logo.setAttribute('glitch', '');
 
-  statusEl.style.color = 'var(--color-red)';
-  statusEl.innerText = `[!!] ${errorMsg.toUpperCase()}`;
+  if (statusEl) {
+    statusEl.style.color = 'var(--color-red)';
+    statusEl.innerText = `[!!] ${errorMsg.toUpperCase()}`;
+  }
 
   setTimeout(() => {
     card.classList.remove('denied-shake');
     if (stamp) stamp.classList.remove('stamp-active');
     if (logo) logo.removeAttribute('glitch');
 
-    submitBtn.classList.remove('scanning');
-    submitBtn.innerText = 'REQUEST ACCESS';
+    if (submitBtn) {
+      submitBtn.classList.remove('scanning');
+      submitBtn.innerText = resetBtnText;
+    }
   }, 900);
 }
 

@@ -52,9 +52,15 @@ def evaluate_hunt_query(raw_query: str, timeframe_minutes: int = 10) -> Dict[str
     if not q:
         q = PRESET_QUERIES[0]["query"]
 
-    # Parse key-value tokens from query
+    # Parse key-value tokens from query (e.g. source.ip: 10.0.2.15 AND event.action: logon_failed)
     tokens = re.findall(r'(\w+(?:\.\w+)?)\s*:\s*([^\s\)]+)', q, re.IGNORECASE)
     field_filters: Dict[str, str] = {k.lower(): v.strip("\"'").lower() for k, v in tokens}
+
+    # Extract free-text keywords if no field tokens
+    free_words = []
+    if not field_filters:
+        clean_words = re.sub(r'[\(\)]', ' ', q).split()
+        free_words = [w.lower() for w in clean_words if w.upper() not in ("AND", "OR", "NOT")]
 
     # Match against preset hypotheses if matching
     matched_hypothesis = None
@@ -81,12 +87,19 @@ def evaluate_hunt_query(raw_query: str, timeframe_minutes: int = 10) -> Dict[str
         matches = True
         evt_dict = {
             "source.ip": evt.source_ip.lower(),
+            "source_ip": evt.source_ip.lower(),
             "src_ip": evt.source_ip.lower(),
+            "src": evt.source_ip.lower(),
             "target.host": evt.target_host.lower(),
+            "target_host": evt.target_host.lower(),
             "target": evt.target_host.lower(),
+            "host": evt.target_host.lower(),
             "technique": evt.technique_id.lower(),
             "technique_id": evt.technique_id.lower(),
+            "technique.id": evt.technique_id.lower(),
+            "mitre": evt.technique_id.lower(),
             "state": evt.state.lower(),
+            "status": evt.state.lower(),
             "severity": evt.severity.lower(),
             "module": evt.module.lower(),
             "event": evt.event.lower(),
@@ -94,14 +107,22 @@ def evaluate_hunt_query(raw_query: str, timeframe_minutes: int = 10) -> Dict[str
             "action": evt.event.lower()
         }
 
-        for k, v in field_filters.items():
-            if k in evt_dict:
-                if v not in evt_dict[k]:
-                    matches = False
-                    break
-            else:
-                # Fallback full-text match in event text
-                if v not in evt.event.lower():
+        if field_filters:
+            for k, v in field_filters.items():
+                if k in evt_dict:
+                    if v not in evt_dict[k]:
+                        matches = False
+                        break
+                else:
+                    # Fallback full-text match in event text
+                    if v not in evt.event.lower() and v not in evt.source_ip.lower() and v not in evt.target_host.lower():
+                        matches = False
+                        break
+        elif free_words:
+            # Free-text search matching across all event attributes
+            combined_text = f"{evt.event} {evt.source_ip} {evt.target_host} {evt.technique_id} {evt.technique_name} {evt.state} {evt.severity}".lower()
+            for w in free_words:
+                if w not in combined_text:
                     matches = False
                     break
 
@@ -120,24 +141,29 @@ def evaluate_hunt_query(raw_query: str, timeframe_minutes: int = 10) -> Dict[str
 
     # Realistic scaled hit count
     base_hits = len(matched_events)
-    multiplier = 14 if "10.0.2.15" in q else (18 if "sqli" in q else 11)
-    total_hits = max(18, base_hits * multiplier + (abs(hash(q)) % 65))
+    if base_hits == 0:
+        total_hits = 0
+    else:
+        multiplier = 6 if "10.0.2.15" in q else (8 if "sqli" in q else 4)
+        total_hits = max(base_hits, base_hits * multiplier + (abs(hash(q)) % 15))
 
     # Build 10-minute bucketed histogram
     now = datetime.now()
     histogram = []
-    for i in range(10):
-        minute_time = (now - timedelta(minutes=9 - i)).strftime("%H:%M")
-        # realistic variance with a peak
-        factor = 1.0 + (0.8 if i in (5, 6, 7) else 0.2) * (random.random() * 0.4 + 0.8)
-        bucket_count = int((total_hits / 10.0) * factor)
-        histogram.append({
-            "minute": minute_time,
-            "count": max(1, bucket_count)
-        })
-
-    # Adjust sum to hit count
-    histogram[-1]["count"] = max(2, total_hits - sum(b["count"] for b in histogram[:-1]))
+    if total_hits == 0:
+        for i in range(10):
+            minute_time = (now - timedelta(minutes=9 - i)).strftime("%H:%M")
+            histogram.append({"minute": minute_time, "count": 0})
+    else:
+        for i in range(10):
+            minute_time = (now - timedelta(minutes=9 - i)).strftime("%H:%M")
+            factor = 1.0 + (0.8 if i in (5, 6, 7) else 0.2) * (random.random() * 0.4 + 0.8)
+            bucket_count = int((total_hits / 10.0) * factor)
+            histogram.append({
+                "minute": minute_time,
+                "count": max(1, bucket_count)
+            })
+        histogram[-1]["count"] = max(1, total_hits - sum(b["count"] for b in histogram[:-1]))
 
     return {
         "query": q,

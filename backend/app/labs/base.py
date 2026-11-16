@@ -10,7 +10,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Any, AsyncIterator, Dict, Optional
+from typing import Any, AsyncIterator, Dict, List, Optional
 from pydantic import BaseModel, Field
 
 INTERNAL_LAB_SECRET = os.getenv("NOENTRY_INTERNAL_SECRET", "noentry-internal-auth-seal-key-991204")
@@ -65,6 +65,11 @@ class LabSessionInfo(BaseModel):
     target_url: str
     target_ip: str = "10.10.14.90"
     target_port: int = 8089
+    target_hostname: str = "target"
+    attacker_ip: str = "10.10.14.10"
+    attacker_hostname: str = "attacker"
+    open_ports: List[int] = Field(default_factory=lambda: [22, 80, 8089])
+    active_sessions_count: int = 1
     network_id: Optional[str] = None
     attacker_container_id: Optional[str] = None
     target_container_id: Optional[str] = None
@@ -125,6 +130,11 @@ class LabSessionInfo(BaseModel):
             "target_url": self.target_url,
             "target_ip": self.target_ip,
             "target_port": self.target_port,
+            "target_hostname": self.target_hostname,
+            "attacker_ip": self.attacker_ip,
+            "attacker_hostname": self.attacker_hostname,
+            "open_ports": self.open_ports,
+            "active_sessions_count": self.active_sessions_count,
             "remaining_seconds": remaining_seconds,
             "expires_at": self.expires_at.isoformat(),
             "error_message": self.error_message,

@@ -142,8 +142,9 @@ class WatchController {
 
   async loadInitialData() {
     try {
-      const events = await api.get('/events?limit=35');
+      const events = await api.get('/events?limit=40');
       if (Array.isArray(events)) {
+        this.allStreamEvents = events;
         const tbody = document.getElementById('watchAlertsTbody');
         if (tbody) tbody.innerHTML = '';
         const seen = new Set();
@@ -153,10 +154,56 @@ class WatchController {
           this.eventsCache.set(evt.id, evt);
           this.appendAlertRow(evt, false);
         });
+        this.updateTechniquesFromEvents(events);
       }
     } catch (err) {
       console.warn('Initial events load note:', err);
     }
+  }
+
+  updateTechniquesFromEvents(events) {
+    if (!events || !events.length) return;
+    const counts = {};
+    events.forEach(e => {
+      const tid = e.technique_id || 'OTHER';
+      counts[tid] = (counts[tid] || 0) + 1;
+    });
+    const total = events.length;
+    const colors = {
+      'T1110': 'var(--color-red)',
+      'T1190': 'var(--color-cyan)',
+      'T1558': '#FFB800',
+      'T1071': 'var(--color-green)',
+      'T1486': 'var(--color-red)',
+      'T1021': 'var(--color-cyan)',
+      'T1059': '#FFB800',
+      'T1548': 'var(--color-green)'
+    };
+    const names = {
+      'T1110': 'T1110 brute force',
+      'T1190': 'T1190 exploit public app',
+      'T1558': 'T1558 kerberoast',
+      'T1071': 'T1071 dns tunnel',
+      'T1486': 'T1486 data encrypted',
+      'T1021': 'T1021 remote services',
+      'T1059': 'T1059 command interpreter',
+      'T1548': 'T1548 abuse elevation'
+    };
+
+    const sortedTech = Object.entries(counts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 5);
+
+    this.techniquesData = sortedTech.map(([tid, count]) => {
+      const pct = Math.round((count / total) * 100);
+      return {
+        id: tid,
+        name: names[tid] || `${tid} technique`,
+        pct: Math.max(12, Math.min(95, pct)),
+        color: colors[tid] || 'var(--color-cyan)'
+      };
+    });
+    this.renderTechniques();
   }
 
   bindWebSocket() {
@@ -413,6 +460,14 @@ class WatchController {
     const input = document.getElementById('huntQueryInput');
     const runBtn = document.getElementById('runHuntBtn');
     const presetBtns = document.querySelectorAll('.preset-btn');
+    const clearBtn = document.getElementById('clearHuntBtn');
+
+    if (clearBtn) {
+      clearBtn.addEventListener('click', () => {
+        try { sound.keyClick(); } catch (_) {}
+        this.resetHuntFilter();
+      });
+    }
 
     presetBtns.forEach(btn => {
       btn.addEventListener('click', () => {
@@ -440,11 +495,31 @@ class WatchController {
     }
   }
 
+  resetHuntFilter() {
+    const banner = document.getElementById('huntActiveBanner');
+    if (banner) banner.style.display = 'none';
+
+    const resultBox = document.getElementById('huntResultBox');
+    if (resultBox) resultBox.classList.remove('active');
+
+    const tbody = document.getElementById('watchAlertsTbody');
+    if (tbody && this.allStreamEvents) {
+      tbody.innerHTML = '';
+      this.allStreamEvents.forEach(evt => this.appendAlertRow(evt, false));
+      this.updateTechniquesFromEvents(this.allStreamEvents);
+    }
+    toast('Hunt filter cleared: live telemetry stream restored', 'info');
+  }
+
   async executeHunt(queryStr) {
     const resultBox = document.getElementById('huntResultBox');
     const hitsText = document.getElementById('huntHitsText');
     const hypText = document.getElementById('huntHypothesisText');
     const runBtn = document.getElementById('runHuntBtn');
+    const banner = document.getElementById('huntActiveBanner');
+    const bannerQuery = document.getElementById('huntBannerQuery');
+    const bannerHits = document.getElementById('huntBannerHits');
+    const tbody = document.getElementById('watchAlertsTbody');
 
     const cleanQuery = (queryStr || '').trim();
     if (!cleanQuery) {
@@ -460,11 +535,28 @@ class WatchController {
 
     try {
       const res = await api.post('/hunt', { query: cleanQuery });
-      if (res && Array.isArray(res.matched_events)) {
-        res.matched_events.forEach(evt => {
-          if (evt && evt.id) this.eventsCache.set(evt.id, evt);
-        });
+
+      // Update banner
+      if (banner && bannerQuery && bannerHits) {
+        bannerQuery.innerText = cleanQuery;
+        bannerHits.innerText = res.hits || 0;
+        banner.style.display = 'flex';
       }
+
+      // Populate Alert Stream with matched events
+      if (tbody) {
+        tbody.innerHTML = '';
+        if (res && Array.isArray(res.matched_events) && res.matched_events.length > 0) {
+          res.matched_events.forEach(evt => {
+            if (evt && evt.id) this.eventsCache.set(evt.id, evt);
+            this.appendAlertRow(evt, false);
+          });
+          this.updateTechniquesFromEvents(res.matched_events);
+        } else {
+          tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--color-muted); padding:24px; font-family:var(--font-mono); font-size:12px;">NO TELEMETRY MATCHED QUERY "${cleanQuery}" // TRY PRESET OR CLEAR FILTER</td></tr>`;
+        }
+      }
+
       if (res && resultBox) {
         resultBox.classList.add('active');
         if (hitsText) hitsText.innerText = `HITS: ${res.hits} in ${res.timeframe}`;
@@ -987,7 +1079,6 @@ curl: (7) Failed to connect to 10.10.14.90 port 8080: Connection refused / Host 
       if (webRect) webRect.setAttribute('stroke', '#00FF6A');
     }
   }
-}
 }
 
 function startWatchController() {
