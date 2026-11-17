@@ -22,7 +22,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Create application operator user
-RUN useradd -m -u 1000 -s /bin/bash operator && \
+RUN if ! getent group operator >/dev/null; then groupadd --system operator; fi && \
+    if ! id -u operator >/dev/null 2>&1; then \
+      useradd --create-home --system --gid operator --shell /bin/bash operator; \
+    fi && \
     mkdir -p /app /app/data /app/reports && \
     chown -R operator:operator /app
 
