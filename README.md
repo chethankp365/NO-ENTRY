@@ -1,305 +1,410 @@
-# NO ENTRY // CYBERSECURITY TRAINING ACADEMY & ADVERSARY SIMULATION PLATFORM
-
 <div align="center">
 
-```
-  _  _  ____    ____  _  _  ____  ____  _  _ 
- ( \( )/ ___)  (  __)( \( )(_  _)(  _ \( \/ )
-  )  ( \___ \   ) _)  )  (   )(   )   / )  / 
- (_)\_)(____/  (____)(_)\_) (__) (__\_)(__/  
-```
+<a href="https://no-entry.onrender.com">
+  <img src="assets/banner.svg" alt="NO ENTRY — Open-Source Attack Simulation. We break in, so no one else can." width="100%">
+</a>
 
-**Next-Generation Cyber Range, Detection Engineering Sandbox & 80-Room Hands-On Academy**
+<br>
 
-[![Python 3.11+](https://img.shields.io/badge/Python-3.11+-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.110+-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
-[![Docker Range](https://img.shields.io/badge/Docker-Isolated_Zero--Trust-2496ED?style=for-the-badge&logo=docker&logoColor=white)](https://www.docker.com/)
-[![Curriculum](https://img.shields.io/badge/Academy-80_Rooms_Complete-00FF6A?style=for-the-badge&logo=hack-the-box&logoColor=black)](#the-80-room-canonical-curriculum)
-[![MITRE ATT&CK](https://img.shields.io/badge/MITRE-ATT%26CK_Mapped-FF1F3D?style=for-the-badge&logo=target&logoColor=white)](https://attack.mitre.org/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-A855F7?style=for-the-badge)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/▶_LIVE_DEMO-no--entry.onrender.com-ff1f3d?style=for-the-badge&labelColor=0b0f14)](https://no-entry.onrender.com)
+[![Rooms](https://img.shields.io/badge/ROOMS-80-18d8f0?style=for-the-badge&labelColor=0b0f14)](#academy)
+[![Tests](https://img.shields.io/badge/TESTS-295_PASSING-2cff8a?style=for-the-badge&labelColor=0b0f14)](#launch)
+[![FastAPI](https://img.shields.io/badge/FASTAPI-PYTHON-a259ff?style=for-the-badge&labelColor=0b0f14)](#stack)
+[![Docker](https://img.shields.io/badge/DOCKER-ISOLATED_RANGE-ffb020?style=for-the-badge&labelColor=0b0f14)](#modes)
 
-*“We break in, so no one else can.”*
+**[BRIEFING](#briefing)** · **[CAPABILITIES](#capabilities)** · **[ATTACK REPLAY](#replay)** · **[ACADEMY](#academy)** · **[FOOTAGE](#footage)** · **[ARCHITECTURE](#architecture)** · **[GHOST AI](#ghost)** · **[LAUNCH](#launch)** · **[SECURITY](#security)**
 
-[⚡ Watch 60s Live Attack Demo](#60-second-live-cyber-attack-demo) • [🎓 Explore 80 Rooms](#the-80-room-canonical-curriculum) • [🚀 Quickstart](#quickstart-guide) • [🧠 GHOST AI Mentor](#ghost-ai-cognitive-mentor) • [🛡️ Architecture](#platform-architecture)
+<br>
+
+<img src="assets/terminal-boot.svg" alt="Terminal boot sequence: private docker bridge sealed, attacker workstation online, targets armed, sensors online, GHOST ready. Break in. Watch it happen. Shut it down." width="92%">
+
+<br><br>
+
+<img src="assets/stats.svg" alt="80 practical rooms, 4 learning tracks, 8 stage attack replay, 12 ATT&CK tactics, 295 tests passing" width="92%">
 
 </div>
 
----
+<br>
 
-## 🌟 Executive Overview
+<a id="briefing"></a>
+<div align="center"><img src="assets/h-briefing.svg" alt="01 Briefing" width="92%"></div>
 
-**NO ENTRY** is an enterprise-grade, portfolio-ready cybersecurity training platform and live-fire simulation range. Engineered from the ground up for modern offensive, defensive, and detection engineers, NO ENTRY pairs **80 fully realized hands-on practice rooms** with an isolated zero-trust sandbox engine, real-time WebSockets telemetry, synthesized WebAudio soundscapes, and an adaptive multi-provider AI mentor (**GHOST**).
+### What is NO ENTRY?
 
-Every task is practical: operators audit real vulnerability vectors, inspect authentic network PCAPs, query Sysmon event logs, craft Sigma detection rules, and emulate adversary tactics inside ephemeral, network-isolated Docker containers or in-process microservice emulators.
+**NO ENTRY is a cybersecurity training ground that runs in your browser.**
 
----
+You get a virtual attacker workstation, a set of vulnerable practice targets, and a simulated Security Operations Center (SOC), all sealed inside an isolated lab. You attack something, then you *watch the defenders' screen light up* as your own actions generate alerts, logs and detections. Then you write the rule that would have caught you.
 
-## 📐 Platform Architecture
+Most platforms teach attack **or** defence. NO ENTRY puts both on the same screen so you can see how one causes the other.
+
+| | |
+|---|---|
+| 🟥 **Break in** | Run controlled attacks from a Kali-style operator terminal against isolated targets. |
+| 🟦 **Watch it happen** | See the telemetry, alerts and MITRE ATT&CK techniques your attack just produced. |
+| 🟩 **Shut it down** | Investigate, write Sigma / YARA detections, and trigger containment. |
+| 🤖 **Never stuck** | **GHOST**, an AI mentor, knows which room you are in and what you just typed. |
+
+> [!IMPORTANT]
+> Everything happens **inside the lab or the built-in emulator**. NO ENTRY is not a tool for attacking real systems. See [Rules of Engagement](#rules).
+
+<details>
+<summary><b>🧠 New to security? Quick glossary</b></summary>
+
+<br>
+
+| Term | Plain-English meaning |
+|---|---|
+| **Red team** | The "attackers". They try to break in, to find weaknesses before real criminals do. |
+| **Blue team** | The "defenders". They monitor, detect and respond to attacks. |
+| **Purple team** | Red and blue working together so every attack teaches a defence. |
+| **SOC** | Security Operations Center: the team (and screens) that watch for threats around the clock. |
+| **SIEM** | A system that collects logs from everywhere and raises alerts when something looks wrong. |
+| **MITRE ATT&CK** | A public catalogue of how real attackers behave, each technique has an ID like `T1110` (brute force). |
+| **Sigma / YARA** | Rule formats for describing "what suspicious looks like" in logs (Sigma) and files (YARA). |
+| **Detection-as-Code** | Treating detection rules like software: version-controlled, tested and automatically validated. |
+
+</details>
+
+### The NO ENTRY loop
+
+Every room follows the same five-beat rhythm:
+
+<div align="center"><img src="assets/loop.svg" alt="The NO ENTRY loop: Attack, Observe, Detect, Respond, Validate" width="92%"></div>
+
+<br>
+
+<a id="capabilities"></a>
+<div align="center"><img src="assets/h-capabilities.svg" alt="02 Capabilities" width="92%"></div>
+
+### Everything inside the range
+
+<div align="center">
+<a href="docs/screenshots/command-center.png"><img src="docs/screenshots/command-center.png" alt="NO ENTRY Command Center showing threat level, alerts today, mean time to detect, live alerts and the attack map" width="92%"></a>
+<br><sub><b>Command Center</b> · live threat level, alert stream, mean time to detect / respond, and a 60-second live attack demo</sub>
+</div>
+
+<br>
+
+| Module | What it does |
+|---|---|
+| 🎛️ **Command Center** | One cinematic control room: navigation, live stats, alert feed and the tactical command palette (`/`). |
+| 🧪 **Cyber Range engine** | Disposable attacker + target environments with private networking, resource limits and automatic cleanup. |
+| 💻 **Operator Workstation** | A full-screen browser terminal (xterm.js over WebSocket) with quick-probe commands, mission briefing, hints and live lab status. |
+| 🗺️ **Lab Map** | Interactive 3D range topology. Select a host, see its OS, zone and last detection, run a web-breach scenario, isolate a host. |
+| 🟥 **Red** | Scenario-driven offensive console: web app breach, ransomware simulation, credential attack, insider threat. |
+| 👁️ **Watch** | The SOC view: event streams, alert triage, ATT&CK technique visibility and a threat-hunting query interface. |
+| 🛡️ **Shield** | Hardening posture: checklist of controls with a before/after audit score. |
+| 🪤 **Trap** | Deception: honeypots, decoy credentials and canary tokens that trip when touched. |
+| 🔎 **Intel** | IOC enrichment and a campaign relationship graph. |
+| 🟪 **Purple Team** | Attacker terminal and SIEM/SOAR logs, correlated side by side, step by step. |
+| 🧬 **Detection Engineering** | Sigma, YARA, Sysmon, Suricata, log normalization, tuning, testing and CI/CD validation. |
+| 🤖 **GHOST AI** | Context-aware mentor with a safe offline fallback. |
+| 🏆 **Progression** | Task validation, XP, room completion, next-mission unlocks, per-operator tracking. |
+
+<br>
+
+<a id="replay"></a>
+<div align="center"><img src="assets/h-replay.svg" alt="03 Attack Replay" width="92%"></div>
+
+### 60 seconds. 8 stages. Both sides of the screen.
+
+Press **WATCH A LIVE ATTACK** and NO ENTRY plays a scripted replay of a full intrusion. Attacker terminal on one side, SOC telemetry on the other, an animated network topology in the middle.
+
+<div align="center"><img src="assets/killchain.svg" alt="Eight stage attack replay: recon, initial access, discovery and evasion, privilege escalation, telemetry correlation, SIEM detection, SOC triage, containment" width="100%"></div>
+
+<div align="center"><img src="assets/topology.svg" alt="Network topology: attacker, perimeter firewall, DMZ server, domain controller, and the SOC correlation engine receiving telemetry" width="100%"></div>
+
+<br>
+
+<div align="center">
+<a href="docs/screenshots/purple-team.png"><img src="docs/screenshots/purple-team.png" alt="Purple Team view with an SSH brute force attack on the left and Wazuh, Suricata and SOAR detections on the right" width="92%"></a>
+<br><sub><b>Purple Team</b> · an SSH brute force (<code>T1110</code>) on the left, the SIEM catching it and SOAR blocking the IP on the right. Time to detect: 3.2 s.</sub>
+</div>
+
+> [!NOTE]
+> The replay is a **scripted educational animation**, not an attack on any real network.
+
+<br>
+
+<a id="academy"></a>
+<div align="center"><img src="assets/h-academy.svg" alt="04 The Academy" width="92%"></div>
+
+### 80 practical rooms across four tracks
+
+<div align="center"><img src="assets/tracks.svg" alt="Red Team, Blue Team, Purple Team and Detection Engineering, 20 rooms each" width="100%"></div>
+
+<br>
+
+Every room teaches in the same **eight steps**, so you always know where you are:
+
+| # | Step | # | Step |
+|:-:|---|:-:|---|
+| 1 | **What is this?** | 5 | **Technical explanation** |
+| 2 | **Everyday analogy** | 6 | **Real-world impact** |
+| 3 | **Architecture flow diagram** | 7 | **What to observe in the lab** |
+| 4 | **How it works** | 8 | **Common mistakes & key takeaway** |
+
+Then you open the terminal and *do it*. Tasks are validated automatically, XP is awarded, and the next room unlocks.
+
+<div align="center">
+<a href="docs/screenshots/academy.png"><img src="docs/screenshots/academy.png" alt="Academy overview listing the Red Team rooms with difficulty, duration and XP" width="92%"></a>
+<br><sub><b>The Academy</b> · 80 rooms, four tracks, XP and progress tracking</sub>
+<br><br>
+<a href="docs/screenshots/room-briefing.png"><img src="docs/screenshots/room-briefing.png" alt="A room page with the theory on the left and the operator workstation on the right" width="92%"></a>
+<br><sub><b>Inside a room</b> · theory on the left, live lab on the right</sub>
+</div>
+
+<br>
+
+<a id="footage"></a>
+<div align="center"><img src="assets/h-footage.svg" alt="05 Field Footage" width="92%"></div>
+
+<div align="center"><img src="assets/reel.svg" alt="Screenshot reel of NO ENTRY: landing page, command center, red team ops, purple team, ATT&CK heatmap and operator workstation" width="100%"></div>
+
+<br>
+
+<div align="center">
+<a href="docs/screenshots/operator-workstation.png"><img src="docs/screenshots/operator-workstation.png" alt="Full-screen operator workstation with terminal, mission briefing, lab intelligence and quick commands" width="92%"></a>
+<br><sub><b>Operator Workstation</b> · full-screen terminal, mission briefing, lab intelligence, quick commands and mission timeline</sub>
+</div>
+
+<br>
+
+<table>
+<tr>
+<td width="50%" align="center"><a href="docs/screenshots/landing.png"><img src="docs/screenshots/landing.png" alt="Landing page"></a><br><sub><b>Landing</b></sub></td>
+<td width="50%" align="center"><a href="docs/screenshots/access-terminal.png"><img src="docs/screenshots/access-terminal.png" alt="Access terminal login"></a><br><sub><b>Access Terminal</b> · operator sign-in</sub></td>
+</tr>
+<tr>
+<td align="center"><a href="docs/screenshots/lab-map.png"><img src="docs/screenshots/lab-map.png" alt="Lab map 3D topology"></a><br><sub><b>Lab Map</b> · 3D range topology</sub></td>
+<td align="center"><a href="docs/screenshots/red-team-ops.png"><img src="docs/screenshots/red-team-ops.png" alt="Red Team Ops console"></a><br><sub><b>Red Team Ops</b> · scenarios and offensive console</sub></td>
+</tr>
+<tr>
+<td align="center"><a href="docs/screenshots/shield-defense.png"><img src="docs/screenshots/shield-defense.png" alt="Shield defense hardening checklist"></a><br><sub><b>Shield</b> · hardening checklist, score 38 → 78</sub></td>
+<td align="center"><a href="docs/screenshots/trap-deception.png"><img src="docs/screenshots/trap-deception.png" alt="Trap deception honeypots and canary tokens"></a><br><sub><b>Trap</b> · honeypots and canary tokens</sub></td>
+</tr>
+<tr>
+<td align="center"><a href="docs/screenshots/intel-threat-recon.png"><img src="docs/screenshots/intel-threat-recon.png" alt="Intel threat recon IOC enrichment"></a><br><sub><b>Intel</b> · IOC enrichment and campaign graph</sub></td>
+<td align="center"><a href="docs/screenshots/attack-coverage-heatmap.png"><img src="docs/screenshots/attack-coverage-heatmap.png" alt="ATT&CK coverage heatmap"></a><br><sub><b>ATT&amp;CK Heatmap</b> · 12 tactics, detection gaps</sub></td>
+</tr>
+</table>
+
+<br>
+
+<a id="architecture"></a>
+<div align="center"><img src="assets/h-architecture.svg" alt="06 Architecture" width="92%"></div>
+
+### Five layers, each swappable
+
+<div align="center"><img src="assets/architecture.svg" alt="Architecture layers: frontend, backend, AI layer, cyber range, persistence" width="100%"></div>
+
+<br>
+
+**What happens when you run a command:**
 
 ```mermaid
-flowchart TD
-    subgraph UI_Layer["Tactical Operator Interface (Frontend)"]
-        UI_HUD["Command Center // Live Attack Globe"]
-        UI_SIEM["Watch Screen // Real-time Telemetry & EPS"]
-        UI_ROOMS["Academy Workspace // 80 Hands-On Rooms"]
-        UI_AI["GHOST AI Floating Mentor // Context-Aware"]
-        UI_AUDIO["WebAudio Tactical Sound Engine (Zero MP3s)"]
-    end
+sequenceDiagram
+    autonumber
+    actor Op as Operator
+    participant UI as Browser (xterm.js)
+    participant API as FastAPI backend
+    participant Lab as Lab engine
+    participant Rng as Docker range / Emulator
+    participant G as GHOST
 
-    subgraph Core_Layer["ASGI Application Core (FastAPI / Uvicorn)"]
-        API_GW["FastAPI REST & WebSocket Gateway"]
-        AUTH["JWT / Operator Session Security"]
-        SIGMA["Sigma / YARA Detection Rule Engine"]
-        SOAR["Reflex Automated Containment (Quarantine / Firewall)"]
-        VAL["Validation Engine // Regex & Challenge Scoring"]
-    end
-
-    subgraph AI_Layer["GHOST AI Cognitive Orchestrator"]
-        ORCH["Multi-Provider Router & Fallback Chain"]
-        GROQ["Groq (Llama-3 70B Fast Inference)"]
-        GEMINI["Google Gemini 1.5 Pro / Flash"]
-        OPENROUTER["OpenRouter Multi-Model Fallback"]
-        SAFETY["Prompt-Injection Defense & Redaction Gate"]
-    end
-
-    subgraph Range_Layer["Isolated Execution Sandbox"]
-        DOCKER["Docker Bridge Network (Internal-Only / No WAN)"]
-        ATK_CONTAINER["Attacker Workstation (Kali Linux / Tools)"]
-        TGT_CONTAINER["Target Services (Apache, SQL, LDAP, APIs)"]
-        PROC_EMULATOR["In-Process High-Speed Microservice Runner"]
-    end
-
-    UI_ROOMS <-->|WebSocket & REST| API_GW
-    UI_SIEM <-->|WebSocket Stream| API_GW
-    API_GW <--> AUTH
-    API_GW <--> SIGMA
-    API_GW <--> SOAR
-    API_GW <--> VAL
-    VAL <--> Range_Layer
-    UI_AI <--> ORCH
-    ORCH --> GROQ
-    ORCH --> GEMINI
-    ORCH --> OPENROUTER
-    ORCH --> SAFETY
-    API_GW <--> DOCKER
-    DOCKER --- ATK_CONTAINER
-    DOCKER --- TGT_CONTAINER
+    Op->>UI: Opens a room and starts the lab
+    UI->>API: Authenticated request
+    API->>Lab: Choose execution mode
+    Lab->>Rng: Create attacker + isolated target
+    Op->>UI: Types a command
+    UI->>API: WebSocket message
+    API->>Rng: Execute inside the sandbox
+    Rng-->>UI: Output + generated telemetry
+    Op->>G: "Give me a hint"
+    G-->>Op: Answer that knows the room and your last commands
+    API->>API: Validate task, award XP, unlock next room
 ```
 
----
+<br>
 
-## ⚡ 60-Second Live Cyber Attack Demo
+<a id="ghost"></a>
+<div align="center"><img src="assets/h-ghost.svg" alt="07 GHOST AI" width="92%"></div>
 
-Experience a complete, scripted, safe cyber engagement in 60 seconds with scrubbable controls, an interactive network topology diagram, and a synchronized dual-terminal display:
+### A mentor that knows where you are
 
-- **Attacker Workstation (Left Stream)**: Interactive shell showing weaponization, exploitation payloads, privilege escalation, and lateral movement.
-- **SOC SIEM Telemetry (Right Stream)**: Live Sysmon Event ID 1/3, Suricata IDS alerts, Sigma rule detections, and analyst triage steps.
-- **Topology Map**: Real-time packet traversal animations through Perimeter Firewall, DMZ Web Server, Internal Domain Controller, and SIEM Correlation Engine.
+GHOST is not a generic chatbot. Before it answers, it looks at **your current room, your task progress, your recent terminal activity and any Sigma rule you are working on**, then routes the question to the best available AI provider.
 
-```
-Stage 1: Reconnaissance (T1595.001)        --> Inbound SYN scan against 10.10.14.90
-Stage 2: Initial Foothold (T1190)          --> Remote Code Execution on debug API
-Stage 3: Local Discovery (T1082 / T1059)   --> Architecture & SUID binary audit
-Stage 4: Privilege Escalation (T1548.001)  --> SUID PATH hijack to Root; shadow dumped
-Stage 5: Telemetry Correlation (T1046)     --> 12 sensor events linked into incident tree
-Stage 6: Automated SIEM Alerting (Sigma)   --> Rule 'proc_creation_lnx_suid_privesc' matches
-Stage 7: Analyst Triage & Verification     --> True-Positive verdict & containment dispatch
-Stage 8: Zero-Trust Containment (SOAR)     --> Firewall IP block, host quarantine, PIR ready
-```
+<div align="center"><img src="assets/ghost.svg" alt="GHOST pipeline: room, task, terminal and Sigma context flow into GHOST, which routes to Groq, Gemini, OpenRouter or a local fallback, with guardrails, and returns hints, log explanations, and rule reviews" width="100%"></div>
 
-*Launch directly from the web interface at `/watch?demo=1` or via the Tactical Command Palette (`/` -> `DEMO`).*
+<br>
 
----
+<table>
+<tr>
+<td width="62%" valign="top">
 
-## 🎓 The 80-Room Canonical Curriculum
+**Quick actions:** `HINT` · `EXPLAIN THIS LOG` · `WHY DID IT WORK` · `REVIEW MY RULE`
 
-The academy is divided into four 20-room professional tracks covering the complete cybersecurity lifecycle. Every room features an everyday analogy, technical breakdown, practical demonstration, hands-on tasks, and live terminal interaction:
+**Providers:** Groq · Google Gemini · OpenRouter, with configurable routing and fallback.
 
-| Track | Identifiers | Rooms | Core Competencies |
-| :--- | :--- | :---: | :--- |
-| **🔴 Red Team** | `red-01` to `red-20` | **20 / 20** | Reconnaissance, Port Scanning, Web Vulnerabilities, SQL Injection, XSS, IDOR, File Inclusion, SUID PrivEsc, Active Directory Kerberoasting, Post-Exploitation Capstone. |
-| **🔵 Blue Team** | `blue-01` to `blue-20` | **20 / 20** | SOC Foundations, Windows Event Logs (EVTX), Linux Syslog, Wireshark PCAP Analysis, SIEM Correlation, YARA Malware Scanning, Phishing Analysis, Threat Hunting, IR Playbooks. |
-| **🟣 Purple Team** | `purple-01` to `purple-20` | **20 / 20** | Adversary Emulation, MITRE ATT&CK Mapping, Atomic Red Team, Detection Gap Analysis, Living off the Land (LOLBins), Cloud Telemetry, Continuous Purple Pipeline. |
-| **🟢 Detection Eng** | `detect-01` to `detect-20` | **20 / 20** | Sigma & YARA Authoring, Detection-as-Code (DaC), CI/CD Gating & Unit Testing, Log Ingestion Pipelines, Tuning & False Positive Reduction, Automated Containment SOAR. |
-| **TOTAL** | **4 Tracks** | **80 / 80** | **100% Operational & Verified** |
+**Voice:** Deepgram speech-to-text / text-to-speech for audible mission briefings.
 
-### Red Team (Offensive Operations // 20 Rooms)
-1. `red-01`: Cybersecurity Fundamentals & Threat Landscape
-2. `red-02`: Linux Command Line & System Administration
-3. `red-03`: Networking Protocols & Packet Architecture
-4. `red-04`: Passive & Active Reconnaissance
-5. `red-05`: Network Mapping & Vulnerability Scanning
-6. `red-06`: Service Enumeration & Fingerprinting
-7. `red-07`: Vulnerability Assessment & CVE Analysis
-8. `red-08`: Web Application Security Fundamentals
-9. `red-09`: SQL Injection (SQLi) Exploitation
-10. `red-10`: Cross-Site Scripting (XSS)
-11. `red-11`: Broken Authentication & Session Hijacking
-12. `red-12`: Broken Access Control & IDOR
-13. `red-13`: File Upload Vulnerabilities & Webshells
-14. `red-14`: Command Injection & Remote Code Execution
-15. `red-15`: Directory Traversal & Local File Inclusion (LFI)
-16. `red-16`: Password Cracking & Credential Attacks
-17. `red-17`: Linux Privilege Escalation (SUID, Sudo, Capabilities)
-18. `red-18`: Active Directory Fundamentals & Kerberoasting
-19. `red-19`: Lateral Movement & Post-Exploitation
-20. `red-20`: Offensive Operations Capstone Challenge
+**Safety:** prompt-injection defences, learner input treated as untrusted, secret redaction, token and rate limits.
 
-### Blue Team (Defensive Operations & SOC // 20 Rooms)
-1. `blue-01`: SOC Operations & Security Fundamentals
-2. `blue-02`: Windows Security Architecture & Event Logs
-3. `blue-03`: Linux Security Architecture & Log Analysis
-4. `blue-04`: Network Security Monitoring & Traffic Analysis
-5. `blue-05`: Wireshark Deep Packet Inspection
-6. `blue-06`: Enterprise Log Analysis & Aggregation
-7. `blue-07`: SIEM Operations & SPL/KQL Fundamentals
-8. `blue-08`: Advanced Windows Event Log Forensics
-9. `blue-09`: Brute-Force & Credential Attack Detection
-10. `blue-10`: Malware Analysis Fundamentals & YARA
-11. `blue-11`: Phishing Email Investigation & Header Analysis
-12. `blue-12`: Endpoint Detection & Response (EDR) Operations
-13. `blue-13`: Network Anomaly Detection & Threat Hunting
-14. `blue-14`: Threat Hunting Workflows & Hypotheses
-15. `blue-15`: Digital Forensics & Artifact Acquisition
-16. `blue-16`: Memory Forensics with Volatility
-17. `blue-17`: Incident Response Lifecycles (NIST / SANS)
-18. `blue-18`: Security Orchestration, Automation & Response (SOAR)
-19. `blue-19`: Cloud Security Monitoring (AWS / Azure)
-20. `blue-20`: Defensive Operations Capstone Challenge
+**Offline-safe:** with no AI keys configured, GHOST drops to a deterministic, curriculum-based hint engine. It stays useful, but it is *not* equivalent to a live LLM.
 
-### Purple Team (Adversary Emulation & Convergence // 20 Rooms)
-1. `purple-01`: Purple Teaming Philosophy & Collaboration
-2. `purple-02`: MITRE ATT&CK Framework Implementation
-3. `purple-03`: Atomic Red Team Execution & Validation
-4. `purple-04`: Emulation Planning & Threat Intelligence
-5. `purple-05`: Telemetry Gap Analysis & Sensor Coverage
-6. `purple-06`: Initial Access Emulation & Detection Validation
-7. `purple-07`: Execution Technique Emulation & Detection
-8. `purple-08`: Persistence Emulation & Detection
-9. `purple-09`: Privilege Escalation Emulation & Detection
-10. `purple-10`: Defense Evasion Emulation & Detection
-11. `purple-11`: Credential Access Emulation & Detection
-12. `purple-12`: Discovery & Lateral Movement Emulation
-13. `purple-13`: Command & Control (C2) Emulation & Detection
-14. `purple-14`: Exfiltration & Impact Emulation
-15. `purple-15`: Living off the Land (LOLBins) Emulation
-16. `purple-16`: Advanced Ransomware Scenario Emulation
-17. `purple-17`: Cloud Threat Emulation & Multi-Cloud Defense
-18. `purple-18`: CI/CD Pipeline & Supply Chain Attack Emulation
-19. `purple-19`: Threat Informed Defense & Coverage Scoring
-20. `purple-20`: Purple Team Capstone Exercise
+</td>
+<td width="38%" align="center">
 
-### Detection Engineering (Detection-as-Code // 20 Rooms)
-1. `detect-01`: Detection Engineering Philosophy & Lifecycle
-2. `detect-02`: Understanding Telemetry & Log Ingestion
-3. `detect-03`: Sigma Rules Fundamentals & Authoring
-4. `detect-04`: YARA Rules for File & Memory Detection
-5. `detect-05`: Snort & Suricata Network Signatures
-6. `detect-06`: EDR Query Languages & Telemetry
-7. `detect-07`: Detection Testing with Atomic Attacks
-8. `detect-08`: False Positive Reduction & Tuning
-9. `detect-09`: Detection-as-Code (DaC) & GitOps Pipelines
-10. `detect-10`: Behavior-Based Detection vs Signatures
-11. `detect-11`: Cloud-Native Detection Engineering
-12. `detect-12`: Identity & Access Detection Engineering
-13. `detect-13`: Network Anomaly & Beaconing Detection
-14. `detect-14`: Memory & Process Injection Detection
-15. `detect-15`: Supply Chain & Build Pipeline Detection
-16. `detect-16`: Living-off-the-Land (LOLBAS) Detection
-17. `detect-17`: Metrics, SLIs & Detection Health Monitoring
-18. `detect-18`: Threat-Informed Detection Gap Analysis
-19. `detect-19`: Automation & SOAR Integration for Detections
-20. `detect-20`: Detection Engineering Capstone Exercise
+<a href="docs/screenshots/ghost-mentor.png"><img src="docs/screenshots/ghost-mentor.png" alt="GHOST mentor panel with hint, explain this log, why did it work and review my rule actions" width="100%"></a>
 
----
+</td>
+</tr>
+</table>
 
-## 🧠 GHOST AI Cognitive Mentor
+<br>
 
-NO ENTRY features **GHOST**, an autonomous, context-aware cybersecurity mentor embedded into every training room:
+<a id="modes"></a>
+<div align="center"><img src="assets/h-modes.svg" alt="08 Execution Modes" width="92%"></div>
 
-- **Multi-Provider Priority Routing**: Automatically cascades from `Groq` (ultra-fast inference) to `Google Gemini` to `OpenRouter`, with local mission-scripted fallbacks when offline.
-- **Context-Aware Assistance**: GHOST inspects your current room ID, completed steps, raw terminal telemetry, and active Sigma rule syntax to provide tailored nudges without giving away raw answers.
-- **Safety Gate & Injection Defense**: Built-in prompt injection neutralization, secret scrubbing, and token rate limiting protect the application from evasion attacks.
-- **Audio Synthesis**: Supported by Deepgram text-to-speech for audible mission briefings and voice guidance.
+NO ENTRY picks how to run a lab based on where it is hosted. Be clear about which one you are using:
 
----
+| | 🐳 **Full Cyber Range** | 🧩 **Emulation Fallback** |
+|---|---|---|
+| **Engine** | Docker runner | `ProcessLabRunner` |
+| **What runs** | Real attacker and target **containers** | Supported commands, scans and challenges **simulated in memory** |
+| **Needs** | Linux host / VM with Docker Engine access | Nothing special, works on managed PaaS |
+| **Networking** | Private Docker bridge, no public target ports | n/a |
+| **Persistent shell** | ✅ | Emulated |
+| **Best for** | Self-hosting the real thing | Public demos, quick tours |
 
-## 🚀 Quickstart Guide
+> [!NOTE]
+> The public demo at **[no-entry.onrender.com](https://no-entry.onrender.com)** runs in **emulation mode** on a free Render instance. It is not a full public Docker range, and the free tier has resource and filesystem limits, so SQLite progress there should not be treated as permanent.
 
-### Option 1: Local Python Environment (Recommended for Development)
+<br>
+
+<a id="launch"></a>
+<div align="center"><img src="assets/h-launch.svg" alt="09 Launch Sequence" width="92%"></div>
 
 ```bash
-# 1. Clone the repository
-git clone https://github.com/your-org/no-entry.git
-cd no-entry
+# 1 · clone
+git clone https://github.com/chethankp365/NO-ENTRY.git
+cd NO-ENTRY
 
-# 2. Create and activate a Python 3.11 virtual environment
+# 2 · environment
 python -m venv .venv
-# On Windows:
-.venv\Scripts\activate
-# On Linux/macOS:
-source .venv/bin/activate
-
-# 3. Install dependencies
+source .venv/bin/activate          # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
-# 4. Copy environment configuration
+# 3 · configure (all AI / voice keys are optional)
 cp .env.example .env
 
-# 5. Launch development server
-python -m uvicorn backend.app.main:app --host 127.0.0.1 --port 8000 --reload
+# 4 · launch
+uvicorn app.main:app --reload
 ```
 
-Open your browser to `http://127.0.0.1:8000` to enter the Command Center, or `http://127.0.0.1:8000/academy` to start training.
+Open **http://127.0.0.1:8000** and request access. You can also *continue as guest operator*.
 
-### Option 2: Docker Container Deployment
+<!-- VERIFY BEFORE PUBLISHING: confirm the requirements file name, .env.example, and the uvicorn module path (app.main:app) match the repository. -->
+
+**Want the real Docker range?** Run on a Linux host with Docker Engine. NO ENTRY detects the daemon and uses containers automatically; without it, it falls back to emulation.
 
 ```bash
-# Build production Docker image
-docker build -t no-entry:latest .
-
-# Run container on port 8000
-docker run -d --name no-entry-app -p 8000:8000 no-entry:latest
-
-# Check container health status
-curl http://127.0.0.1:8000/api/health
+docker build -t no-entry .
+docker run -p 8000:8000 no-entry
 ```
 
----
-
-## 🧪 Testing & Verification
-
-NO ENTRY includes an automated test suite verifying room schemas, curriculum integrity, task scoring, validator correctness, and API endpoints:
+**Run the test suite**
 
 ```bash
-# Run full non-Docker regression test suite (279+ automated tests)
-pytest backend/tests/ -k "not docker" -v
-
-# Run targeted academy curriculum test
-pytest backend/tests/test_academy_api.py -v
-
-# Run detection engineering test suite
-pytest backend/tests/test_rooms_detection_17_20.py -v
+pytest
 ```
 
----
+> Latest production-readiness report: **295 passed · 106 skipped · 0 failed**. Most skipped tests need a live Docker daemon.
 
-## 🎮 Easter Eggs & Tactical Hotkeys
+<details>
+<summary><b>🔑 Optional AI and voice keys</b></summary>
 
-- **Keyboard Shortcut `/`**: Opens the Tactical Command Palette from anywhere in the platform.
-- **Konami Code (`↑ ↑ ↓ ↓ ← → ← → B A`)**: Unlocks `[RETRO RUNNER]` mode, applying a 1980s CRT scanline and phosphor glow filter to the interface.
-- **Terminal Command `matrix`**: Cascades green digital rain directly in the xterm.js workstation.
-- **Terminal Command `ghost --whoami`**: Intercepts an encrypted status transmission from the GHOST AI sentinel node.
-- **Terminal Command `ne --stats`**: Outputs a live operational audit across all 80 rooms and active sensors.
+<br>
 
----
+GHOST works without any keys using its scripted fallback. To enable live AI, add keys for any of **Groq**, **Google Gemini** or **OpenRouter**; add a **Deepgram** key for voice. Put them in `.env` and never commit that file.
 
-## 🔒 Ethics & Responsible Disclosure
+</details>
 
-NO ENTRY is designed exclusively for educational, ethical research, and defensive readiness purposes. All simulated attack scenarios, reverse shells, and exploit vectors are confined strictly to local containerized bridges or software emulators. Never execute unauthorized penetration tests against systems you do not own.
+<br>
 
----
+<a id="security"></a>
+<div align="center"><img src="assets/h-security.svg" alt="10 Containment" width="92%"></div>
 
-## 📄 License
+NO ENTRY runs offensive exercises, so isolation is a design requirement, not an afterthought.
 
-Distributed under the MIT License. See [LICENSE](LICENSE) for more information.
+| Safeguard | Detail |
+|---|---|
+| 🔐 **Authenticated labs** | Lab lifecycle operations require login, and sessions belong to the operator who started them. |
+| 🧱 **Sealed network** | Attacker and target talk only over a private, internal-only Docker bridge. |
+| 🚫 **No exposed targets** | Vulnerable containers publish no host ports. |
+| 👤 **Least privilege** | Non-root attacker container, `no-new-privileges`. |
+| 📉 **Resource caps** | CPU, memory and PID limits on every container. |
+| 🧹 **Auto cleanup** | Session-scoped lifecycle and teardown. |
+| 🙅 **No host access** | No Docker socket or host filesystem mounted into learner containers. |
+| 🛡️ **Account hygiene** | bcrypt password hashing, JWT auth, HTTP-only cookies, rate-limited auth endpoints. |
+| 🤖 **Safe AI** | Prompt-injection defences and secret redaction in GHOST. |
+
+The app **manages** lab lifecycles. It does not run learner commands directly on the host operating system.
+
+<br>
+
+<a id="stack"></a>
+<div align="center"><img src="assets/h-stack.svg" alt="11 Tech Stack" width="92%"></div>
+
+<div align="center">
+
+![Python](https://img.shields.io/badge/Python-0b0f14?style=for-the-badge&logo=python&logoColor=18d8f0)
+![FastAPI](https://img.shields.io/badge/FastAPI-0b0f14?style=for-the-badge&logo=fastapi&logoColor=2cff8a)
+![Uvicorn](https://img.shields.io/badge/Uvicorn-0b0f14?style=for-the-badge&logo=gunicorn&logoColor=white)
+![JavaScript](https://img.shields.io/badge/JS_ES_Modules-0b0f14?style=for-the-badge&logo=javascript&logoColor=ffb020)
+![Jinja](https://img.shields.io/badge/Jinja2-0b0f14?style=for-the-badge&logo=jinja&logoColor=ff1f3d)
+![Docker](https://img.shields.io/badge/Docker-0b0f14?style=for-the-badge&logo=docker&logoColor=18d8f0)
+![SQLite](https://img.shields.io/badge/SQLite-0b0f14?style=for-the-badge&logo=sqlite&logoColor=18d8f0)
+![PostgreSQL](https://img.shields.io/badge/PostgreSQL-0b0f14?style=for-the-badge&logo=postgresql&logoColor=a259ff)
+![Pytest](https://img.shields.io/badge/Pytest-0b0f14?style=for-the-badge&logo=pytest&logoColor=2cff8a)
+![Render](https://img.shields.io/badge/Render-0b0f14?style=for-the-badge&logo=render&logoColor=white)
+
+</div>
+
+| Area | Technologies |
+|---|---|
+| **Backend** | Python, FastAPI, Uvicorn |
+| **Frontend** | HTML, CSS, JavaScript ES modules, Jinja2, SVG, WebAudio |
+| **Terminal & realtime** | xterm.js, WebSockets |
+| **Auth** | JWT, bcrypt |
+| **Database** | SQLite (default), PostgreSQL (optional) |
+| **Cyber range** | Docker, private bridge networks |
+| **AI & voice** | Groq, Gemini, OpenRouter, Deepgram |
+| **Detection** | Sigma, YARA concepts and validation |
+| **Quality** | Pytest |
+| **Deploy** | Dockerfile, Render |
+
+<br>
+
+<a id="rules"></a>
+<div align="center"><img src="assets/h-rules.svg" alt="12 Rules of Engagement" width="92%"></div>
+
+NO ENTRY is for **ethical education, authorised security research and defensive readiness.**
+
+- ✅ Practise inside the lab, the emulator, or systems **you own**.
+- ✅ Get **written permission** before testing anything else.
+- ❌ Never use these techniques against systems you are not authorised to test.
+
+<br>
+
+<div align="center">
+
+<img src="assets/footer.svg" alt="NO ENTRY. We break in, so no one else can." width="100%">
+
+<br>
+
+**[▶ Launch the live demo](https://no-entry.onrender.com)** · **[⭐ Star the repo](https://github.com/chethankp365/NO-ENTRY)**
+
+<sub>Built by <a href="https://github.com/chethankp365">@chethankp365</a></sub>
+
+</div>
