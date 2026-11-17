@@ -1,7 +1,7 @@
 <div align="center">
 
 <a href="https://no-entry.onrender.com">
-  <img src="assets/banner.svg" alt="NO ENTRY — Open-Source Attack Simulation. We break in, so no one else can." width="100%">
+  <img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/banner.svg" alt="NO ENTRY — Open-Source Attack Simulation. We break in, so no one else can." width="100%">
 </a>
 
 <br>
@@ -16,18 +16,18 @@
 
 <br>
 
-<img src="assets/terminal-boot.svg" alt="Terminal boot sequence: private docker bridge sealed, attacker workstation online, targets armed, sensors online, GHOST ready. Break in. Watch it happen. Shut it down." width="92%">
+<img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/terminal-boot.svg" alt="Terminal boot sequence: private docker bridge sealed, attacker workstation online, targets armed, sensors online, GHOST ready. Break in. Watch it happen. Shut it down." width="92%">
 
 <br><br>
 
-<img src="assets/stats.svg" alt="80 practical rooms, 4 learning tracks, 8 stage attack replay, 12 ATT&CK tactics, 295 tests passing" width="92%">
+<img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/stats.svg" alt="80 practical rooms, 4 learning tracks, 8 stage attack replay, 12 ATT&CK tactics, 295 tests passing" width="92%">
 
 </div>
 
 <br>
 
 <a id="briefing"></a>
-<div align="center"><img src="assets/h-briefing.svg" alt="01 Briefing" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-briefing.svg" alt="01 Briefing" width="92%"></div>
 
 ### What is NO ENTRY?
 
@@ -69,17 +69,17 @@ Most platforms teach attack **or** defence. NO ENTRY puts both on the same scree
 
 Every room follows the same five-beat rhythm:
 
-<div align="center"><img src="assets/loop.svg" alt="The NO ENTRY loop: Attack, Observe, Detect, Respond, Validate" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/loop.svg" alt="The NO ENTRY loop: Attack, Observe, Detect, Respond, Validate" width="92%"></div>
 
 <br>
 
 <a id="capabilities"></a>
-<div align="center"><img src="assets/h-capabilities.svg" alt="02 Capabilities" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-capabilities.svg" alt="02 Capabilities" width="92%"></div>
 
 ### Everything inside the range
 
 <div align="center">
-<a href="docs/screenshots/command-center.png"><img src="docs/screenshots/command-center.png" alt="NO ENTRY Command Center showing threat level, alerts today, mean time to detect, live alerts and the attack map" width="92%"></a>
+<a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/command-center.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/command-center.png" alt="NO ENTRY Command Center showing threat level, alerts today, mean time to detect, live alerts and the attack map" width="92%"></a>
 <br><sub><b>Command Center</b> · live threat level, alert stream, mean time to detect / respond, and a 60-second live attack demo</sub>
 </div>
 
@@ -104,20 +104,20 @@ Every room follows the same five-beat rhythm:
 <br>
 
 <a id="replay"></a>
-<div align="center"><img src="assets/h-replay.svg" alt="03 Attack Replay" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-replay.svg" alt="03 Attack Replay" width="92%"></div>
 
 ### 60 seconds. 8 stages. Both sides of the screen.
 
 Press **WATCH A LIVE ATTACK** and NO ENTRY plays a scripted replay of a full intrusion. Attacker terminal on one side, SOC telemetry on the other, an animated network topology in the middle.
 
-<div align="center"><img src="assets/killchain.svg" alt="Eight stage attack replay: recon, initial access, discovery and evasion, privilege escalation, telemetry correlation, SIEM detection, SOC triage, containment" width="100%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/killchain.svg" alt="Eight stage attack replay: recon, initial access, discovery and evasion, privilege escalation, telemetry correlation, SIEM detection, SOC triage, containment" width="100%"></div>
 
-<div align="center"><img src="assets/topology.svg" alt="Network topology: attacker, perimeter firewall, DMZ server, domain controller, and the SOC correlation engine receiving telemetry" width="100%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/topology.svg" alt="Network topology: attacker, perimeter firewall, DMZ server, domain controller, and the SOC correlation engine receiving telemetry" width="100%"></div>
 
 <br>
 
 <div align="center">
-<a href="docs/screenshots/purple-team.png"><img src="docs/screenshots/purple-team.png" alt="Purple Team view with an SSH brute force attack on the left and Wazuh, Suricata and SOAR detections on the right" width="92%"></a>
+<a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/purple-team.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/purple-team.png" alt="Purple Team view with an SSH brute force attack on the left and Wazuh, Suricata and SOAR detections on the right" width="92%"></a>
 <br><sub><b>Purple Team</b> · an SSH brute force (<code>T1110</code>) on the left, the SIEM catching it and SOAR blocking the IP on the right. Time to detect: 3.2 s.</sub>
 </div>
 
@@ -127,11 +127,11 @@ Press **WATCH A LIVE ATTACK** and NO ENTRY plays a scripted replay of a full int
 <br>
 
 <a id="academy"></a>
-<div align="center"><img src="assets/h-academy.svg" alt="04 The Academy" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-academy.svg" alt="04 The Academy" width="92%"></div>
 
 ### 80 practical rooms across four tracks
 
-<div align="center"><img src="assets/tracks.svg" alt="Red Team, Blue Team, Purple Team and Detection Engineering, 20 rooms each" width="100%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/tracks.svg" alt="Red Team, Blue Team, Purple Team and Detection Engineering, 20 rooms each" width="100%"></div>
 
 <br>
 
@@ -147,24 +147,24 @@ Every room teaches in the same **eight steps**, so you always know where you are
 Then you open the terminal and *do it*. Tasks are validated automatically, XP is awarded, and the next room unlocks.
 
 <div align="center">
-<a href="docs/screenshots/academy.png"><img src="docs/screenshots/academy.png" alt="Academy overview listing the Red Team rooms with difficulty, duration and XP" width="92%"></a>
+<a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/academy.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/academy.png" alt="Academy overview listing the Red Team rooms with difficulty, duration and XP" width="92%"></a>
 <br><sub><b>The Academy</b> · 80 rooms, four tracks, XP and progress tracking</sub>
 <br><br>
-<a href="docs/screenshots/room-briefing.png"><img src="docs/screenshots/room-briefing.png" alt="A room page with the theory on the left and the operator workstation on the right" width="92%"></a>
+<a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/room-briefing.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/room-briefing.png" alt="A room page with the theory on the left and the operator workstation on the right" width="92%"></a>
 <br><sub><b>Inside a room</b> · theory on the left, live lab on the right</sub>
 </div>
 
 <br>
 
 <a id="footage"></a>
-<div align="center"><img src="assets/h-footage.svg" alt="05 Field Footage" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-footage.svg" alt="05 Field Footage" width="92%"></div>
 
-<div align="center"><img src="assets/reel.svg" alt="Screenshot reel of NO ENTRY: landing page, command center, red team ops, purple team, ATT&CK heatmap and operator workstation" width="100%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/reel.svg" alt="Screenshot reel of NO ENTRY: landing page, command center, red team ops, purple team, ATT&CK heatmap and operator workstation" width="100%"></div>
 
 <br>
 
 <div align="center">
-<a href="docs/screenshots/operator-workstation.png"><img src="docs/screenshots/operator-workstation.png" alt="Full-screen operator workstation with terminal, mission briefing, lab intelligence and quick commands" width="92%"></a>
+<a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/operator-workstation.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/operator-workstation.png" alt="Full-screen operator workstation with terminal, mission briefing, lab intelligence and quick commands" width="92%"></a>
 <br><sub><b>Operator Workstation</b> · full-screen terminal, mission briefing, lab intelligence, quick commands and mission timeline</sub>
 </div>
 
@@ -172,31 +172,31 @@ Then you open the terminal and *do it*. Tasks are validated automatically, XP is
 
 <table>
 <tr>
-<td width="50%" align="center"><a href="docs/screenshots/landing.png"><img src="docs/screenshots/landing.png" alt="Landing page"></a><br><sub><b>Landing</b></sub></td>
-<td width="50%" align="center"><a href="docs/screenshots/access-terminal.png"><img src="docs/screenshots/access-terminal.png" alt="Access terminal login"></a><br><sub><b>Access Terminal</b> · operator sign-in</sub></td>
+<td width="50%" align="center"><a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/landing.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/landing.png" alt="Landing page"></a><br><sub><b>Landing</b></sub></td>
+<td width="50%" align="center"><a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/access-terminal.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/access-terminal.png" alt="Access terminal login"></a><br><sub><b>Access Terminal</b> · operator sign-in</sub></td>
 </tr>
 <tr>
-<td align="center"><a href="docs/screenshots/lab-map.png"><img src="docs/screenshots/lab-map.png" alt="Lab map 3D topology"></a><br><sub><b>Lab Map</b> · 3D range topology</sub></td>
-<td align="center"><a href="docs/screenshots/red-team-ops.png"><img src="docs/screenshots/red-team-ops.png" alt="Red Team Ops console"></a><br><sub><b>Red Team Ops</b> · scenarios and offensive console</sub></td>
+<td align="center"><a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/lab-map.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/lab-map.png" alt="Lab map 3D topology"></a><br><sub><b>Lab Map</b> · 3D range topology</sub></td>
+<td align="center"><a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/red-team-ops.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/red-team-ops.png" alt="Red Team Ops console"></a><br><sub><b>Red Team Ops</b> · scenarios and offensive console</sub></td>
 </tr>
 <tr>
-<td align="center"><a href="docs/screenshots/shield-defense.png"><img src="docs/screenshots/shield-defense.png" alt="Shield defense hardening checklist"></a><br><sub><b>Shield</b> · hardening checklist, score 38 → 78</sub></td>
-<td align="center"><a href="docs/screenshots/trap-deception.png"><img src="docs/screenshots/trap-deception.png" alt="Trap deception honeypots and canary tokens"></a><br><sub><b>Trap</b> · honeypots and canary tokens</sub></td>
+<td align="center"><a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/shield-defense.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/shield-defense.png" alt="Shield defense hardening checklist"></a><br><sub><b>Shield</b> · hardening checklist, score 38 → 78</sub></td>
+<td align="center"><a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/trap-deception.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/trap-deception.png" alt="Trap deception honeypots and canary tokens"></a><br><sub><b>Trap</b> · honeypots and canary tokens</sub></td>
 </tr>
 <tr>
-<td align="center"><a href="docs/screenshots/intel-threat-recon.png"><img src="docs/screenshots/intel-threat-recon.png" alt="Intel threat recon IOC enrichment"></a><br><sub><b>Intel</b> · IOC enrichment and campaign graph</sub></td>
-<td align="center"><a href="docs/screenshots/attack-coverage-heatmap.png"><img src="docs/screenshots/attack-coverage-heatmap.png" alt="ATT&CK coverage heatmap"></a><br><sub><b>ATT&amp;CK Heatmap</b> · 12 tactics, detection gaps</sub></td>
+<td align="center"><a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/intel-threat-recon.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/intel-threat-recon.png" alt="Intel threat recon IOC enrichment"></a><br><sub><b>Intel</b> · IOC enrichment and campaign graph</sub></td>
+<td align="center"><a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/attack-coverage-heatmap.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/attack-coverage-heatmap.png" alt="ATT&CK coverage heatmap"></a><br><sub><b>ATT&amp;CK Heatmap</b> · 12 tactics, detection gaps</sub></td>
 </tr>
 </table>
 
 <br>
 
 <a id="architecture"></a>
-<div align="center"><img src="assets/h-architecture.svg" alt="06 Architecture" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-architecture.svg" alt="06 Architecture" width="92%"></div>
 
 ### Five layers, each swappable
 
-<div align="center"><img src="assets/architecture.svg" alt="Architecture layers: frontend, backend, AI layer, cyber range, persistence" width="100%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/architecture.svg" alt="Architecture layers: frontend, backend, AI layer, cyber range, persistence" width="100%"></div>
 
 <br>
 
@@ -228,13 +228,13 @@ sequenceDiagram
 <br>
 
 <a id="ghost"></a>
-<div align="center"><img src="assets/h-ghost.svg" alt="07 GHOST AI" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-ghost.svg" alt="07 GHOST AI" width="92%"></div>
 
 ### A mentor that knows where you are
 
 GHOST is not a generic chatbot. Before it answers, it looks at **your current room, your task progress, your recent terminal activity and any Sigma rule you are working on**, then routes the question to the best available AI provider.
 
-<div align="center"><img src="assets/ghost.svg" alt="GHOST pipeline: room, task, terminal and Sigma context flow into GHOST, which routes to Groq, Gemini, OpenRouter or a local fallback, with guardrails, and returns hints, log explanations, and rule reviews" width="100%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/ghost.svg" alt="GHOST pipeline: room, task, terminal and Sigma context flow into GHOST, which routes to Groq, Gemini, OpenRouter or a local fallback, with guardrails, and returns hints, log explanations, and rule reviews" width="100%"></div>
 
 <br>
 
@@ -255,7 +255,7 @@ GHOST is not a generic chatbot. Before it answers, it looks at **your current ro
 </td>
 <td width="38%" align="center">
 
-<a href="docs/screenshots/ghost-mentor.png"><img src="docs/screenshots/ghost-mentor.png" alt="GHOST mentor panel with hint, explain this log, why did it work and review my rule actions" width="100%"></a>
+<a href="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/ghost-mentor.png"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/docs/screenshots/ghost-mentor.png" alt="GHOST mentor panel with hint, explain this log, why did it work and review my rule actions" width="100%"></a>
 
 </td>
 </tr>
@@ -264,7 +264,7 @@ GHOST is not a generic chatbot. Before it answers, it looks at **your current ro
 <br>
 
 <a id="modes"></a>
-<div align="center"><img src="assets/h-modes.svg" alt="08 Execution Modes" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-modes.svg" alt="08 Execution Modes" width="92%"></div>
 
 NO ENTRY picks how to run a lab based on where it is hosted. Be clear about which one you are using:
 
@@ -283,7 +283,7 @@ NO ENTRY picks how to run a lab based on where it is hosted. Be clear about whic
 <br>
 
 <a id="launch"></a>
-<div align="center"><img src="assets/h-launch.svg" alt="09 Launch Sequence" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-launch.svg" alt="09 Launch Sequence" width="92%"></div>
 
 ```bash
 # 1 · clone
@@ -333,7 +333,7 @@ GHOST works without any keys using its scripted fallback. To enable live AI, add
 <br>
 
 <a id="security"></a>
-<div align="center"><img src="assets/h-security.svg" alt="10 Containment" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-security.svg" alt="10 Containment" width="92%"></div>
 
 NO ENTRY runs offensive exercises, so isolation is a design requirement, not an afterthought.
 
@@ -354,7 +354,7 @@ The app **manages** lab lifecycles. It does not run learner commands directly on
 <br>
 
 <a id="stack"></a>
-<div align="center"><img src="assets/h-stack.svg" alt="11 Tech Stack" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-stack.svg" alt="11 Tech Stack" width="92%"></div>
 
 <div align="center">
 
@@ -387,7 +387,7 @@ The app **manages** lab lifecycles. It does not run learner commands directly on
 <br>
 
 <a id="rules"></a>
-<div align="center"><img src="assets/h-rules.svg" alt="12 Rules of Engagement" width="92%"></div>
+<div align="center"><img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/h-rules.svg" alt="12 Rules of Engagement" width="92%"></div>
 
 NO ENTRY is for **ethical education, authorised security research and defensive readiness.**
 
@@ -399,7 +399,7 @@ NO ENTRY is for **ethical education, authorised security research and defensive 
 
 <div align="center">
 
-<img src="assets/footer.svg" alt="NO ENTRY. We break in, so no one else can." width="100%">
+<img src="NO-ENTRY-readme-kit/NO-ENTRY-readme-kit/assets/footer.svg" alt="NO ENTRY. We break in, so no one else can." width="100%">
 
 <br>
 
