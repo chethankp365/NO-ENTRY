@@ -25,6 +25,12 @@ data/*.db
 .coverage
 htmlcov/
 
+# Generated Reports
+backend/app/reports_data/rep-*.pdf
+!backend/app/reports_data/rep-001.pdf
+!backend/app/reports_data/rep-002.pdf
+!backend/app/reports_data/rep-003.pdf
+
 # IDE / OS
 .vscode/
 .idea/

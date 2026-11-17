@@ -56,11 +56,20 @@ async def test_real_docker_lab_lifecycle_and_security_constraints(docker_runner)
     assert info.attacker_container_id is not None
     assert info.target_container_id is not None
     assert info.network_id is not None
+    assert info.attacker_container_id != info.target_container_id
+    assert info.attacker_hostname == "attacker"
+    assert info.target_hostname == "target"
+    assert info.attacker_ip != info.target_ip
+    assert info.open_ports == [info.target_port]
 
     try:
         # 1. whoami inside attacker container (must run as non-root operator)
         whoami = await docker_runner.execute_command(session_id, "whoami")
         assert whoami.strip() == "operator"
+        identity = await docker_runner.execute_command(session_id, "id")
+        assert "uid=1000(operator)" in identity
+        hostname = await docker_runner.execute_command(session_id, "hostname")
+        assert hostname.strip() == "attacker"
 
         # 2. pwd inside attacker container (must be /home/operator)
         pwd = await docker_runner.execute_command(session_id, "pwd")
@@ -69,9 +78,21 @@ async def test_real_docker_lab_lifecycle_and_security_constraints(docker_runner)
         # 3. ip addr (must show lo and internal bridge interface)
         ip_out = await docker_runner.execute_command(session_id, "ip addr")
         assert "eth0" in ip_out
-        assert "10.10." in ip_out
+        assert info.attacker_ip in ip_out
+        brief_ip = await docker_runner.execute_command(session_id, "ip -br addr")
+        assert "eth0" in brief_ip and info.attacker_ip in brief_ip
+        route = await docker_runner.execute_command(session_id, "ip route")
+        assert ".".join(info.target_ip.split(".")[:3]) in route
 
-        # 4. ls inside container
+        # 4. Verify genuine attacker image tools and Linux image.
+        os_release = await docker_runner.execute_command(session_id, "cat /etc/os-release")
+        assert "NAME=" in os_release
+        nmap_path = await docker_runner.execute_command(session_id, "which nmap")
+        assert nmap_path.strip().endswith("nmap")
+        nmap_version = await docker_runner.execute_command(session_id, "nmap --version")
+        assert "Nmap version" in nmap_version
+
+        # 5. ls inside container
         ls_out = await docker_runner.execute_command(session_id, "ls -la")
         assert "entrypoint.sh" in ls_out or "." in ls_out
 
@@ -86,6 +107,11 @@ async def test_real_docker_lab_lifecycle_and_security_constraints(docker_runner)
             session_id, f"curl -s http://{info.target_ip}:{info.target_port}/"
         )
         assert "VoltGear" in index_html
+        room_scan = await docker_runner.execute_command(
+            session_id,
+            f"nmap -sV --version-light -T4 --max-retries 1 -p {info.target_port} {info.target_ip}",
+        )
+        assert "Nmap done" in room_scan and str(info.target_port) in room_scan
 
         # 7. Execute SQL Injection Auth Bypass against real target container
         auth_bypass = await docker_runner.execute_command(
@@ -109,6 +135,16 @@ async def test_real_docker_lab_lifecycle_and_security_constraints(docker_runner)
         # Teardown and destroy containers and network
         stopped = await docker_runner.stop_session(session_id)
         assert stopped is True
+        for resource_type, resource_id in (
+            ("container", info.attacker_container_id),
+            ("container", info.target_container_id),
+            ("network", info.network_id),
+        ):
+            inspect_code, _ = await docker_runner._run_cmd(
+                ["docker", resource_type, "inspect", resource_id],
+                ignore_errors=True,
+            )
+            assert inspect_code != 0, f"{resource_type} {resource_id} remained after stop"
 
 
 @pytest.mark.asyncio
@@ -123,4 +159,3 @@ async def test_docker_runner_timeout_handling(docker_runner):
         assert "timed out" in res.lower()
     finally:
         await docker_runner.stop_session(session_id)
-

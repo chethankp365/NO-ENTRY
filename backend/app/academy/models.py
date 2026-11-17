@@ -5,7 +5,7 @@ Defines tracks, rooms, tasks, quizzes, submissions, and feedback.
 
 from enum import Enum
 from typing import Dict, List, Optional, Any
-from pydantic import BaseModel, Field, model_validator
+from pydantic import AliasChoices, BaseModel, Field, model_validator
 
 
 class TrackEnum(str, Enum):
@@ -108,7 +108,10 @@ class RoomDefinition(BaseModel):
     difficulty: str = "Beginner"  # Beginner | Intermediate | Advanced
     estimated_duration: str = "45 min"
     prerequisites: List[str] = Field(default_factory=list)
-    required_practical_skills: List[str] = Field(default_factory=list)
+    required_practical_skills: List[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("required_practical_skills", "required_skills"),
+    )
     required_lab_type: str = "container_duo"  # container_duo | single_host | simulated | analytical
     status: RoomStatus = RoomStatus.PLANNED
     learning_objectives: List[str] = Field(default_factory=list)
@@ -119,6 +122,28 @@ class RoomDefinition(BaseModel):
     tasks: List[TaskDefinition] = Field(default_factory=list)
     target_app_type: Optional[str] = None
     default_port: int = 8089
+
+    @model_validator(mode="after")
+    def _ensure_objectives_and_criteria(self) -> "RoomDefinition":
+        if not self.learning_objectives:
+            self.learning_objectives = [
+                f"Master {self.title} operational concepts and core methodology",
+                f"Execute hands-on cyber range tasks for {self.title}",
+                f"Analyze security telemetry and forensic indicators related to {self.title}",
+            ]
+        if not self.assessment_criteria:
+            task_cnt = len(self.tasks) if self.tasks else 5
+            self.assessment_criteria = [
+                f"Complete all {task_cnt} practical challenge tasks with 100% accuracy",
+                "Demonstrate proficiency in analyzing security logs and threat telemetry",
+            ]
+        if not self.completion_requirements:
+            task_cnt = len(self.tasks) if self.tasks else 5
+            self.completion_requirements = [
+                f"Submit verified solutions for all {task_cnt} tasks",
+                f"Earn full room XP allocation ({self.total_xp} XP)",
+            ]
+        return self
 
     def client_summary(self) -> Dict[str, Any]:
         """Summary card representation for the academy curriculum browser."""
@@ -166,4 +191,3 @@ class TaskSubmissionResult(BaseModel):
     room_completed: bool = False
     new_room_status: str = "IN_PROGRESS"
     total_user_xp: int = 0
-

@@ -10,6 +10,7 @@ including genuine WebSocket terminal communication.
 """
 
 import pytest
+from conftest import drain_terminal_until_prompt, execute_terminal_command
 from backend.app.labs.docker_runner import DockerLabRunner
 
 
@@ -229,41 +230,28 @@ async def test_docker_websocket_terminal_purple20(docker_runner, client, session
 
     try:
         with client.websocket_connect(f"/ws/academy/{room_id}/terminal") as ws:
-            # Drain banner output chunks
-            for _ in range(8):
-                msg = ws.receive_json()
-                assert msg["type"] == "output"
+            drain_terminal_until_prompt(ws)
 
             # Execute emulation over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/purple_capstone_tool.py --emulate-campaign",
-            })
-            emu_resp = ws.receive_json()
+            emu_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/purple_capstone_tool.py --emulate-campaign"
+            )
             assert "PURPLE_CAPSTONE_EMULATION_VERIFIED" in emu_resp["data"]
             assert info.has_action("purple_capstone_emulated")
-            ws.receive_json()  # Prompt
 
             # Execute rule tuning over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/purple_capstone_tool.py --tune-enterprise-rules",
-            })
-            tune_resp = ws.receive_json()
+            tune_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/purple_capstone_tool.py --tune-enterprise-rules"
+            )
             assert "ENTERPRISE_RULES_TUNED_OK" in tune_resp["data"]
-            ws.receive_json()  # Prompt
 
             # Execute challenge finalization over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/purple_capstone_tool.py --challenge",
-            })
-            chal_resp = ws.receive_json()
+            chal_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/purple_capstone_tool.py --challenge"
+            )
             assert "PURPLE_CAPSTONE_DETECTION_VALIDATED" in chal_resp["data"]
             assert info.has_action("purple_capstone_detection_validated")
-            ws.receive_json()  # Prompt
 
     finally:
         await lab_manager._docker_runner.stop_session(session_id)
         lab_manager._active_sessions.pop(session_id, None)
-

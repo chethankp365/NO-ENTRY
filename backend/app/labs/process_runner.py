@@ -460,12 +460,16 @@ class ProcessLabRunner(LabRunner):
         # Initialize clean database
         init_target_db()
 
-
-
-        open_ports = [22, 80]
-        if target_port not in open_ports:
-            open_ports.append(target_port)
-        open_ports.sort()
+        octet = 14
+        if "blue" in room_id:
+            octet = 15
+        elif "purple" in room_id:
+            octet = 16
+        elif "detect" in room_id:
+            octet = 17
+        target_ip = f"10.10.{octet}.90"
+        attacker_ip = f"10.10.{octet}.10"
+        open_ports = [22, 80, 443, target_port]
 
         info = LabSessionInfo(
             session_id=session_id,
@@ -475,10 +479,10 @@ class ProcessLabRunner(LabRunner):
             docker_available=False,
             status="RUNNING",
             target_url=f"http://127.0.0.1:{target_port}",
-            target_ip="10.10.14.90",
+            target_ip=target_ip,
             target_port=target_port,
             target_hostname="target",
-            attacker_ip="10.10.14.10",
+            attacker_ip=attacker_ip,
             attacker_hostname="attacker",
             open_ports=open_ports,
             active_sessions_count=1,
@@ -4367,6 +4371,9 @@ class ProcessLabRunner(LabRunner):
                 ports_to_show.insert(1, 80)
             if 443 not in ports_to_show:
                 ports_to_show.insert(2, 443)
+            if "red-05" in (info.room_id or "") or "-p-" in cmd or "9001" in cmd:
+                if 9001 not in ports_to_show:
+                    ports_to_show.append(9001)
             ports_to_show.sort()
 
             ports_lines = ""
@@ -4377,6 +4384,8 @@ class ProcessLabRunner(LabRunner):
                     svc, ver = "https", "nginx 1.24.0"
                 elif p == 80:
                     svc, ver = "http", "Apache httpd 2.4.58"
+                elif p == 9001:
+                    svc, ver = "raw-tcp", "Raw TCP Socket Service (:9001)"
                 else:
                     svc, ver = "http", f"VoltDefense Target Service (:{p})"
                 ports_lines += f"{p}/tcp open  {svc:<8} {ver}\n"

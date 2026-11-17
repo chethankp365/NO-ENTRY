@@ -2513,16 +2513,16 @@
         <!-- Active Guided Step Card -->
         <div class="ghost-active-step-box" style="background:#090d16;border:1px solid #1e293b;border-radius:4px;padding:12px;margin-bottom:12px;">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-            <span style="font-family:var(--font-mono);font-size:11px;color:#00E5FF;font-weight:700;" id="ghostStepBadge">STEP 1 / 6: UNDERSTAND ENVIRONMENT</span>
-            <span style="font-family:var(--font-mono);font-size:10px;color:#64748b;" id="ghostToolBadge">TOOL: whoami / id</span>
+            <span style="font-family:var(--font-mono);font-size:11px;color:#00E5FF;font-weight:700;" id="ghostStepBadge">ROOM GUIDE LOADING</span>
+            <span style="font-family:var(--font-mono);font-size:10px;color:#64748b;" id="ghostToolBadge">TOOLS: ROOM-SPECIFIC</span>
           </div>
-          <p style="font-size:12px;color:#cbd5e1;margin:4px 0 8px 0;" id="ghostStepGoal">Verify operator identity and local workstation privileges.</p>
+          <p style="font-size:12px;color:#cbd5e1;margin:4px 0 8px 0;" id="ghostStepGoal">Loading this room's objectives and backend-verified progress.</p>
           <div style="display:flex;align-items:center;background:#030712;border:1px solid #1e293b;border-radius:3px;padding:6px 10px;gap:8px;">
-            <code style="font-family:var(--font-mono);font-size:11px;color:#00FF6A;flex:1;" id="ghostStepCmd">whoami &amp;&amp; id &amp;&amp; pwd</code>
-            <button class="btn-hud-action" id="btnGhostCopyCmd" title="Copy command to clipboard" style="padding:2px 8px;font-size:10px;">📋 COPY</button>
-            <button class="btn-hud-action" id="btnGhostRunCmd" title="Execute directly in terminal" style="padding:2px 8px;font-size:10px;color:#00E5FF;border-color:#00E5FF;">▶ RUN</button>
+            <code style="font-family:var(--font-mono);font-size:11px;color:#00FF6A;flex:1;" id="ghostStepCmd">Start the Docker lab to receive a verified command for this step.</code>
+            <button class="btn-hud-action" id="btnGhostCopyCmd" title="Copy command to clipboard" style="padding:2px 8px;font-size:10px;" disabled>📋 COPY</button>
+            <button class="btn-hud-action" id="btnGhostRunCmd" title="Execute directly in terminal" style="padding:2px 8px;font-size:10px;color:#00E5FF;border-color:#00E5FF;" disabled>▶ RUN</button>
           </div>
-          <p style="font-size:11px;color:#94a3b8;margin:6px 0 0 0;" id="ghostStepExpl">Confirms you are executing as the unprivileged 'operator' user on the isolated attacker workstation.</p>
+          <p style="font-size:11px;color:#94a3b8;margin:6px 0 0 0;" id="ghostStepExpl">GHOST will load the practical guidance for this room.</p>
         </div>
 
         <!-- Step Navigation Stepper Buttons -->
@@ -2569,11 +2569,11 @@
       <div class="lab-info-left" style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
         <div class="target-badge">
           <span style="color:#64748b;">TARGET:</span>
-          <span style="color:var(--track-accent);font-weight:700;" id="labTargetIpText">10.10.14.90:8089</span>
+          <span style="color:var(--track-accent);font-weight:700;" id="labTargetIpText">NOT ASSIGNED</span>
         </div>
         <div class="target-badge">
           <span style="color:#64748b;">OPERATOR:</span>
-          <span style="color:#00FF6A;font-weight:700;" id="labAttackerIpText">10.10.14.10</span>
+          <span style="color:#00FF6A;font-weight:700;" id="labAttackerIpText">NOT ASSIGNED</span>
         </div>
         <span class="runner-badge emulated" id="labRunnerBadge">STOPPED</span>
         <span style="font-family:var(--font-mono);font-size:11px;color:#94a3b8;" id="labTimerText">60:00</span>
@@ -2604,10 +2604,11 @@
       </div>
       <div class="quick-cmd-bar" id="quickCmdBar">
         <span style="font-family:var(--font-mono);font-size:10px;color:#64748b;align-self:center;">QUICK PROBES:</span>
-        <button class="btn-quick-cmd" data-cmd="curl -s http://10.10.14.90:8089/">curl target</button>
-        <button class="btn-quick-cmd" data-cmd="clear">clear</button>
+        <span style="font-family:var(--font-mono);font-size:10px;color:#64748b;align-self:center;">START LAB TO LOAD VERIFIED COMMANDS</span>
       </div>
-      <div id="normalTerminalMount" style="display:none;"></div>
+      <div id="normalTerminalMount">
+        <div id="terminalContainer"></div>
+      </div>
     </div>
   </div>
 </div>
@@ -2644,7 +2645,7 @@
       </div>
       <div class="briefing-meta-item">
         <span class="meta-label">TARGET VECTOR</span>
-        <span class="meta-val" id="briefingTarget">10.10.14.90</span>
+        <span class="meta-val" id="briefingTarget">Assigned when lab starts</span>
       </div>
     </div>
 
@@ -2705,16 +2706,16 @@
 <!-- 3. Evidence Dataset Inspector Drawer -->
 <div id="evidenceDrawerModal" class="evidence-drawer" style="display:none;">
   <div class="evidence-header">
-    <span class="evidence-title">📂 EVIDENCE &amp; TELEMETRY DATASET INSPECTOR</span>
+    <span class="evidence-title">📂 ROOM REFERENCE &amp; EVIDENCE INSPECTOR</span>
     <button id="btnCloseEvidence" class="btn-close-evidence">&times;</button>
   </div>
   <div class="evidence-body">
     <div class="evidence-file-info">
-      <span id="evidenceFilePath">/var/log/detection/evidence.json</span>
-      <button id="btnCopyEvidenceCmd" class="btn btn-outline" style="font-size:10px;padding:3px 8px;cursor:pointer;">📋
+      <span id="evidenceFilePath">No evidence file supplied</span>
+      <button id="btnCopyEvidenceCmd" class="btn btn-outline" style="font-size:10px;padding:3px 8px;cursor:pointer;" disabled>📋
         COPY CAT CMD</button>
     </div>
-    <pre id="evidenceContentPre" class="evidence-pre">Loading dataset telemetry...</pre>
+    <pre id="evidenceContentPre" class="evidence-pre">Room reference information will load here. No sample telemetry is implied.</pre>
   </div>
 </div>
 
@@ -2725,9 +2726,9 @@
 </div>
 
 <!-- =========================================================================
-     CINEMATIC OPERATOR WORKSTATION
+     CINEMATIC FULL-SCREEN OPERATOR WORKSTATION (MODE B)
      ========================================================================= -->
-<div id="fullscreenWorkstation" class="fs-workstation-overlay active" style="display:flex;">
+<div id="fullscreenWorkstation" class="fs-workstation-overlay" style="display:none;">
   <!-- 1. TOP COMMAND BAR -->
   <header class="fs-top-bar">
     <div class="fs-top-bar-left">
@@ -2745,9 +2746,9 @@
       </div>
     </div>
     <div class="fs-top-bar-right">
-      <div class="fs-status-pill offline" id="fsStatusPill">
+      <div class="fs-status-pill online" id="fsStatusPill">
         <span class="fs-status-dot"></span>
-        <span class="fs-status-label" id="fsStatusText">STOPPED</span>
+        <span class="fs-status-label" id="fsStatusText">ONLINE</span>
       </div>
       <div class="fs-xp-pill">
         <span class="fs-xp-star">★</span>
@@ -2755,9 +2756,9 @@
       </div>
       <div class="fs-timer-pill">
         <span class="fs-timer-icon">⏱</span>
-        <span class="fs-timer-val" id="fsTimerVal">--:--</span>
+        <span class="fs-timer-val" id="fsTimerVal">28:47</span>
       </div>
-      <button id="btnExitFsLab" class="fs-exit-btn" title="Exit Lab to Academy (ESC)">
+      <button id="btnExitFsLab" class="fs-exit-btn" title="Exit Full-Screen Workstation (ESC)">
         &lt; EXIT LAB
       </button>
     </div>
@@ -2896,19 +2897,19 @@
           <div class="fs-intel-row">
             <span class="fs-intel-label">Target IP</span>
             <span class="fs-intel-val highlight-cyan" id="fsIntelIp">
-              OFFLINE
-              <button id="btnFsCopyIp" class="fs-copy-inline" title="Copy Target IP" style="display:none;">📋</button>
+              NOT ASSIGNED
+              <button id="btnFsCopyIp" class="fs-copy-inline" title="Copy Target IP" disabled>📋</button>
             </span>
           </div>
           <div class="fs-intel-row">
             <span class="fs-intel-label">Operator IP</span>
-            <span class="fs-intel-val" id="fsIntelOperatorIp" style="color:#94a3b8;font-weight:700;">
-              OFFLINE
+            <span class="fs-intel-val" id="fsIntelOperatorIp" style="color:#00FF6A;font-weight:700;">
+              NOT ASSIGNED
             </span>
           </div>
           <div class="fs-intel-row">
             <span class="fs-intel-label">Lab Status</span>
-            <span class="fs-intel-val offline" id="fsIntelStatus">
+            <span class="fs-intel-val online" id="fsIntelStatus">
               <span class="dot red"></span> STOPPED
             </span>
           </div>
@@ -2923,11 +2924,6 @@
             <span class="fs-intel-val" id="fsIntelContainer">
               <span class="dot red"></span> stopped
             </span>
-          </div>
-          <div class="fs-intel-actions" id="fsIntelActions" style="display:flex;gap:6px;margin-top:10px;">
-            <button id="btnFsStartLab" class="btn-lab btn-lab-start" style="flex:1;padding:6px 12px;font-size:11px;font-weight:800;background:rgba(0,255,106,0.15);border:1px solid #00FF6A;color:#00FF6A;border-radius:4px;cursor:pointer;">&#9654; START LAB</button>
-            <button id="btnFsStopLab" class="btn-lab btn-lab-stop" style="display:none;flex:1;padding:6px 12px;font-size:11px;font-weight:800;background:rgba(255,31,61,0.15);border:1px solid #FF1F3D;color:#FF1F3D;border-radius:4px;cursor:pointer;">&#9632; STOP LAB</button>
-            <button id="btnFsResetLab" class="btn-lab btn-lab-reset" style="display:none;padding:6px 10px;font-size:11px;font-weight:800;background:rgba(255,230,0,0.15);border:1px solid #FFE600;color:#FFE600;border-radius:4px;cursor:pointer;">&#8634; RESET</button>
           </div>
         </div>
 
@@ -3004,14 +3000,6 @@
           <span class="fs-rail-icon">⚡</span>
           <span class="fs-rail-text">PROBES</span>
         </button>
-        <button id="btnFsRailGhost" class="fs-rail-btn" data-tab="ghost" title="GHOST AI Step-by-Step Mentor">
-          <span class="fs-rail-icon">🤖</span>
-          <span class="fs-rail-text">GHOST AI</span>
-        </button>
-        <button id="btnFsRailStartToggle" class="fs-rail-btn success" title="Start or Stop Lab Environment">
-          <span class="fs-rail-icon" id="fsRailStartIcon">▶</span>
-          <span class="fs-rail-text" id="fsRailStartText">START LAB</span>
-        </button>
         <button id="btnFsRailReset" class="fs-rail-btn warning" title="Reset Docker Container &amp; Session">
           <span class="fs-rail-icon">🔄</span>
           <span class="fs-rail-text">RESET LAB</span>
@@ -3025,10 +3013,10 @@
           <svg viewBox="0 0 80 80" class="fs-gauge-svg">
             <circle cx="40" cy="40" r="32" class="gauge-bg"/>
             <circle cx="40" cy="40" r="32" class="gauge-bar" id="fsGaugeBar" stroke-dasharray="201" stroke-dashoffset="50"/>
-            <text x="40" y="44" text-anchor="middle" class="gauge-val" id="fsGaugeVal">75%</text>
+            <text x="40" y="44" text-anchor="middle" class="gauge-val" id="fsGaugeVal">0%</text>
           </svg>
         </div>
-        <div class="fs-progress-sub" id="fsProgressRooms">15 / 20 Rooms</div>
+        <div class="fs-progress-sub" id="fsProgressRooms">0 / 0 Tasks</div>
       </div>
     </nav>
 
@@ -3040,20 +3028,19 @@
           <div class="fs-term-title-left">
             <span class="fs-term-icon">⌨️</span>
             <span class="fs-term-heading">OPERATOR WORKSTATION // tty0</span>
-            <span class="fs-term-ready-badge standby" id="fsTermReadyBadge" style="color:#ef4444;">⏸ STANDBY</span>
+            <span class="fs-term-ready-badge" id="fsTermReadyBadge">▶ READY</span>
           </div>
           <div class="fs-term-title-right">
             <button id="btnFsClear" class="fs-term-btn" title="Clear terminal screen">🗑 CLEAR</button>
             <button id="btnFsCopy" class="fs-term-btn" title="Copy terminal selection">📋 COPY</button>
             <button id="btnFsMin" class="fs-term-btn" title="Toggle compact terminal">🗕 MIN</button>
             <button id="btnFsFocus" class="fs-term-btn highlight" title="Expand Terminal to 95%+ Screen (Focus Mode)">🗖 FOCUS</button>
-            <button id="btnFsClose" class="fs-term-btn danger" title="Exit Lab to Academy">✕ CLOSE</button>
+            <button id="btnFsClose" class="fs-term-btn danger" title="Exit Full-Screen Workstation">✕ CLOSE</button>
           </div>
         </div>
 
-        <!-- Terminal Mount Point (Permanent stable mount for xterm.js) -->
+        <!-- Terminal Mount Point (where #terminalContainer is dynamically reparented) -->
         <div class="fs-term-mount-area" id="fsTerminalMount">
-          <div id="terminalContainer" style="width:100%;height:100%;"></div>
           <!-- Floating Restore Button in Focus Mode -->
           <button id="btnFsRestoreWorkstation" class="fs-restore-float-btn" style="display:none;" title="Restore Full Multi-Panel Workstation">
             🗗 RESTORE WORKSTATION
@@ -3069,14 +3056,14 @@
         <div class="fs-card-header">
           <span class="fs-card-icon green">👤</span>
           <span class="fs-card-title green">ACTIVE SESSIONS</span>
-          <span class="fs-card-badge" id="fsSessionCount">0 / 1</span>
+          <span class="fs-card-badge" id="fsSessionCount">0</span>
         </div>
         <div class="fs-session-list">
-          <div class="fs-session-item" id="fsSessionItem">
+          <div class="fs-session-item">
             <span class="dot red" id="fsSessionDot"></span>
-            <span class="fs-session-user">operator-001</span>
-            <span class="fs-session-ip" id="fsSessionIp">Standby</span>
-            <span class="fs-session-status badge-stopped" id="fsSessionStatus">Stopped</span>
+            <span class="fs-session-user">ACADEMY OPERATOR</span>
+            <span class="fs-session-ip" id="fsSessionIp">NOT ASSIGNED</span>
+            <span class="fs-session-status" id="fsSessionStatus">Standby</span>
           </div>
         </div>
       </div>
@@ -3088,14 +3075,14 @@
           <span class="fs-card-title gold">QUICK COMMANDS</span>
         </div>
         <div class="fs-quick-grid" id="fsQuickCmdGrid">
-          <button class="fs-cmd-btn" data-cmd="nmap -sV -F 10.10.15.90">nmap scan</button>
-          <button class="fs-cmd-btn" data-cmd="whoami">whoami</button>
-          <button class="fs-cmd-btn" data-cmd="id">id</button>
-          <button class="fs-cmd-btn" data-cmd="ls -la">ls -la</button>
-          <button class="fs-cmd-btn" data-cmd="netstat -tulpn">netstat</button>
-          <button class="fs-cmd-btn" data-cmd="ps aux">ps aux</button>
-          <button class="fs-cmd-btn" data-cmd="curl -s http://10.10.15.90/">curl</button>
-          <button class="fs-cmd-btn" data-cmd="clear">clear</button>
+          <button class="fs-cmd-btn" data-cmd="nmap -sV --version-light -T4 --max-retries 1">nmap scan</button>
+          <button class="fs-cmd-btn" data-cmd="whoami" disabled>whoami</button>
+          <button class="fs-cmd-btn" data-cmd="id" disabled>id</button>
+          <button class="fs-cmd-btn" data-cmd="ls -la" disabled>ls -la</button>
+          <button class="fs-cmd-btn" data-cmd="netstat -tulpn" disabled>netstat</button>
+          <button class="fs-cmd-btn" data-cmd="ps aux" disabled>ps aux</button>
+          <button class="fs-cmd-btn" data-cmd="curl -s" disabled>curl</button>
+          <button class="fs-cmd-btn" data-cmd="clear" disabled>clear</button>
         </div>
       </div>
 
@@ -3179,7 +3166,7 @@
           <span class="fs-star-icon">⭐</span>
           <span>MISSION OBJECTIVES</span>
         </div>
-        <span class="fs-obj-count" id="fsObjCount">1 / 4</span>
+        <span class="fs-obj-count" id="fsObjCount">0 / 0</span>
       </div>
       <div class="fs-obj-bar-wrap">
         <div class="fs-obj-bar-fill" id="fsObjBarFill" style="width: 25%;"></div>

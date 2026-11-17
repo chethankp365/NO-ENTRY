@@ -6,6 +6,7 @@ Applies memory limits, CPU caps, PID limits, and disabled outbound internet.
 
 import asyncio
 import hashlib
+import json
 import os
 import re
 import shutil
@@ -48,6 +49,15 @@ def get_docker_env() -> Dict[str, str]:
 class DockerLabRunner(LabRunner):
     def __init__(self):
         self._active_sessions: Dict[str, LabSessionInfo] = {}
+
+    @staticmethod
+    def _resource_names(session_id: str) -> Tuple[str, str, str]:
+        clean_id = f"{session_id.replace('-', '_')[:8]}_{hashlib.sha256(session_id.encode('utf-8')).hexdigest()[:8]}"
+        return (
+            f"noentry_attacker_{clean_id}",
+            f"noentry_target_{clean_id}",
+            f"noentry_net_{clean_id}",
+        )
 
     def check_docker_status(self) -> Tuple[DockerStatus, str, str]:
         """
@@ -169,13 +179,10 @@ class DockerLabRunner(LabRunner):
 
         await self.ensure_images_available()
 
-        # Clean up any preexisting session with the same ID
+        # A session may only clean up resources derived from its own session ID.
         await self.stop_session(session_id)
 
-        clean_id = f"{session_id.replace('-', '_')[:8]}_{hashlib.sha256(session_id.encode('utf-8')).hexdigest()[:8]}"
-        net_name = f"noentry_net_{clean_id}"
-        target_name = f"noentry_target_{clean_id}"
-        attacker_name = f"noentry_attacker_{clean_id}"
+        attacker_name, target_name, net_name = self._resource_names(session_id)
 
         # 1. Create dedicated internal bridge network (no internet egress)
         net_created = False
@@ -458,10 +465,17 @@ class DockerLabRunner(LabRunner):
 
         for octet in [14, 15, 16, 17, 18, 19, 20]:
             candidate_subnet = f"10.10.{octet}.0/24"
+            candidate_gateway = f"10.10.{octet}.1"
             candidate_target_ip = f"10.10.{octet}.90"
             candidate_attacker_ip = f"10.10.{octet}.10"
             code, out = await self._run_cmd(
-                ["docker", "network", "create", "--internal", f"--subnet={candidate_subnet}", net_name],
+                [
+                    "docker", "network", "create",
+                    "--internal",
+                    "--subnet", candidate_subnet,
+                    "--gateway", candidate_gateway,
+                    net_name,
+                ],
                 ignore_errors=True,
             )
             if code == 0:
@@ -471,7 +485,8 @@ class DockerLabRunner(LabRunner):
                 break
 
         if not net_created:
-            # Fallback to standard internal bridge network without explicit static subnet
+            # Fallback to standard internal bridge network without explicit static subnet.
+            # This should only be used if Docker refuses to reserve a private 10.10.* pool.
             code, out = await self._run_cmd(
                 ["docker", "network", "create", "--internal", net_name],
                 ignore_errors=True,
@@ -515,6 +530,25 @@ class DockerLabRunner(LabRunner):
                     "Check memory and CPU quota availability in Docker Desktop WSL 2 settings.",
                 )
 
+            # Resolve the address Docker actually assigned before configuring the attacker.
+            c_code, c_out = await self._run_cmd(
+                ["docker", "inspect", "-f", "{{.Id}}|{{.Config.Hostname}}|{{.State.Running}}|{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", target_name],
+                ignore_errors=True,
+            )
+            target_identity = c_out.strip().split("|")
+            if (
+                c_code != 0
+                or len(target_identity) != 4
+                or target_identity[2].lower() != "true"
+                or not target_identity[3]
+            ):
+                raise DockerRuntimeError(
+                    DockerStatus.LAB_START_FAILED,
+                    f"Target container did not reach a running network-ready state: {c_out.strip()}",
+                    "Inspect the target container state and Docker network.",
+                )
+            target_container_id, target_hostname, _, target_ip = target_identity
+
             # 3. Run attacker container (Operator workstation with curl, python, jq)
             attacker_cmd = [
                 "docker", "run", "-d",
@@ -545,30 +579,64 @@ class DockerLabRunner(LabRunner):
                     "Check container execution permissions in Docker Desktop.",
                 )
 
-            # Query authoritative assigned IPs from Docker inspect
+            # Verify distinct container identities and read the actual assigned addresses.
             c_code, c_out = await self._run_cmd(
-                ["docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", target_name],
+                ["docker", "inspect", "-f", "{{.Id}}|{{.Config.Hostname}}|{{.State.Running}}|{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", attacker_name],
                 ignore_errors=True,
             )
-            if c_code == 0 and c_out.strip():
-                target_ip = c_out.strip()
+            attacker_identity = c_out.strip().split("|")
+            if (
+                c_code != 0
+                or len(attacker_identity) != 4
+                or attacker_identity[2].lower() != "true"
+                or not attacker_identity[3]
+            ):
+                raise DockerRuntimeError(
+                    DockerStatus.LAB_START_FAILED,
+                    f"Attacker container did not reach a running network-ready state: {c_out.strip()}",
+                    "Inspect the attacker container state and Docker network.",
+                )
+            attacker_container_id, attacker_hostname, _, attacker_ip = attacker_identity
+            if (
+                target_container_id == attacker_container_id
+                or target_hostname == attacker_hostname
+                or target_ip == attacker_ip
+            ):
+                raise DockerRuntimeError(
+                    DockerStatus.LAB_START_FAILED,
+                    "Docker did not provision distinct attacker and target identities.",
+                    "Inspect the created containers and their network attachments.",
+                )
 
-            c_code, c_out = await self._run_cmd(
-                ["docker", "inspect", "-f", "{{range .NetworkSettings.Networks}}{{.IPAddress}}{{end}}", attacker_name],
-                ignore_errors=True,
-            )
-            if c_code == 0 and c_out.strip():
-                attacker_ip = c_out.strip()
-
-            # 4. Wait briefly for target application readiness inside the network
-            for _ in range(12):
+            # 4. Wait for the room's actual target service to respond from the attacker.
+            service_ready = False
+            for _ in range(30):
                 await asyncio.sleep(0.5)
                 c_code, c_out = await self._run_cmd(
-                    ["docker", "exec", attacker_name, "curl", "-s", "-m", "1", f"http://{target_ip}:8089/"],
+                    [
+                        "docker", "exec", attacker_name, "curl", "-sS", "--max-time", "1",
+                        "-o", "/dev/null", "-w", "%{http_code}",
+                        f"http://{target_ip}:{target_port}/",
+                    ],
                     ignore_errors=True,
                 )
-                if c_code == 0 and "VoltGear" in c_out:
+                try:
+                    service_status = int(c_out.strip())
+                except ValueError:
+                    service_status = 0
+                if c_code == 0 and 200 <= service_status < 500:
+                    service_ready = True
                     break
+            if not service_ready:
+                _, target_logs = await self._run_cmd(
+                    ["docker", "logs", "--tail", "40", target_name],
+                    ignore_errors=True,
+                )
+                raise DockerRuntimeError(
+                    DockerStatus.LAB_START_FAILED,
+                    f"Room target service on port {target_port} did not become ready. {target_logs[-1200:]}",
+                    "Review the target container logs and verify that the room service starts.",
+                )
 
         except Exception as exc:
             # Tear down any partially allocated containers/network on failure
@@ -583,10 +651,7 @@ class DockerLabRunner(LabRunner):
                 "Check Docker daemon resource utilization and container logs.",
             )
 
-        open_ports = [22, 80]
-        if target_port not in open_ports:
-            open_ports.append(target_port)
-        open_ports.sort()
+        open_ports = [target_port]
 
         info = LabSessionInfo(
             session_id=session_id,
@@ -599,59 +664,172 @@ class DockerLabRunner(LabRunner):
             target_url=f"http://{target_ip}:{target_port}",
             target_ip=target_ip,
             target_port=target_port,
-            target_hostname="target",
+            target_hostname=target_hostname,
             attacker_ip=attacker_ip,
             attacker_hostname="attacker",
             open_ports=open_ports,
             active_sessions_count=1,
             network_id=net_name,
-            attacker_container_id=attacker_name,
-            target_container_id=target_name,
+            attacker_container_id=attacker_container_id,
+            target_container_id=target_container_id,
             created_at=datetime.utcnow(),
             expires_at=datetime.utcnow() + timedelta(minutes=60),
+        )
+        info.record_action(
+            "ghost_target_reachable",
+            {"target_ip": target_ip, "target_port": target_port, "network_id": net_name},
+        )
+        self._active_sessions[session_id] = info
+        return info
+
+    async def restore_session(
+        self,
+        session_id: str,
+        room_id: str,
+        operator_id: str,
+        target_port: int,
+        created_at: datetime,
+        expires_at: datetime,
+        network_name: str,
+        expected_attacker_id: Optional[str],
+        expected_target_id: Optional[str],
+    ) -> LabSessionInfo:
+        """Rebuild in-memory state only after confirming the persisted Docker resources."""
+        status, message, guidance = self.check_docker_status()
+        if status != DockerStatus.DOCKER_AVAILABLE:
+            raise DockerRuntimeError(status, message, guidance)
+        if not network_name:
+            raise RuntimeError(f"Persisted Docker session {session_id} has no network name.")
+
+        attacker_name, target_name, _ = self._resource_names(session_id)
+        network_code, network_json = await self._run_cmd(
+            ["docker", "network", "inspect", network_name],
+            ignore_errors=True,
+        )
+        if network_code != 0:
+            raise RuntimeError(f"Persisted Docker network {network_name} no longer exists.")
+        network = json.loads(network_json)[0]
+        if not network.get("Internal"):
+            raise RuntimeError(f"Persisted Docker network {network_name} is not internal.")
+
+        async def inspect_container(name: str, expected_id: Optional[str]) -> Tuple[str, str, str]:
+            code, container_json = await self._run_cmd(
+                ["docker", "inspect", name],
+                ignore_errors=True,
+            )
+            if code != 0:
+                raise RuntimeError(f"Persisted Docker container {name} no longer exists.")
+            container = json.loads(container_json)[0]
+            container_id = container["Id"]
+            if expected_id and expected_id not in (container_id, name):
+                raise RuntimeError(f"Persisted Docker container identity changed for {name}.")
+            if not container.get("State", {}).get("Running"):
+                raise RuntimeError(f"Persisted Docker container {name} is not running.")
+            network_state = container.get("NetworkSettings", {}).get("Networks", {}).get(network_name)
+            if not network_state or not network_state.get("IPAddress"):
+                raise RuntimeError(f"Persisted Docker container {name} is not attached to {network_name}.")
+            if network_state.get("NetworkID") != network.get("Id"):
+                raise RuntimeError(f"Persisted Docker container {name} is attached to a different network.")
+            return container_id, container.get("Config", {}).get("Hostname", ""), network_state["IPAddress"]
+
+        attacker_id, attacker_hostname, attacker_ip = await inspect_container(
+            attacker_name, expected_attacker_id
+        )
+        target_id, target_hostname, target_ip = await inspect_container(
+            target_name, expected_target_id
+        )
+        if attacker_id == target_id or attacker_ip == target_ip or attacker_hostname == target_hostname:
+            raise RuntimeError("Persisted attacker and target identities are not distinct.")
+
+        probe_code, probe_output = await self._run_cmd(
+            [
+                "docker", "exec", attacker_name, "curl", "-sS", "--max-time", "2",
+                "-o", "/dev/null", "-w", "%{http_code}",
+                f"http://{target_ip}:{target_port}/",
+            ],
+            ignore_errors=True,
+        )
+        try:
+            response_status = int(probe_output.strip())
+        except ValueError:
+            response_status = 0
+        if probe_code != 0 or not 200 <= response_status < 500:
+            raise RuntimeError("Persisted target service is not reachable from the attacker container.")
+
+        info = LabSessionInfo(
+            session_id=session_id,
+            room_id=room_id,
+            operator_id=operator_id,
+            runner_mode="docker",
+            docker_available=True,
+            docker_status=DockerStatus.DOCKER_AVAILABLE,
+            status="RUNNING",
+            target_url=f"http://{target_ip}:{target_port}",
+            target_ip=target_ip,
+            target_port=target_port,
+            target_hostname=target_hostname,
+            attacker_ip=attacker_ip,
+            attacker_hostname=attacker_hostname,
+            open_ports=[target_port],
+            active_sessions_count=1,
+            network_id=network_name,
+            attacker_container_id=attacker_id,
+            target_container_id=target_id,
+            created_at=created_at,
+            expires_at=expires_at,
+        )
+        info.record_action(
+            "ghost_target_reachable",
+            {"target_ip": target_ip, "target_port": target_port, "network_id": network_name},
         )
         self._active_sessions[session_id] = info
         return info
 
     async def stop_session(self, session_id: str) -> bool:
-        clean_id = f"{session_id.replace('-', '_')[:8]}_{hashlib.sha256(session_id.encode('utf-8')).hexdigest()[:8]}"
-        attacker_name = f"noentry_attacker_{clean_id}"
-        target_name = f"noentry_target_{clean_id}"
-        net_name = f"noentry_net_{clean_id}"
+        status, message, guidance = self.check_docker_status()
+        if status != DockerStatus.DOCKER_AVAILABLE:
+            raise DockerRuntimeError(status, message, guidance)
 
-        info = self._active_sessions.pop(session_id, None)
-        if info:
-            info.status = "STOPPED"
+        attacker_name, target_name, net_name = self._resource_names(session_id)
 
-        # Force remove containers and network
+        # Remove only resources derived from this session, then verify Docker removed them.
         await self._run_cmd(["docker", "rm", "-f", attacker_name], ignore_errors=True)
         await self._run_cmd(["docker", "rm", "-f", target_name], ignore_errors=True)
         await self._run_cmd(["docker", "network", "rm", net_name], ignore_errors=True)
 
+        remaining_resources = []
+        for resource_type, resource_name in (
+            ("container", attacker_name),
+            ("container", target_name),
+            ("network", net_name),
+        ):
+            code, _ = await self._run_cmd(
+                ["docker", resource_type, "inspect", resource_name],
+                ignore_errors=True,
+            )
+            if code == 0:
+                remaining_resources.append(f"{resource_type} {resource_name}")
+
+        if remaining_resources:
+            raise DockerRuntimeError(
+                DockerStatus.LAB_STOP_FAILED,
+                "Docker did not remove lab resources: " + ", ".join(remaining_resources),
+                "Check Docker Desktop permissions and remove the listed session resources before retrying.",
+            )
+
+        info = self._active_sessions.pop(session_id, None)
+        if info:
+            info.status = "STOPPED"
         return True
 
     async def reset_session(self, session_id: str) -> LabSessionInfo:
         info = self._active_sessions.get(session_id)
         if not info:
             raise KeyError(f"Session {session_id} not found.")
-
-        # Re-initialize target database inside container
-        await self._run_cmd(
-            [
-                "docker", "exec", info.target_container_id,
-                "python", "-c", "from app import init_target_db; init_target_db()",
-            ],
-            ignore_errors=True,
-        )
-        if info.attacker_container_id:
-            await self._run_cmd(
-                [
-                    "docker", "exec", "-u", "operator", "-w", "/home/operator", info.attacker_container_id,
-                    "/bin/sh", "-c", "rm -f /home/operator/loot/* /home/operator/*.tmp /home/operator/*.log 2>/dev/null || true",
-                ],
-                ignore_errors=True,
-            )
-        return info
+        room_id = info.room_id
+        operator_id = info.operator_id
+        await self.stop_session(session_id)
+        return await self.start_session(session_id, room_id, operator_id)
 
     @staticmethod
     def _is_forged_command(command: str) -> bool:
@@ -674,9 +852,21 @@ class DockerLabRunner(LabRunner):
         if self._is_forged_command(command):
             return
 
+        command_lower = command.lower()
+        if (
+            all(token in command_lower for token in ("whoami", "id", "hostname", "ip -br addr"))
+            and "operator" in output
+            and "uid=1000" in output
+            and "eth0" in output
+        ):
+            info.record_action("ghost_environment_verified")
+
+        if "nmap" in command_lower and info.target_ip in command and "Nmap done" in output:
+            info.record_action("ghost_services_enumerated")
+
         # Ensure command is actually invoking a legitimate HTTP client, shell tool, or script
         has_client = any(
-            tool in command.lower()
+            tool in command_lower
             for tool in [
                 "curl", "wget", "python", "tshark", "tcpdump", "edr_query",
                 "yara_scanner", "detect_bruteforce", "inspect_email", "soc_query", "parse_evtx",

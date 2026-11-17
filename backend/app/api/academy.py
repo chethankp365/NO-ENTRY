@@ -10,7 +10,7 @@ from sqlmodel import Session
 from backend.app.academy.models import TaskSubmission, TaskSubmissionResult
 from backend.app.academy.service import academy_service
 from backend.app.academy.validator import task_validator
-from backend.app.api.auth import resolve_operator
+from backend.app.api.auth import get_current_user, resolve_operator
 from backend.app.db.database import get_session
 from backend.app.db.models import User
 from backend.app.labs.base import DockerRuntimeError, DockerStatus
@@ -49,6 +49,23 @@ def get_room(
     detail = academy_service.get_room_detail_for_user(session, user.operator_id, room_id)
     if not detail:
         raise HTTPException(status_code=404, detail=f"Room '{room_id}' not found.")
+    lab_info = lab_manager.get_user_session(user.operator_id, room_id)
+    target_ip = (
+        lab_info.target_ip
+        if lab_info and lab_info.status == "RUNNING" and lab_info.target_ip
+        else "TARGET_IP"
+    )
+
+    def resolve_target(value: Any) -> Any:
+        if isinstance(value, str):
+            return value.replace("10.10.14.90", target_ip)
+        if isinstance(value, list):
+            return [resolve_target(item) for item in value]
+        if isinstance(value, dict):
+            return {key: resolve_target(item) for key, item in value.items()}
+        return value
+
+    detail = resolve_target(detail)
     return detail
 
 
@@ -80,7 +97,7 @@ def submit_task(
 @academy_router.post("/labs/{room_id}/start")
 async def start_lab(
     room_id: str,
-    user: User = Depends(resolve_operator),
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """Spawn isolated target application and attacker workstation."""
@@ -101,49 +118,76 @@ async def start_lab(
 @academy_router.post("/labs/{room_id}/stop")
 async def stop_lab(
     room_id: str,
-    user: User = Depends(resolve_operator),
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """Shut down and release isolated lab resources."""
-    stopped = await lab_manager.stop_lab(session, user.operator_id, room_id)
-    return {"room_id": room_id, "stopped": stopped}
+    try:
+        stopped = await lab_manager.stop_lab(session, user.operator_id, room_id)
+        return {"room_id": room_id, "stopped": stopped}
+    except DockerRuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": exc.status.value,
+                "message": exc.message,
+                "guidance": exc.guidance,
+            },
+        ) from exc
 
 
 @academy_router.post("/labs/{room_id}/reset")
 async def reset_lab(
     room_id: str,
-    user: User = Depends(resolve_operator),
+    user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
     """Reset target database and state to initial configuration."""
-    info = await lab_manager.reset_lab(session, user.operator_id, room_id)
-    return info.client_dict()
+    try:
+        info = await lab_manager.reset_lab(session, user.operator_id, room_id)
+        return info.client_dict()
+    except DockerRuntimeError as exc:
+        raise HTTPException(
+            status_code=503,
+            detail={
+                "error": exc.status.value,
+                "message": exc.message,
+                "guidance": exc.guidance,
+            },
+        ) from exc
 
 
 @academy_router.get("/labs/{room_id}/status")
 def get_lab_status(
     room_id: str,
-    user: User = Depends(resolve_operator),
+    user: User = Depends(get_current_user),
 ):
     """Query live lab session status, IP/port, countdown timer, and runner mode."""
     info = lab_manager.get_user_session(user.operator_id, room_id)
     d_status, d_msg, d_guidance = lab_manager.get_docker_status()
     if not info:
+        from backend.app.academy.curriculum import curriculum_registry
+
+        room = curriculum_registry.get_room(room_id)
         return {
             "session_id": None,
             "room_id": room_id,
             "status": "STOPPED",
-            "runner_mode": "docker" if d_status == DockerStatus.DOCKER_AVAILABLE else "emulated",
+            "runner_mode": "docker" if d_status == DockerStatus.DOCKER_AVAILABLE else None,
             "docker_available": d_status == DockerStatus.DOCKER_AVAILABLE,
             "docker_status": d_status.value,
             "target_url": None,
-            "target_ip": "10.10.14.90",
-            "target_port": 8089,
-            "target_hostname": "target",
-            "attacker_ip": "10.10.14.10",
-            "attacker_hostname": "attacker",
-            "open_ports": [22, 80, 8089],
+            "target_ip": None,
+            "target_port": room.default_port if room else None,
+            "target_hostname": None,
+            "attacker_ip": None,
+            "attacker_hostname": None,
+            "open_ports": [],
             "active_sessions_count": 0,
+            "network_id": None,
+            "attacker_container_id": None,
+            "target_container_id": None,
+            "running_containers": [],
             "remaining_seconds": 0,
             "error_message": d_msg if d_status != DockerStatus.DOCKER_AVAILABLE else None,
             "guidance": d_guidance if d_status != DockerStatus.DOCKER_AVAILABLE else None,
@@ -158,7 +202,9 @@ async def academy_terminal_ws(
     session: Session = Depends(get_session),
 ):
     """Interactive WebSocket terminal for xterm.js connection."""
-    token = websocket.cookies.get("ne_auth_token")
-    user = resolve_operator(token, session)
+    try:
+        user = get_current_user(websocket, session)
+    except HTTPException:
+        await websocket.close(code=1008, reason="Authentication required.")
+        return
     await academy_terminal_handler.handle_connection(websocket, room_id, user)
-

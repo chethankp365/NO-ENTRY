@@ -20,6 +20,41 @@ from backend.app.main import app
 from backend.app.db.database import get_session
 from backend.app.sim.engine import sim_engine
 
+
+def drain_terminal_until_prompt(websocket):
+    """Consume the complete Academy terminal banner and return once its shell prompt is ready."""
+    messages = []
+    while True:
+        message = websocket.receive_json()
+        if message.get("type") != "output":
+            raise AssertionError(f"Unexpected terminal startup message: {message!r}")
+        messages.append(message)
+        if "operator@noentry" in message.get("data", "") and "$ " in message.get("data", ""):
+            return messages
+
+
+def execute_terminal_command(websocket, command):
+    """Collect all streamed command output and its exit status before the next prompt."""
+    websocket.send_json({"type": "command", "command": command})
+    output = []
+    while True:
+        message = websocket.receive_json()
+        if message.get("type") == "exit_status":
+            exit_code = message["code"]
+            break
+        if message.get("type") != "output":
+            raise AssertionError(f"Unexpected terminal command message: {message!r}")
+        output.append(message.get("data", ""))
+
+    prompt = websocket.receive_json()
+    if prompt.get("type") != "output":
+        raise AssertionError(f"Unexpected terminal prompt message: {prompt!r}")
+    output_text = "".join(output)
+    if exit_code != 0:
+        raise AssertionError(f"Terminal command exited with status {exit_code}: {output_text}")
+    return {"data": output_text, "exit_status": exit_code}
+
+
 @pytest.fixture(scope="session")
 def event_loop():
     loop = asyncio.new_event_loop()

@@ -88,14 +88,14 @@ async def test_process_runner_lifecycle_and_command_execution():
     cat_notes = await runner.execute_command(session_id, "cat notes.txt")
     assert "ENGAGEMENT NOTES" in cat_notes
 
-    # Execute live curl command against target
-    curl_out = await runner.execute_command(session_id, f"curl -s http://10.10.14.90:{info.target_port}/")
+    # Process emulation uses its explicit loopback service URL, not a fictional target IP.
+    curl_out = await runner.execute_command(session_id, f"curl -s {info.target_url}/")
     assert "VOLTGEAR" in curl_out
 
     # Execute SQLi auth bypass via curl command
     curl_bypass = await runner.execute_command(
         session_id,
-        f'curl -s -X POST -d "username=admin\' OR 1=1 --&password=x" http://10.10.14.90:{info.target_port}/login'
+        f'curl -s -X POST -d "username=admin\' OR 1=1 --&password=x" {info.target_url}/login'
     )
     assert "NOENTRY{sqli_auth_bypass_success_3914}" in curl_bypass
 
@@ -111,6 +111,8 @@ async def test_process_runner_lifecycle_and_command_execution():
 def test_api_lab_status_and_lifecycle_endpoints(client):
     """Test POST /api/academy/labs/{room_id}/start, status, reset, and stop."""
     room_id = "red-09-sqli-fundamentals"
+    auth_res = client.post("/api/auth/guest")
+    assert auth_res.status_code == 200
 
     # 1. Initial status when stopped
     res_status = client.get(f"/api/academy/labs/{room_id}/status")
@@ -143,28 +145,39 @@ def test_api_lab_status_and_lifecycle_endpoints(client):
 
 def test_terminal_websocket_academy_interaction(client):
     """Test interactive WebSocket terminal connection to the academy lab."""
+    if not lab_manager.is_docker_available():
+        pytest.skip("Real Docker is required for the Academy terminal test.")
     room_id = "red-09-sqli-fundamentals"
+    auth = client.post("/api/auth/guest")
+    assert auth.status_code == 200
 
     # Ensure lab is active for the operator
     client.post(f"/api/academy/labs/{room_id}/start")
 
     try:
         with client.websocket_connect(f"/ws/academy/{room_id}/terminal") as ws:
-            # Drain initial output messages (banner lines and prompt)
+            # Drain the banner until the real shell prompt is ready.
             initial_chunks = []
-            for _ in range(8):
+            while True:
                 msg = ws.receive_json()
                 assert msg["type"] == "output"
                 initial_chunks.append(msg["data"])
+                if "operator@noentry" in msg["data"] and "$ " in msg["data"]:
+                    break
 
             full_banner = "".join(initial_chunks)
             assert "NO ENTRY ACADEMY" in full_banner
 
             # Send command through websocket
             ws.send_json({"type": "command", "command": "whoami"})
-            resp = ws.receive_json()
-            assert resp["type"] == "output"
-            assert "operator" in resp["data"]
+            command_output = []
+            while True:
+                resp = ws.receive_json()
+                if resp["type"] == "output":
+                    command_output.append(resp["data"])
+                elif resp["type"] == "exit_status":
+                    assert resp["code"] == 0
+                    break
+            assert "".join(command_output).strip() == "operator"
     finally:
         client.post(f"/api/academy/labs/{room_id}/stop")
-

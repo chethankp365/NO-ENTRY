@@ -3,6 +3,7 @@ REST & SSE API router for Ghost AI Mentor and Deepgram Voice Integration.
 """
 
 import json
+import re
 from typing import Any, Dict, List, Literal, Optional
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile
 from fastapi.responses import StreamingResponse
@@ -140,79 +141,161 @@ class GhostRoomAskRequest(BaseModel):
     current_step: Optional[int] = 1
 
 
-@ghost_router.get("/room/{room_id}/guide")
-def api_ghost_room_guide(
-    room_id: str,
-    user: User = Depends(resolve_operator),
-    session: Session = Depends(get_session),
-):
-    """Retrieve structured 6-step guided path for the given room."""
+def _academy_room_context(room_id: str, user: User, session: Session, task_id: Optional[str] = None):
     from backend.app.academy.curriculum import curriculum_registry
+    from backend.app.academy.service import academy_service
     from backend.app.labs.manager import lab_manager
 
     room = curriculum_registry.get_room(room_id)
     if not room:
         raise HTTPException(status_code=404, detail=f"Room '{room_id}' not found.")
 
+    detail = academy_service.get_room_detail_for_user(session, user.operator_id, room_id)
+    tasks = detail["tasks"] if detail else []
+    selected_task = next((item for item in tasks if item["task_id"] == task_id), None) if task_id else None
+    if not selected_task:
+        selected_task = next((item for item in tasks if not item.get("is_completed")), tasks[-1] if tasks else None)
+
     session_info = lab_manager.get_user_session(user.operator_id, room_id)
-    target_ip = session_info.target_ip if session_info else "10.10.14.90"
-    target_port = session_info.target_port if session_info else (room.default_port or 8089)
+    active_session = (
+        session_info
+        if session_info and session_info.status == "RUNNING" and session_info.runner_mode == "docker"
+        else None
+    )
+    lab_status = (
+        "EMULATED"
+        if session_info and session_info.status == "RUNNING" and session_info.runner_mode != "docker"
+        else session_info.status if session_info else "STOPPED"
+    )
+    target_ip = active_session.target_ip if active_session and active_session.target_ip else None
+    target_port = active_session.target_port if active_session else room.default_port
+    task = next((item for item in room.tasks if selected_task and item.task_id == selected_task["task_id"]), None)
+    task_hint = task.hint if task else None
+    target_reference = target_ip or "<target-ip>"
 
-    first_task = room.tasks[0] if room.tasks else None
-    task_desc = first_task.instructions if first_task else room.short_description
-    primary_tool = room.required_practical_skills[0] if room.required_practical_skills else "curl"
+    def resolve_target(value: str) -> str:
+        return value.replace("10.10.14.90", target_reference)
 
+    command = None
+    if task_hint:
+        candidates = re.findall(r"`([^`]+)`", task_hint)
+        executable = re.compile(
+            r"^(?:curl|wget|nmap|python3?|tcpdump|tshark|dig|nslookup|whois|nc|"
+            r"cat|grep|awk|jq|ip|whoami|id|hostname|ls|file|strings|sha256sum|"
+            r"git|yara|pytest|sqlite3|find|sed|openssl)\b"
+        )
+        for raw_candidate in candidates:
+            candidate = resolve_target(raw_candidate.strip())
+            if executable.match(candidate) and (target_ip or "<target-ip>" not in candidate):
+                command = candidate
+                break
+
+    verified_actions = set(session_info.recorded_actions) if active_session else set()
+    display_hint = resolve_target(task_hint) if task_hint else None
+    if not target_ip and display_hint and "<target-ip>" in display_hint:
+        display_hint = None
+    return {
+        "room": room,
+        "detail": detail or room.client_detail(),
+        "task": selected_task,
+        "task_hint": display_hint,
+        "task_command": command,
+        "session": active_session,
+        "lab_status": lab_status,
+        "target_ip": target_ip,
+        "target_port": target_port,
+        "verified_actions": verified_actions,
+    }
+
+
+@ghost_router.get("/room/{room_id}/guide")
+def api_ghost_room_guide(
+    room_id: str,
+    user: User = Depends(resolve_operator),
+    session: Session = Depends(get_session),
+):
+    """Return curriculum-led steps and completion based only on backend evidence."""
+    ctx = _academy_room_context(room_id, user, session)
+    room, task = ctx["room"], ctx["task"]
+    target_ip, target_port = ctx["target_ip"], ctx["target_port"]
+    completed_task = bool(task and task.get("is_completed"))
+    task_title = task["title"] if task else room.title
+    task_goal = task["instructions"] if task else room.short_description
+    task_tools = ", ".join(room.required_practical_skills) or "the tools described in this room"
+    target_status = (
+        f"Backend assigned {target_ip}:{target_port} on the running isolated lab."
+        if target_ip
+        else "Start the lab to receive the actual target address; no address is assigned while stopped."
+    )
+    environment_verified = "ghost_environment_verified" in ctx["verified_actions"]
+    target_verified = "ghost_target_reachable" in ctx["verified_actions"]
+    services_verified = "ghost_services_enumerated" in ctx["verified_actions"]
     steps = [
         {
             "step": 1,
-            "title": "Understand Environment",
-            "goal": "Verify operator identity and local workstation privileges.",
-            "tool": "whoami / id",
-            "command": "whoami && id && pwd",
-            "explanation": "Confirms you are executing as the unprivileged 'operator' user on the isolated attacker workstation.",
+            "title": "Verify Environment: Operator Workstation",
+            "goal": "Confirm the current user, host, and interface from inside the isolated attacker container.",
+            "tool": "whoami, id, hostname, ip",
+            "command": "whoami && id && hostname && ip -br addr" if ctx["session"] else None,
+            "explanation": "This proves the terminal is attached to the provisioned operator container rather than the application host.",
+            "completed": environment_verified,
         },
         {
             "step": 2,
             "title": "Identify Network & Target",
-            "goal": f"Verify interface addressing and reachability to target host ({target_ip}).",
-            "tool": "ip / ping",
-            "command": f"ip -br addr && ping -c 2 {target_ip}",
-            "explanation": f"Checks your attacker IP (10.10.x.10) and confirms low-latency IP routing to the target ({target_ip}) on the zero-trust bridge.",
+            "goal": target_status,
+            "tool": "Lab Intelligence",
+            "command": (
+                f"curl -sS -o /dev/null -w 'HTTP %{{http_code}}\\n' http://{target_ip}:{target_port}/"
+                if target_ip
+                else None
+            ),
+            "explanation": "The address comes from Docker inspection; the backend also checks the target service is reachable from the attacker container before reporting the lab online.",
+            "completed": target_verified,
         },
         {
             "step": 3,
-            "title": "Enumerate Target Services",
-            "goal": f"Scan target ports and identify running services and versions.",
+            "title": "Enumerate Room Service",
+            "goal": f"Check the service provisioned for {room.title} and record its actual response.",
             "tool": "nmap",
-            "command": f"nmap -sV -p 22,80,{target_port} {target_ip}",
-            "explanation": f"Discovers open ports (SSH 22, HTTP 80, App {target_port}) and fingerprints service daemon versions.",
+            "command": (
+                f"nmap -sV --version-light -T4 --max-retries 1 -p {target_port} {target_ip}"
+                if target_ip
+                else None
+            ),
+            "explanation": "Use the assigned IP and room port only; the range does not claim unrelated SSH or HTTP ports are open.",
+            "completed": services_verified,
         },
         {
             "step": 4,
-            "title": "Execute Practical Exercise Probe",
-            "goal": f"Test the target service according to the room objective: {room.title}",
-            "tool": primary_tool,
-            "command": f"curl -s -i http://{target_ip}:{target_port}/",
-            "explanation": f"Interacts directly with the target endpoint to gather HTTP headers, application state, and security banners.",
+            "title": f"Practise: {task_title}",
+            "goal": task_goal,
+            "tool": task_tools,
+            "command": ctx["task_command"],
+            "explanation": ctx["task_hint"] or "Follow the task procedure in the room and compare your result with its stated objective.",
+            "completed": completed_task,
         },
         {
             "step": 5,
-            "title": "Analyze Results & Formulate Solution",
-            "goal": f"Examine response data and apply security techniques: {task_desc[:80]}...",
-            "tool": "analysis",
-            "command": f"curl -s http://{target_ip}:{target_port}/ | grep -iE 'error|voltgear|version|admin|user'",
-            "explanation": "Filters output for vulnerable parameters, sensitive keywords, or telemetry signatures required to complete the mission.",
+            "title": "Interpret the Evidence",
+            "goal": "Compare the observed result with the room's assessment criteria.",
+            "tool": "Room assessment criteria",
+            "command": None,
+            "explanation": "GHOST marks this step complete only after the backend records the task as completed.",
+            "completed": completed_task,
         },
         {
             "step": 6,
-            "title": "Verify Remediation & Complete Task",
-            "goal": "Submit task answer or flag to validate completion.",
-            "tool": "validator",
-            "command": "cat /home/operator/loot/* 2>/dev/null || echo 'Review task instructions on the left pane.'",
-            "explanation": "Confirm successful exploit, rule detection, or log analysis and submit the solution into the task verification box.",
+            "title": "Submit and Verify",
+            "goal": "Submit the evidence required by this room's task for backend validation.",
+            "tool": "Room task validator",
+            "command": None,
+            "explanation": "Only the server-side validator updates task progress and completion.",
+            "completed": completed_task,
         },
     ]
 
+    active_step = next((item["step"] for item in steps if not item["completed"]), 6)
     return {
         "room_id": room.room_id,
         "title": room.title,
@@ -220,6 +303,9 @@ def api_ghost_room_guide(
         "difficulty": room.difficulty,
         "target_ip": target_ip,
         "target_port": target_port,
+        "lab_status": ctx["lab_status"],
+        "active_task_id": task["task_id"] if task else None,
+        "active_step": active_step,
         "steps": steps,
     }
 
@@ -232,61 +318,60 @@ def api_ghost_room_hint(
     user: User = Depends(resolve_operator),
     session: Session = Depends(get_session),
 ):
-    """Return progressive, actionable hint (Levels 1 to 4) for the active room task."""
-    from backend.app.academy.curriculum import curriculum_registry
-    from backend.app.labs.manager import lab_manager
-
-    room = curriculum_registry.get_room(room_id)
-    if not room:
-        raise HTTPException(status_code=404, detail=f"Room '{room_id}' not found.")
-
-    session_info = lab_manager.get_user_session(user.operator_id, room_id)
-    target_ip = session_info.target_ip if session_info else "10.10.14.90"
-    target_port = session_info.target_port if session_info else (room.default_port or 8089)
-
-    active_task = None
-    if task_id:
-        for t in room.tasks:
-            if t.task_id == task_id:
-                active_task = t
-                break
-    if not active_task and room.tasks:
-        active_task = room.tasks[0]
-
-    title = active_task.title if active_task else room.title
-    primary_tool = room.required_practical_skills[0] if room.required_practical_skills else "curl"
-
+    """Return progressive hints derived from the current room task and backend lab state."""
+    ctx = _academy_room_context(room_id, user, session, task_id)
+    room, task = ctx["room"], ctx["task"]
+    task_title = task["title"] if task else room.title
+    task_instructions = task["instructions"] if task else room.short_description
+    tools = ", ".join(room.required_practical_skills) or "the practical tools described in this room"
+    criteria = room.assessment_criteria or room.completion_requirements
+    hint_text = ctx["task_hint"] or (
+        "Start the lab to receive the assigned target and a usable room-specific procedure."
+        if not ctx["session"]
+        else None
+    )
     hints = {
         1: {
-            "level": 1,
-            "label": "Conceptual Objective",
-            "hint": f"Objective: {title}. Focus on understanding how the system behaves under standard operation versus attack conditions.",
+            "label": "Objective: Understand the Task",
+            "hint": f"{task_title}: {task_instructions}",
             "command": None,
         },
         2: {
-            "level": 2,
-            "label": "Tool Selection & Syntax",
-            "hint": f"Recommended tool: {primary_tool}. Target address is {target_ip}:{target_port}. Inspect service responses and parameters.",
+            "label": "Tool Selection",
+            "hint": (
+                f"Use this room's practical tools and skills: {tools}. "
+                + (
+                    f"The isolated target is {ctx['target_ip']}:{ctx['target_port']}."
+                    if ctx["target_ip"]
+                    else "Start the lab first to obtain its actual target address."
+                )
+            ),
             "command": None,
         },
         3: {
-            "level": 3,
-            "label": "Actionable Command",
-            "hint": "Execute this command in the terminal to probe the target directly:",
-            "command": f"curl -s -i http://{target_ip}:{target_port}/",
+            "label": "Command: Actionable Task Hint",
+            "hint": hint_text or "Use the task instructions to plan a procedure; this task has no additional command hint.",
+            "command": ctx["task_command"],
         },
         4: {
-            "level": 4,
-            "label": "Result Interpretation",
-            "hint": f"Look at the HTTP response or logs. Once confirmed, enter your answer or flag into the task box on the left pane.",
-            "command": f"nmap -sV -p {target_port} {target_ip}",
+            "label": "Interpretation: Check the Evidence",
+            "hint": (
+                "Compare your result with: " + "; ".join(criteria)
+                if criteria
+                else f"Compare your evidence with the task requirement: {task_instructions}"
+            ),
+            "command": None,
         },
     }
 
     selected = hints.get(level, hints[1])
     return {
         "room_id": room_id,
-        "task_id": active_task.task_id if active_task else None,
+        "task_id": task["task_id"] if task else None,
+        "lab_status": ctx["lab_status"],
+        "target_ip": ctx["target_ip"],
+        "target_port": ctx["target_port"],
+        "task_completed": bool(task and task.get("is_completed")),
         "level": level,
         "label": selected["label"],
         "hint": selected["hint"],
@@ -301,52 +386,112 @@ async def api_ghost_room_ask(
     user: User = Depends(resolve_operator),
     session: Session = Depends(get_session),
 ):
-    """Answer learner's question with room and lab context, utilizing AI or deterministic curriculum knowledge."""
-    from backend.app.academy.curriculum import curriculum_registry
-    from backend.app.labs.manager import lab_manager
-
-    room = curriculum_registry.get_room(room_id)
-    if not room:
-        raise HTTPException(status_code=404, detail=f"Room '{room_id}' not found.")
-
-    session_info = lab_manager.get_user_session(user.operator_id, room_id)
-    target_ip = session_info.target_ip if session_info else "10.10.14.90"
-    target_port = session_info.target_port if session_info else (room.default_port or 8089)
-
+    """Use the existing multi-provider GHOST service with server-verified room context."""
+    ctx = _academy_room_context(room_id, user, session)
     q = req.question.strip()
-
-    answer = None
-    try:
-        from backend.app.ai.orchestrator import orchestrator
-        prompt = (
-            f"You are GHOST, the elite cybersecurity AI mentor for NO ENTRY Academy. "
-            f"The learner is in Room: '{room.title}' ({room_id}), Track: {room.track.value if hasattr(room.track, 'value') else room.track}. "
-            f"Target IP: {target_ip}, Port: {target_port}. "
-            f"Learner question: {q}\n"
-            f"Provide a concise, practical, technical answer with a suggested terminal command if appropriate."
-        )
-        reply = await orchestrator.generate_text(prompt, max_tokens=350)
-        if reply and reply.strip():
-            answer = reply.strip()
-    except Exception:
-        pass
-
-    if not answer:
-        q_lower = q.lower()
-        if "target" in q_lower or "ip" in q_lower or "address" in q_lower:
-            answer = f"The target machine is hosted at `{target_ip}` on port `{target_port}`. You can probe it with `curl -s http://{target_ip}:{target_port}/` or scan it with `nmap -sV -p 22,80,{target_port} {target_ip}`."
-        elif "tool" in q_lower or "command" in q_lower or "how" in q_lower:
-            tools_str = ", ".join(room.required_practical_skills) if room.required_practical_skills else "curl, nmap, python3"
-            answer = f"For {room.title}, the recommended tools are: {tools_str}. Start by probing `{target_ip}:{target_port}`."
-        elif "flag" in q_lower or "answer" in q_lower:
-            answer = "Examine the output of your exploit or inspection command. Look for key values or tokens produced by the target service, then paste into the task submission box."
+    q_lower = q.lower()
+    if "next" in q_lower or "step-by-step" in q_lower:
+        actions = ctx["verified_actions"]
+        if not ctx["session"]:
+            answer = (
+                "The next step is to start this room's Docker lab. The backend has not assigned a target "
+                "address while the lab is stopped."
+            )
+        elif "ghost_environment_verified" not in actions:
+            answer = (
+                "First verify the isolated operator workstation with "
+                "`whoami && id && hostname && ip -br addr`. GHOST advances after that output is observed "
+                "from the active container."
+            )
+        elif "ghost_services_enumerated" not in actions:
+            answer = (
+                f"The backend-confirmed target service is {ctx['target_ip']}:{ctx['target_port']}. "
+                "Enumerate that room port with "
+                f"`nmap -sV --version-light -T4 --max-retries 1 -p "
+                f"{ctx['target_port']} {ctx['target_ip']}`."
+            )
+        elif ctx["task"]:
+            answer = (
+                f"Continue with the current backend-tracked task, “{ctx['task']['title']}”: "
+                f"{ctx['task']['instructions']} "
+                + (f"Try `{ctx['task_command']}`." if ctx["task_command"] else "")
+            )
         else:
-            answer = f"GHOST MENTOR // {room.title}: Ensure your lab is RUNNING (click 'START LAB'). Verify connectivity with `ping -c 2 {target_ip}`, then run `nmap -sV -p 22,80,{target_port} {target_ip}` to discover service details."
+            answer = "All curriculum tasks are complete according to backend progress. Review the room's assessment criteria."
+        return {
+            "room_id": room_id,
+            "question": q,
+            "answer": answer,
+            "mentor": "GHOST AI MENTOR",
+            "provider": "backend-context",
+            "ai_generated": False,
+            "lab_status": ctx["lab_status"],
+            "active_task_id": ctx["task"]["task_id"] if ctx["task"] else None,
+        }
+    if any(term in q_lower for term in ("target ip", "target address", "target host", "scan it", "scan the target")):
+        if not ctx["target_ip"]:
+            answer = (
+                "The lab is not running, so Docker has not assigned a target IP yet. "
+                "Start the lab first; GHOST will then use the address reported by the backend."
+            )
+        else:
+            answer = (
+                f"The active Docker lab reports target {ctx['target_ip']} on room service port "
+                f"{ctx['target_port']}. "
+            )
+            if "nmap" in [tool.lower() for tool in ctx["room"].required_practical_skills]:
+                answer += (
+                    "To inspect that assigned service, run "
+                    f"`nmap -sV --version-light -T4 --max-retries 1 -p "
+                    f"{ctx['target_port']} {ctx['target_ip']}`."
+                )
+            else:
+                answer += f"Use the room's listed tools against `{ctx['target_ip']}:{ctx['target_port']}`."
+        return {
+            "room_id": room_id,
+            "question": q,
+            "answer": answer,
+            "mentor": "GHOST AI MENTOR",
+            "provider": "backend-context",
+            "ai_generated": False,
+            "lab_status": ctx["lab_status"],
+            "active_task_id": ctx["task"]["task_id"] if ctx["task"] else None,
+        }
+    try:
+        from backend.app.labs.terminal import academy_terminal_handler
 
+        terminal_session = (
+            academy_terminal_handler._sessions.get(ctx["session"].session_id)
+            if ctx["session"]
+            else None
+        )
+        terminal_output = terminal_session.recent_output if terminal_session else []
+        events = []
+        async for event in ghost_service.stream_mentor_reply(
+            session,
+            user,
+            {
+                "message": q,
+                "action": "auto",
+                "mission_id": room_id,
+                "stage": f"academy_step_{req.current_step or 1}",
+                "screen": "academy_room",
+                "terminal_output": terminal_output,
+            },
+        ):
+            events.append(event)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+
+    answer = "".join(event.get("text", "") for event in events if event.get("type") == "token")
+    done = next((event for event in reversed(events) if event.get("type") == "done"), {})
     return {
         "room_id": room_id,
         "question": q,
         "answer": answer,
         "mentor": "GHOST AI MENTOR",
+        "provider": done.get("provider"),
+        "ai_generated": done.get("ai_generated", False),
+        "lab_status": ctx["lab_status"],
+        "active_task_id": ctx["task"]["task_id"] if ctx["task"] else None,
     }
-

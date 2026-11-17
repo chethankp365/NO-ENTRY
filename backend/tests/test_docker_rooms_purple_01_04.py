@@ -10,6 +10,7 @@ including genuine WebSocket terminal communication.
 """
 
 import pytest
+from conftest import drain_terminal_until_prompt, execute_terminal_command
 from backend.app.labs.docker_runner import DockerLabRunner
 
 
@@ -235,39 +236,27 @@ async def test_docker_purple_websocket_terminal_workflow(docker_runner, client, 
 
     try:
         with client.websocket_connect(f"/ws/academy/{room_id}/terminal") as ws:
-            # Drain banner output chunks
-            for _ in range(8):
-                msg = ws.receive_json()
-                assert msg["type"] == "output"
+            drain_terminal_until_prompt(ws)
 
             # Execute scope submission over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/purple_foundations_tool.py --submit-scope",
-            })
-            scope_resp = ws.receive_json()
+            scope_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/purple_foundations_tool.py --submit-scope"
+            )
             assert "PURPLE_SCOPE_APPROVED" in scope_resp["data"]
-            ws.receive_json()  # Prompt
 
             # Execute telemetry mapping over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/purple_foundations_tool.py --map-telemetry",
-            })
-            map_resp = ws.receive_json()
+            map_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/purple_foundations_tool.py --map-telemetry"
+            )
             assert "PURPLE_TELEMETRY_MAP_VERIFIED" in map_resp["data"]
             assert info.has_action("purple_telemetry_mapped")
-            ws.receive_json()  # Prompt
 
             # Execute exercise finalization over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/purple_foundations_tool.py --finalize",
-            })
-            fin_resp = ws.receive_json()
+            fin_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/purple_foundations_tool.py --finalize"
+            )
             assert "PURPLE_FOUNDATIONS_EXERCISE_APPROVED" in fin_resp["data"]
             assert info.has_action("purple_foundations_approved")
-            ws.receive_json()  # Prompt
 
     finally:
         await lab_manager._docker_runner.stop_session(session_id)

@@ -7,12 +7,13 @@ import asyncio
 from contextlib import asynccontextmanager
 from pathlib import Path
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request, HTTPException, Depends
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
+from sqlmodel import Session
 
 from backend.app.config import settings
-from backend.app.db.database import init_db
+from backend.app.db.database import engine, init_db
 from backend.app.db.models import User
 from backend.app.sim.engine import sim_engine
 from backend.app.api.routes import api_router
@@ -20,14 +21,17 @@ from backend.app.api.auth import auth_router
 from backend.app.api.missions import missions_router
 from backend.app.api.ghost import ghost_router
 from backend.app.api.academy import academy_router, academy_terminal_handler
-from backend.app.api.auth import resolve_operator
+from backend.app.api.auth import get_current_user, resolve_operator
 from backend.app.db.database import get_session
+from backend.app.labs.manager import lab_manager
 
 # Lifespan event handler for startup and shutdown
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Initialize SQLite database tables
     init_db()
+    with Session(engine) as db_session:
+        await lab_manager.restore_active_sessions(db_session)
 
     # Start simulation engine background autopilot
     sim_engine.start_background_loop()
@@ -74,6 +78,13 @@ settings.TEMPLATES_DIR.mkdir(parents=True, exist_ok=True)
 app.mount("/static", StaticFiles(directory=str(settings.STATIC_DIR)), name="static")
 templates = Jinja2Templates(directory=str(settings.TEMPLATES_DIR))
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    icon_path = settings.STATIC_DIR / "favicon.svg"
+    if icon_path.exists():
+        return FileResponse(icon_path, media_type="image/svg+xml")
+    raise HTTPException(status_code=404)
+
 @app.get("/", response_class=HTMLResponse)
 def landing_page(request: Request):
     """Screen 2: Landing page."""
@@ -111,8 +122,9 @@ def command_center_page(request: Request):
     )
 
 @app.get("/lab-map", response_class=HTMLResponse)
+@app.get("/threat-map", response_class=HTMLResponse)
 def lab_map_page(request: Request):
-    """Screen 5: 3D Hero Lab Map."""
+    """Screen 5: 3D Hero Lab Map / Global Threat Topology."""
     return templates.TemplateResponse(
         request=request,
         name="lab_map.html",
@@ -263,7 +275,6 @@ def academy_catalog_page(request: Request):
 
 @app.get("/academy/rooms/{room_id}", response_class=HTMLResponse)
 @app.get("/academy/{room_id}", response_class=HTMLResponse)
-@app.get("/room/{room_id}", response_class=HTMLResponse)
 def academy_room_page(request: Request, room_id: str):
     """TryHackMe-style Hands-On Practical Room Workspace."""
     return templates.TemplateResponse(
@@ -290,7 +301,11 @@ async def academy_terminal_direct_ws(
     session = Depends(get_session),
 ):
     """Direct WebSocket endpoint for xterm.js terminal connection."""
-    user = resolve_operator(websocket, session)
+    try:
+        user = get_current_user(websocket, session)
+    except HTTPException:
+        await websocket.close(code=1008, reason="Authentication required.")
+        return
     await academy_terminal_handler.handle_connection(websocket, room_id, user)
 
 

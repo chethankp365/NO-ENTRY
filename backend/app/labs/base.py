@@ -44,6 +44,7 @@ class DockerStatus(str, Enum):
     DOCKER_STARTING = "DOCKER_STARTING"
     LAB_BUILD_FAILED = "LAB_BUILD_FAILED"
     LAB_START_FAILED = "LAB_START_FAILED"
+    LAB_STOP_FAILED = "LAB_STOP_FAILED"
 
 
 class DockerRuntimeError(Exception):
@@ -63,12 +64,12 @@ class LabSessionInfo(BaseModel):
     docker_status: DockerStatus = DockerStatus.DOCKER_AVAILABLE
     status: str = "STARTING"  # STARTING | RUNNING | STOPPED | EXPIRED | ERROR
     target_url: str
-    target_ip: str = "10.10.14.90"
+    target_ip: str = ""
     target_port: int = 8089
     target_hostname: str = "target"
-    attacker_ip: str = "10.10.14.10"
+    attacker_ip: str = ""
     attacker_hostname: str = "attacker"
-    open_ports: List[int] = Field(default_factory=lambda: [22, 80, 8089])
+    open_ports: List[int] = Field(default_factory=list)
     active_sessions_count: int = 1
     network_id: Optional[str] = None
     attacker_container_id: Optional[str] = None
@@ -134,6 +135,14 @@ class LabSessionInfo(BaseModel):
             "attacker_ip": self.attacker_ip,
             "attacker_hostname": self.attacker_hostname,
             "open_ports": self.open_ports,
+            "network_id": self.network_id,
+            "attacker_container_id": self.attacker_container_id,
+            "target_container_id": self.target_container_id,
+            "running_containers": (
+                [self.attacker_container_id, self.target_container_id]
+                if self.status == "RUNNING" and self.runner_mode == "docker"
+                else []
+            ),
             "active_sessions_count": self.active_sessions_count,
             "remaining_seconds": remaining_seconds,
             "expires_at": self.expires_at.isoformat(),
@@ -169,4 +178,3 @@ class LabRunner(ABC):
     async def execute_command(self, session_id: str, command: str) -> str:
         """Execute a command in the attacker container or shell environment."""
         pass
-

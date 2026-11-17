@@ -10,6 +10,7 @@ including genuine WebSocket terminal communication.
 """
 
 import pytest
+from conftest import drain_terminal_until_prompt, execute_terminal_command
 from backend.app.labs.docker_runner import DockerLabRunner
 
 
@@ -196,7 +197,7 @@ async def test_docker_room_detect_16_yara_hunting(docker_runner):
 
 
 @pytest.mark.asyncio
-async def test_docker_room_detect_16_websocket_terminal(client, session):
+async def test_docker_room_detect_16_websocket_terminal(client, session, docker_runner):
     """Room 16: End-to-end WebSocket interactive terminal test with live Docker."""
     from backend.app.db.models import User
     from backend.app.api.auth import create_access_token
@@ -227,41 +228,28 @@ async def test_docker_room_detect_16_websocket_terminal(client, session):
 
     try:
         with client.websocket_connect(f"/ws/academy/{room_id}/terminal") as ws:
-            # Drain banner output chunks
-            for _ in range(8):
-                msg = ws.receive_json()
-                assert msg["type"] == "output"
+            drain_terminal_until_prompt(ws)
 
             # Execute scan over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/yara_hunting_tool.py --scan-memory",
-            })
-            emulate_resp = ws.receive_json()
+            emulate_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/yara_hunting_tool.py --scan-memory"
+            )
             assert "YARA_HUNTING_VERIFIED" in emulate_resp["data"]
             assert info.has_action("yara_hunting_verified")
-            ws.receive_json()  # Prompt
 
             # Execute tuning over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/yara_hunting_tool.py --tune-condition",
-            })
-            tune_resp = ws.receive_json()
+            tune_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/yara_hunting_tool.py --tune-condition"
+            )
             assert "YARA_CONDITION_TUNED_OK" in tune_resp["data"]
-            ws.receive_json()  # Prompt
 
             # Execute challenge over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/yara_hunting_tool.py --challenge",
-            })
-            fin_resp = ws.receive_json()
+            fin_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/yara_hunting_tool.py --challenge"
+            )
             assert "YARA_HUNTING_VALIDATED" in fin_resp["data"]
             assert info.has_action("yara_hunting_validated")
-            ws.receive_json()  # Prompt
 
     finally:
         await lab_manager._docker_runner.stop_session(session_id)
         lab_manager._active_sessions.pop(session_id, None)
-

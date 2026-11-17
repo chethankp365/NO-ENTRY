@@ -10,6 +10,7 @@ including genuine WebSocket terminal communication.
 """
 
 import pytest
+from conftest import drain_terminal_until_prompt, execute_terminal_command
 from backend.app.labs.docker_runner import DockerLabRunner
 
 
@@ -225,41 +226,28 @@ async def test_docker_purple_05_08_websocket_terminal_workflow(docker_runner, cl
 
     try:
         with client.websocket_connect(f"/ws/academy/{room_id}/terminal") as ws:
-            # Drain banner output chunks
-            for _ in range(8):
-                msg = ws.receive_json()
-                assert msg["type"] == "output"
+            drain_terminal_until_prompt(ws)
 
             # Execute emulation over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/privesc_emulation_tool.py --emulate-uac",
-            })
-            emu_resp = ws.receive_json()
+            emu_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/privesc_emulation_tool.py --emulate-uac"
+            )
             assert "PRIVESC_EMULATION_VERIFIED" in emu_resp["data"]
             assert info.has_action("privesc_emulated")
-            ws.receive_json()  # Prompt
 
             # Execute detection tuning over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/privesc_emulation_tool.py --tune-detection",
-            })
-            tune_resp = ws.receive_json()
+            tune_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/privesc_emulation_tool.py --tune-detection"
+            )
             assert "DETECTION_TUNED_OK" in tune_resp["data"]
-            ws.receive_json()  # Prompt
 
             # Execute challenge finalization over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/privesc_emulation_tool.py --challenge",
-            })
-            chal_resp = ws.receive_json()
+            chal_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/privesc_emulation_tool.py --challenge"
+            )
             assert "PRIVESC_DETECTION_VALIDATED" in chal_resp["data"]
             assert info.has_action("privesc_detection_validated")
-            ws.receive_json()  # Prompt
 
     finally:
         await lab_manager._docker_runner.stop_session(session_id)
         lab_manager._active_sessions.pop(session_id, None)
-

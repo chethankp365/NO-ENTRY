@@ -36,6 +36,13 @@ class InteractiveTerminalSession:
         self.proc: Optional[asyncio.subprocess.Process] = None
         self.lock = asyncio.Lock()
         self.is_alive = False
+        self.recent_output: List[str] = []
+        self.last_exit_code: Optional[int] = None
+
+    def _remember_output(self, text: str) -> None:
+        if text:
+            self.recent_output.extend(text.splitlines())
+            self.recent_output = self.recent_output[-25:]
 
     async def ensure_started(self):
         if self.runner_mode != "docker" or not self.container_id:
@@ -100,6 +107,7 @@ class InteractiveTerminalSession:
                 if not self.proc or self.proc.returncode is not None:
                     # Fallback execution via runner if interactive process failed to launch
                     out = await lab_manager._docker_runner.execute_command(self.session_id, cmd)
+                    self._remember_output(out)
                     if websocket and out:
                         formatted = out.replace("\n", "\r\n")
                         await websocket.send_json({"type": "output", "data": formatted})
@@ -123,6 +131,7 @@ class InteractiveTerminalSession:
                 except Exception:
                     self.proc = None
                     out = await lab_manager._docker_runner.execute_command(self.session_id, cmd)
+                    self._remember_output(out)
                     if websocket and out:
                         formatted = out.replace("\n", "\r\n")
                         await websocket.send_json({"type": "output", "data": formatted})
@@ -141,14 +150,25 @@ class InteractiveTerminalSession:
                         break
 
                     line_str = line_bytes.decode("utf-8", errors="replace")
-                    if sentinel in line_str:
-                        parts = line_str.strip().split(":")
-                        if len(parts) >= 3:
+                    sentinel_index = line_str.find(sentinel)
+                    if sentinel_index >= 0:
+                        command_output = line_str[:sentinel_index]
+                        if command_output:
+                            out_chunks.append(command_output)
+                            if websocket:
+                                formatted = command_output.replace("\n", "\r\n")
+                                await websocket.send_json({"type": "output", "data": formatted})
+
+                        metadata = line_str[sentinel_index + len(sentinel):].strip()
+                        if metadata.startswith(":"):
+                            metadata = metadata[1:]
+                        parts = metadata.split(":", 1)
+                        if len(parts) == 2:
                             try:
-                                exit_code = int(parts[1])
+                                exit_code = int(parts[0])
                             except ValueError:
                                 pass
-                            raw_cwd = parts[2]
+                            raw_cwd = parts[1]
                             self.cwd = "~" if raw_cwd == "/home/operator" else raw_cwd
                         break
 
@@ -158,6 +178,10 @@ class InteractiveTerminalSession:
                         await websocket.send_json({"type": "output", "data": formatted})
 
                 out_text = "".join(out_chunks)
+                self.last_exit_code = exit_code
+                self._remember_output(out_text)
+                if websocket:
+                    await websocket.send_json({"type": "exit_status", "code": exit_code})
                 if session_info and exit_code == 0:
                     lab_manager._docker_runner._record_command_actions(session_info, cmd, out_text)
 
@@ -196,6 +220,7 @@ class InteractiveTerminalSession:
                 else:
                     out_text = await lab_manager._process_runner.execute_command(self.session_id, cmd)
 
+                self._remember_output(out_text)
                 if websocket and out_text:
                     formatted = out_text.replace("\n", "\r\n")
                     await websocket.send_json({"type": "output", "data": formatted})
@@ -248,7 +273,11 @@ class AcademyTerminalHandler:
         session_info = lab_manager.get_user_session(user.operator_id, room_id)
         shell_session: Optional[InteractiveTerminalSession] = None
 
-        if session_info and session_info.status == "RUNNING":
+        if (
+            session_info
+            and session_info.status == "RUNNING"
+            and session_info.runner_mode == "docker"
+        ):
             shell_session = self.get_or_create_session(session_info)
 
         # Welcome banner matching operator workstation visual reference
@@ -259,11 +288,15 @@ class AcademyTerminalHandler:
             "\x1b[38;2;255;31;61m| . ` | |  | | \x1b[38;2;0;229;255m|  __| | . ` |  | |  |  _  / > <  \x1b[0m\r\n",
             "\x1b[38;2;255;31;61m| |\\  | |__| | \x1b[38;2;0;229;255m| |____| |\\  |  | |  | | \\ \\ / . \\\x1b[0m\r\n",
             "\x1b[38;2;255;31;61m|_| \\_|\\____/  \x1b[38;2;0;229;255m|______|_| \\_|  |_|  |_|  \\_/_/ \\_\\\x1b[0m\r\n",
-            "            \x1b[90m- NO ENTRY ACADEMY -\x1b[0m\r\n",
-            "          \x1b[38;2;0;229;255mLEARN • PRACTICE • DEFEND\x1b[0m\r\n\r\n",
+            "        \x1b[90m- NO ENTRY ACADEMY -\x1b[0m\r\n",
+            "        \x1b[38;2;0;229;255m> Learn • Practice • Defend <\x1b[0m\r\n\r\n",
         ]
 
-        if session_info and session_info.status == "RUNNING":
+        if (
+            session_info
+            and session_info.status == "RUNNING"
+            and session_info.runner_mode == "docker"
+        ):
             if session_info.runner_mode == "docker":
                 mode_badge = "\x1b[38;2;0;255;106mDOCKER (ISOLATED BRIDGE // ROOTLESS)\x1b[0m"
             else:
@@ -280,7 +313,7 @@ class AcademyTerminalHandler:
             )
         else:
             banner_lines.append(
-                "\x1b[90mLab environment in standby. Click \x1b[0m\x1b[38;2;0;255;106m'START LAB'\x1b[0m \x1b[90min Lab Intelligence to launch the range.\x1b[0m\r\n\r\n"
+                "\x1b[90mLab environment in standby. Click \x1b[0m\x1b[38;2;0;255;106m'START LAB'\x1b[0m \x1b[90mabove to spawn the isolated range.\x1b[0m\r\n\r\n"
             )
 
         for line in banner_lines:
@@ -290,8 +323,8 @@ class AcademyTerminalHandler:
         await websocket.send_json({"type": "output", "data": current_prompt})
 
         cmd_buffer = ""
-        history: List[str] = []
-        history_idx: int = 0
+        command_history: List[str] = []
+        history_index = 0
 
         try:
             while True:
@@ -306,7 +339,11 @@ class AcademyTerminalHandler:
                 # Refresh session state if started recently
                 if not shell_session:
                     session_info = lab_manager.get_user_session(user.operator_id, room_id)
-                    if session_info and session_info.status == "RUNNING":
+                    if (
+                        session_info
+                        and session_info.status == "RUNNING"
+                        and session_info.runner_mode == "docker"
+                    ):
                         shell_session = self.get_or_create_session(session_info)
 
                 current_prompt = shell_session.format_prompt() if shell_session else "\x1b[38;2;0;255;106moperator@noentry\x1b[0m:\x1b[38;2;0;229;255m~\x1b[0m$ "
@@ -314,9 +351,9 @@ class AcademyTerminalHandler:
                 if msg_type == "command":
                     cmd = (payload.get("command") or "").strip()
                     if cmd:
-                        if not history or history[-1] != cmd:
-                            history.append(cmd)
-                        history_idx = len(history)
+                        command_history.append(cmd)
+                        command_history = command_history[-100:]
+                        history_index = len(command_history)
                     await self._handle_exec(websocket, shell_session, session_info, user, room_id, cmd)
                 elif msg_type == "input":
                     char = payload.get("data", "")
@@ -325,38 +362,34 @@ class AcademyTerminalHandler:
                         exec_cmd = cmd_buffer.strip()
                         cmd_buffer = ""
                         if exec_cmd:
-                            if not history or history[-1] != exec_cmd:
-                                history.append(exec_cmd)
-                            history_idx = len(history)
+                            command_history.append(exec_cmd)
+                            command_history = command_history[-100:]
+                            history_index = len(command_history)
                             await self._handle_exec(websocket, shell_session, session_info, user, room_id, exec_cmd)
                         else:
                             await websocket.send_json({"type": "output", "data": current_prompt})
+                    elif char in ("\x1b[A", "\x1b[B"):
+                        if char == "\x1b[A":
+                            history_index = max(0, history_index - 1)
+                        else:
+                            history_index = min(len(command_history), history_index + 1)
+                        replacement = (
+                            command_history[history_index]
+                            if history_index < len(command_history)
+                            else ""
+                        )
+                        erase = "\b \b" * len(cmd_buffer)
+                        cmd_buffer = replacement
+                        await websocket.send_json(
+                            {"type": "output", "data": erase + replacement}
+                        )
                     elif char in ("\x7f", "\x08"):  # Backspace
                         if len(cmd_buffer) > 0:
                             cmd_buffer = cmd_buffer[:-1]
                             await websocket.send_json({"type": "output", "data": "\b \b"})
-                    elif char == "\x1b[A":  # Up arrow (Command history previous)
-                        if history and history_idx > 0:
-                            history_idx -= 1
-                            cmd_buffer = history[history_idx]
-                            await websocket.send_json({"type": "output", "data": f"\r\x1b[K{current_prompt}{cmd_buffer}"})
-                    elif char == "\x1b[B":  # Down arrow (Command history next)
-                        if history and history_idx < len(history) - 1:
-                            history_idx += 1
-                            cmd_buffer = history[history_idx]
-                            await websocket.send_json({"type": "output", "data": f"\r\x1b[K{current_prompt}{cmd_buffer}"})
-                        elif history and history_idx >= len(history) - 1:
-                            history_idx = len(history)
-                            cmd_buffer = ""
-                            await websocket.send_json({"type": "output", "data": f"\r\x1b[K{current_prompt}"})
-                    elif char == "\x0c":  # Ctrl+L (Clear screen and redraw prompt)
-                        await websocket.send_json({"type": "output", "data": f"\x1b[2J\x1b[H{current_prompt}{cmd_buffer}"})
                     elif char == "\x03":  # Ctrl+C
                         cmd_buffer = ""
-                        history_idx = len(history)
                         await websocket.send_json({"type": "output", "data": "^C\r\n" + current_prompt})
-                    elif char.startswith("\x1b"):  # Ignore unhandled escape sequences (e.g. left/right arrows)
-                        pass
                     else:
                         cmd_buffer += char
                         await websocket.send_json({"type": "output", "data": char})
@@ -378,12 +411,19 @@ class AcademyTerminalHandler:
             await websocket.send_json({"type": "output", "data": prompt})
             return
 
-        if not session_info or session_info.status != "RUNNING":
+        if (
+            not session_info
+            or session_info.status != "RUNNING"
+            or session_info.runner_mode != "docker"
+        ):
             session_info = lab_manager.get_user_session(user.operator_id, room_id)
-            if not session_info or session_info.status != "RUNNING":
+            if (
+                not session_info
+                or session_info.status != "RUNNING"
+                or session_info.runner_mode != "docker"
+            ):
                 err_msg = (
-                    "\r\n\x1b[33m[!] Lab environment is currently in STANDBY.\x1b[0m\r\n"
-                    "\x1b[36m[*] Click 'START LAB' in the Lab Intelligence panel to spawn the isolated range.\x1b[0m\r\n"
+                    "\r\n\x1b[31m[-] No active Docker lab terminal is available. Start the Docker lab before running commands.\x1b[0m\r\n"
                 )
                 prompt = "\x1b[38;2;0;255;106moperator@noentry\x1b[0m:\x1b[38;2;0;229;255m~\x1b[0m$ "
                 await websocket.send_json({"type": "output", "data": err_msg + prompt})

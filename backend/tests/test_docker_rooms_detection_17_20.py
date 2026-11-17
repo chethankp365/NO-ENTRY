@@ -10,6 +10,7 @@ including genuine WebSocket terminal communication for the platform capstone.
 """
 
 import pytest
+from conftest import drain_terminal_until_prompt, execute_terminal_command
 from backend.app.labs.docker_runner import DockerLabRunner
 
 
@@ -192,7 +193,7 @@ async def test_docker_room_detect_20_capstone_pipeline(docker_runner):
 
 
 @pytest.mark.asyncio
-async def test_docker_room_detect_20_websocket_terminal(client, session):
+async def test_docker_room_detect_20_websocket_terminal(client, session, docker_runner):
     """Room 20: End-to-end WebSocket interactive terminal test with live Docker for Capstone."""
     from backend.app.db.models import User
     from backend.app.api.auth import create_access_token
@@ -223,41 +224,28 @@ async def test_docker_room_detect_20_websocket_terminal(client, session):
 
     try:
         with client.websocket_connect(f"/ws/academy/{room_id}/terminal") as ws:
-            # Drain banner output chunks
-            for _ in range(8):
-                msg = ws.receive_json()
-                assert msg["type"] == "output"
+            drain_terminal_until_prompt(ws)
 
             # Execute production emulation over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/capstone_pipeline_tool.py --emulate-production",
-            })
-            emulate_resp = ws.receive_json()
+            emulate_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/capstone_pipeline_tool.py --emulate-production"
+            )
             assert "CAPSTONE_PIPELINE_VERIFIED" in emulate_resp["data"]
             assert info.has_action("capstone_pipeline_verified")
-            ws.receive_json()  # Prompt
 
             # Execute tuning over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/capstone_pipeline_tool.py --tune-production",
-            })
-            tune_resp = ws.receive_json()
+            tune_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/capstone_pipeline_tool.py --tune-production"
+            )
             assert "CAPSTONE_PRODUCTION_TUNED_OK" in tune_resp["data"]
-            ws.receive_json()  # Prompt
 
             # Execute challenge over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/capstone_pipeline_tool.py --challenge",
-            })
-            fin_resp = ws.receive_json()
+            fin_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/capstone_pipeline_tool.py --challenge"
+            )
             assert "CAPSTONE_PIPELINE_VALIDATED" in fin_resp["data"]
             assert info.has_action("capstone_pipeline_validated")
-            ws.receive_json()  # Prompt
 
     finally:
         await lab_manager._docker_runner.stop_session(session_id)
         lab_manager._active_sessions.pop(session_id, None)
-

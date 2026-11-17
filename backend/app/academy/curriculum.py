@@ -1104,7 +1104,7 @@ ROOM_09_TASKS = [
         order=2,
         title="Authentication Bypass via Tautology",
         instructions=(
-            "Connect to the target application on port 8089 (`http://10.10.14.90:8089` or the lab target URL). "
+            "Connect to the target URL shown in the lab status panel on port 8089. "
             "Navigate to `/login`. Use an SQL tautology injection payload in the username field (e.g. `' OR 1=1 --`) "
             "to authenticate as the administrator without knowing the password. Capture the secret flag displayed in the admin portal."
         ),
@@ -1268,7 +1268,7 @@ ROOM_09_DEFINITION = RoomDefinition(
     difficulty="Beginner",
     estimated_duration="45 min",
     prerequisites=["Web Fundamentals", "Basic SQL Knowledge"],
-    required_skills=["Authentication bypass", "UNION data exfiltration", "Code remediation verification"],
+    required_practical_skills=["Browser", "curl", "SQL query analysis"],
     lab_type="container_isolated",
     concept=ROOM_09_CONCEPT,
     tasks=ROOM_09_TASKS,
@@ -1887,10 +1887,6 @@ class CurriculumRegistry:
             "detect-13-threshold": "detect-13-threshold-detections",
             "detect-13-baseline": "detect-13-threshold-detections",
             "detect-13-threshold-detections": "detect-13-threshold-detections",
-            "detect-13-baseline-profiling": "detect-13-threshold-detections",
-            "room-13-baseline-profiling": "detect-13-threshold-detections",
-            "room-13": "detect-13-threshold-detections",
-            "room-13-threshold-detections": "detect-13-threshold-detections",
             "detect-14": "detect-14-correlation-rules",
             "detect-14-correlation": "detect-14-correlation-rules",
             "detect-14-multi-event": "detect-14-correlation-rules",

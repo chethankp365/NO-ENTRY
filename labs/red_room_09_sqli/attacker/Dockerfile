@@ -14,17 +14,6 @@ RUN apk add --no-cache \
     whois \
     netcat-openbsd \
     iproute2 \
-    iputils \
-    net-tools \
-    traceroute \
-    file \
-    grep \
-    sed \
-    gawk \
-    findutils \
-    tar \
-    gzip \
-    unzip \
     nmap \
     nmap-scripts \
     tcpdump \

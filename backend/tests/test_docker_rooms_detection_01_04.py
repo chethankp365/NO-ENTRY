@@ -10,6 +10,7 @@ including genuine WebSocket terminal communication.
 """
 
 import pytest
+from conftest import drain_terminal_until_prompt, execute_terminal_command
 from backend.app.labs.docker_runner import DockerLabRunner
 
 
@@ -226,41 +227,28 @@ async def test_docker_detect_websocket_terminal_workflow(docker_runner, client, 
 
     try:
         with client.websocket_connect(f"/ws/academy/{room_id}/terminal") as ws:
-            # Drain banner output chunks
-            for _ in range(8):
-                msg = ws.receive_json()
-                assert msg["type"] == "output"
+            drain_terminal_until_prompt(ws)
 
             # Execute emulation over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/process_creation_tool.py --emulate-detection",
-            })
-            emulate_resp = ws.receive_json()
+            emulate_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/process_creation_tool.py --emulate-detection"
+            )
             assert "PROCESS_CREATION_VERIFIED" in emulate_resp["data"]
             assert info.has_action("process_creation_verified")
-            ws.receive_json()  # Prompt
 
             # Execute tuning over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/process_creation_tool.py --tune-lolbin-filter",
-            })
-            tune_resp = ws.receive_json()
+            tune_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/process_creation_tool.py --tune-lolbin-filter"
+            )
             assert "LOLBIN_FILTER_TUNED_OK" in tune_resp["data"]
-            ws.receive_json()  # Prompt
 
             # Execute challenge over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/process_creation_tool.py --challenge",
-            })
-            fin_resp = ws.receive_json()
+            fin_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/process_creation_tool.py --challenge"
+            )
             assert "PROCESS_CREATION_VALIDATED" in fin_resp["data"]
             assert info.has_action("process_creation_validated")
-            ws.receive_json()  # Prompt
 
     finally:
         await lab_manager._docker_runner.stop_session(session_id)
         lab_manager._active_sessions.pop(session_id, None)
-

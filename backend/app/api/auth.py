@@ -5,7 +5,7 @@ Handles operator registration, bcrypt verification, PyJWT tokens, and httpOnly c
 
 from datetime import datetime, timedelta
 import secrets
-from typing import Optional, Any, Dict, List
+from typing import Optional, Dict, List
 import bcrypt
 import jwt
 from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
@@ -162,7 +162,7 @@ def get_current_user(
 
 
 def resolve_operator(
-    request: Optional[Any] = None,
+    request: Request,
     session: Session = Depends(get_session)
 ) -> User:
     """
@@ -371,22 +371,23 @@ def forgot_password(req: ForgotPasswordRequest, session: Session = Depends(get_s
     email = req.email.strip().lower()
     user = session.exec(select(User).where(User.email == email)).first()
 
+    generic_msg = "If an operator account exists with that email, password recovery instructions have been generated."
+    response_data: Dict[str, Any] = {
+        "status": "success",
+        "message": generic_msg,
+    }
+
     if user:
         reset_token = f"rst-{secrets.token_urlsafe(20)}"
         user.reset_token = reset_token
         user.reset_token_expires_at = datetime.utcnow() + timedelta(hours=1)
         session.add(user)
         session.commit()
-        return {
-            "status": "success",
-            "message": "Password reset instructions sent. Token generated.",
-            "reset_token": reset_token
-        }
+        # In development/test mode, expose token for automated testing and sandbox verification
+        if settings.APP_ENV == "development" or settings.DEBUG:
+            response_data["reset_token"] = reset_token
 
-    return {
-        "status": "success",
-        "message": "If an account exists with this email, reset instructions have been generated."
-    }
+    return response_data
 
 @auth_router.post("/reset-password")
 def reset_password(req: ResetPasswordRequest, session: Session = Depends(get_session)):

@@ -22,14 +22,13 @@ class LabSessionManager:
         self._docker_runner = DockerLabRunner()
         self._process_runner = ProcessLabRunner()
         self._active_sessions: Dict[str, LabSessionInfo] = {}
+        self._lifecycle_locks: Dict[Tuple[str, str], asyncio.Lock] = {}
 
-    def _normalize_room_id(self, room_id: str) -> str:
-        try:
-            from backend.app.academy.curriculum import curriculum_registry
-            r = curriculum_registry.get_room(room_id)
-            return r.room_id if r else room_id
-        except Exception:
-            return room_id
+    def _lifecycle_lock(self, operator_id: str, room_id: str) -> asyncio.Lock:
+        key = (operator_id, room_id)
+        if key not in self._lifecycle_locks:
+            self._lifecycle_locks[key] = asyncio.Lock()
+        return self._lifecycle_locks[key]
 
     def get_docker_status(self) -> Tuple[DockerStatus, str, str]:
         """Query Docker daemon status directly."""
@@ -57,22 +56,58 @@ class LabSessionManager:
         room_id: str,
         allow_emulation: bool = False,
     ) -> LabSessionInfo:
-        room_id = self._normalize_room_id(room_id)
-        # Check if user already has an active, non-expired session for this room
-        existing_info = self.get_user_session(user.operator_id, room_id)
-        if existing_info and not existing_info.is_expired() and existing_info.status == "RUNNING":
-            return existing_info
+        async with self._lifecycle_lock(user.operator_id, room_id):
+            existing_info = self.get_user_session(user.operator_id, room_id)
+            if existing_info and not existing_info.is_expired() and existing_info.status == "RUNNING":
+                return existing_info
 
-        # Clean up any stale session for this user/room
-        await self.stop_lab(db_session, user.operator_id, room_id)
+            await self._stop_lab_unlocked(db_session, user.operator_id, room_id)
+            return await self._start_lab_unlocked(db_session, user, room_id, allow_emulation)
 
+    async def restore_active_sessions(self, db_session: Session) -> None:
+        """Restore persisted sessions after a backend restart, validating live Docker state."""
+        records = db_session.exec(
+            select(LabSessionRecord).where(
+                LabSessionRecord.status == "RUNNING",
+                LabSessionRecord.expires_at > datetime.utcnow(),
+                LabSessionRecord.runner_mode == "docker",
+            )
+        ).all()
+        for record in records:
+            try:
+                info = await self._docker_runner.restore_session(
+                    session_id=record.session_id,
+                    room_id=record.room_id,
+                    operator_id=record.operator_id,
+                    target_port=record.target_port or 0,
+                    created_at=record.created_at,
+                    expires_at=record.expires_at,
+                    network_name=record.network_id or "",
+                    expected_attacker_id=record.attacker_container_id,
+                    expected_target_id=record.target_container_id,
+                )
+            except Exception as exc:
+                record.status = "ERROR"
+                db_session.add(record)
+                db_session.commit()
+                print(f"Unable to restore lab session {record.session_id}: {exc}")
+                continue
+
+            self._active_sessions[info.session_id] = info
+
+    async def _start_lab_unlocked(
+        self,
+        db_session: Session,
+        user: User,
+        room_id: str,
+        allow_emulation: bool,
+    ) -> LabSessionInfo:
         session_id = f"lab_{user.operator_id}_{room_id}_{uuid.uuid4().hex[:6]}"
         runner = self._get_runner(allow_emulation=allow_emulation)
 
         info = await runner.start_session(session_id, room_id, user.operator_id)
         self._active_sessions[session_id] = info
 
-        # Persist session record
         db_record = LabSessionRecord(
             session_id=session_id,
             user_id=user.id or 1,
@@ -92,7 +127,6 @@ class LabSessionManager:
         )
         db_session.add(db_record)
         db_session.commit()
-
         return info
 
     async def stop_lab(
@@ -101,32 +135,46 @@ class LabSessionManager:
         operator_id: str,
         room_id: str,
     ) -> bool:
-        room_id = self._normalize_room_id(room_id)
+        async with self._lifecycle_lock(operator_id, room_id):
+            return await self._stop_lab_unlocked(db_session, operator_id, room_id)
+
+    async def _stop_lab_unlocked(
+        self,
+        db_session: Session,
+        operator_id: str,
+        room_id: str,
+    ) -> bool:
         session_info = self.get_user_session(operator_id, room_id)
         if not session_info:
             return False
 
-        session_info.status = "STOPPED"
         runner = self._docker_runner if session_info.runner_mode == "docker" else self._process_runner
-        await runner.stop_session(session_info.session_id)
-        self._active_sessions.pop(session_info.session_id, None)
         try:
-            from backend.app.labs.terminal import academy_terminal_handler
-            academy_terminal_handler.cleanup_session(session_info.session_id)
-        except Exception:
-            pass
+            await runner.stop_session(session_info.session_id)
+        except Exception as exc:
+            session_info.status = "ERROR"
+            session_info.error_message = str(exc)
+            record = db_session.exec(
+                select(LabSessionRecord).where(LabSessionRecord.session_id == session_info.session_id)
+            ).first()
+            if record:
+                record.status = "ERROR"
+                db_session.add(record)
+                db_session.commit()
+            raise
 
-        # Update database record
+        session_info.status = "STOPPED"
+        self._active_sessions.pop(session_info.session_id, None)
+        from backend.app.labs.terminal import academy_terminal_handler
+        academy_terminal_handler.cleanup_session(session_info.session_id)
+
         record = db_session.exec(
-            select(LabSessionRecord).where(
-                LabSessionRecord.session_id == session_info.session_id
-            )
+            select(LabSessionRecord).where(LabSessionRecord.session_id == session_info.session_id)
         ).first()
         if record:
             record.status = "STOPPED"
             db_session.add(record)
             db_session.commit()
-
         return True
 
     async def reset_lab(
@@ -135,22 +183,52 @@ class LabSessionManager:
         operator_id: str,
         room_id: str,
     ) -> LabSessionInfo:
-        room_id = self._normalize_room_id(room_id)
-        session_info = self.get_user_session(operator_id, room_id)
-        if not session_info:
-            user = db_session.exec(
-                select(User).where(User.operator_id == operator_id)
-            ).first() or User(username=operator_id, operator_id=operator_id, hashed_password="")
-            return await self.start_lab(db_session, user, room_id)
+        async with self._lifecycle_lock(operator_id, room_id):
+            session_info = self.get_user_session(operator_id, room_id)
+            if not session_info:
+                user = db_session.exec(
+                    select(User).where(User.operator_id == operator_id)
+                ).first() or User(username=operator_id, operator_id=operator_id, hashed_password="")
+                return await self._start_lab_unlocked(db_session, user, room_id, allow_emulation=False)
 
-        runner = self._docker_runner if session_info.runner_mode == "docker" else self._process_runner
-        info = await runner.reset_session(session_info.session_id)
-        return info
+            from backend.app.labs.terminal import academy_terminal_handler
+            academy_terminal_handler.cleanup_session(session_info.session_id)
+            runner = self._docker_runner if session_info.runner_mode == "docker" else self._process_runner
+            try:
+                info = await runner.reset_session(session_info.session_id)
+            except Exception as exc:
+                session_info.status = "ERROR"
+                session_info.error_message = str(exc)
+                record = db_session.exec(
+                    select(LabSessionRecord).where(LabSessionRecord.session_id == session_info.session_id)
+                ).first()
+                if record:
+                    record.status = "ERROR"
+                    db_session.add(record)
+                    db_session.commit()
+                raise
+            self._active_sessions[session_info.session_id] = info
+
+            record = db_session.exec(
+                select(LabSessionRecord).where(LabSessionRecord.session_id == session_info.session_id)
+            ).first()
+            if record:
+                record.status = info.status
+                record.target_url = info.target_url
+                record.target_ip = info.target_ip
+                record.target_port = info.target_port
+                record.runner_mode = info.runner_mode
+                record.docker_available = info.docker_available
+                record.network_id = info.network_id
+                record.attacker_container_id = info.attacker_container_id
+                record.target_container_id = info.target_container_id
+                db_session.add(record)
+                db_session.commit()
+            return info
 
     def get_user_session(
         self, operator_id: str, room_id: str
     ) -> Optional[LabSessionInfo]:
-        room_id = self._normalize_room_id(room_id)
         for s in list(self._active_sessions.values()):
             if s.operator_id == operator_id and s.room_id == room_id:
                 if s.is_expired():

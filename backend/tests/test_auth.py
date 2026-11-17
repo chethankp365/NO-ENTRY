@@ -65,3 +65,32 @@ def test_logout(client):
     # Next /me call should be 401
     unauth_resp = client.get("/api/auth/me")
     assert unauth_resp.status_code == 401
+
+
+def test_password_reset_production_security_no_token_leak(client, monkeypatch):
+    """Ensure production password reset never returns reset_token and uses uniform anti-enumeration message."""
+    # Test with unregistered email
+    resp_unreg = client.post("/api/auth/forgot-password", json={"email": "nonexistent_operator@test.local"})
+    assert resp_unreg.status_code == 200
+    assert "reset_token" not in resp_unreg.json()
+    assert "password recovery instructions have been generated" in resp_unreg.json()["message"]
+
+    # Register an operator first
+    reg_resp = client.post("/api/auth/register", json={
+        "full_name": "Audit Operator",
+        "email": "audit_operator@test.local",
+        "password": "InitialPassword123!",
+        "confirm_password": "InitialPassword123!"
+    })
+    assert reg_resp.status_code == 200
+
+    # In production mode:
+    monkeypatch.setattr(settings, "APP_ENV", "production")
+    monkeypatch.setattr(settings, "DEBUG", False)
+
+    resp_prod = client.post("/api/auth/forgot-password", json={"email": "audit_operator@test.local"})
+    assert resp_prod.status_code == 200
+    prod_data = resp_prod.json()
+    assert prod_data["status"] == "success"
+    assert "reset_token" not in prod_data, "CRITICAL: reset_token must never be returned in production API response!"
+    assert prod_data["message"] == resp_unreg.json()["message"], "Message must be uniform to prevent account enumeration!"

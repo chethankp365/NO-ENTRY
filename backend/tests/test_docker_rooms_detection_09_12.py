@@ -10,6 +10,7 @@ including genuine WebSocket terminal communication.
 """
 
 import pytest
+from conftest import drain_terminal_until_prompt, execute_terminal_command
 from backend.app.labs.docker_runner import DockerLabRunner
 
 
@@ -196,7 +197,7 @@ async def test_docker_room_detect_12_false_positive(docker_runner):
 
 
 @pytest.mark.asyncio
-async def test_docker_detection_12_websocket_terminal_workflow(client, session):
+async def test_docker_detection_12_websocket_terminal_workflow(client, session, docker_runner):
     """Room 12: End-to-end WebSocket interactive terminal test with live Docker."""
     from backend.app.db.models import User
     from backend.app.api.auth import create_access_token
@@ -227,41 +228,28 @@ async def test_docker_detection_12_websocket_terminal_workflow(client, session):
 
     try:
         with client.websocket_connect(f"/ws/academy/{room_id}/terminal") as ws:
-            # Drain banner output chunks
-            for _ in range(8):
-                msg = ws.receive_json()
-                assert msg["type"] == "output"
+            drain_terminal_until_prompt(ws)
 
             # Execute emulation over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/false_positive_tool.py --emulate-detection",
-            })
-            emulate_resp = ws.receive_json()
+            emulate_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/false_positive_tool.py --emulate-detection"
+            )
             assert "FALSE_POSITIVE_TUNING_VERIFIED" in emulate_resp["data"]
             assert info.has_action("false_positive_tuning_verified")
-            ws.receive_json()  # Prompt
 
             # Execute tuning over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/false_positive_tool.py --tune-baseline",
-            })
-            tune_resp = ws.receive_json()
+            tune_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/false_positive_tool.py --tune-baseline"
+            )
             assert "BASELINE_EXCLUSION_TUNED_OK" in tune_resp["data"]
-            ws.receive_json()  # Prompt
 
             # Execute challenge over WebSocket
-            ws.send_json({
-                "type": "command",
-                "command": "python3 /home/operator/tools/false_positive_tool.py --challenge",
-            })
-            fin_resp = ws.receive_json()
+            fin_resp = execute_terminal_command(
+                ws, "python3 /home/operator/tools/false_positive_tool.py --challenge"
+            )
             assert "FALSE_POSITIVE_TUNING_VALIDATED" in fin_resp["data"]
             assert info.has_action("false_positive_tuning_validated")
-            ws.receive_json()  # Prompt
 
     finally:
         await lab_manager._docker_runner.stop_session(session_id)
         lab_manager._active_sessions.pop(session_id, None)
-

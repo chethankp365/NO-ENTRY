@@ -8,12 +8,13 @@
 import { sound } from '../core/sound.js';
 
 let currentRoom = null;
+let roomDataLoaded = false;
 let currentLabSession = null;
 let terminal = null;
 let termFitAddon = null;
 let termSocket = null;
 let timerInterval = null;
-let currentInputLine = '';
+let labOperation = null;
 
 const containerEl = document.querySelector('.workspace-container');
 const roomId = containerEl ? containerEl.dataset.roomId : null;
@@ -29,12 +30,17 @@ export async function initRoomWorkspace() {
   await loadRoomData();
   await checkLabStatus();
   initTerminal();
+  if (currentLabSession?.status === 'AUTH_REQUIRED' && currentLabSession.error_message) {
+    terminal.writeln(`\r\n\x1b[31m[-] ${currentLabSession.error_message}\x1b[0m\r\n`);
+  }
   setupQuickCommands();
   setupEvidenceDrawer();
   initGhostMentor();
   syncFullscreenWorkstationData();
 
-  openFullscreenWorkstation();
+  if (window.location.search.includes('fullscreen') || window.location.search.includes('workstation') || sessionStorage.getItem('auto_workstation') === 'true') {
+    setTimeout(openFullscreenWorkstation, 180);
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -134,6 +140,7 @@ async function loadRoomData() {
       return;
     }
     currentRoom = await res.json();
+    const showBriefing = !roomDataLoaded && !sessionStorage.getItem(`briefing_seen_${roomId}`);
     applyTrackTheme();
     renderRoomHeader();
     renderConcept();
@@ -142,7 +149,7 @@ async function loadRoomData() {
     updateProgress();
 
     // Auto-display Mission Briefing on first entry
-    if (!sessionStorage.getItem(`briefing_seen_${roomId}`)) {
+    if (showBriefing) {
       setTimeout(() => {
         const briefingModal = document.getElementById('missionBriefingModal');
         if (briefingModal) {
@@ -151,6 +158,7 @@ async function loadRoomData() {
         }
       }, 350);
     }
+    roomDataLoaded = true;
   } catch (err) {
     console.error('Failed to load room details:', err);
   }
@@ -224,7 +232,7 @@ function populateMissionBriefing() {
   if (diffEl) diffEl.textContent = currentRoom.difficulty;
   if (durEl) durEl.textContent = currentRoom.estimated_duration;
   if (xpEl) xpEl.textContent = `+${currentRoom.total_xp} XP`;
-  if (targetEl) targetEl.textContent = currentLabSession ? `${currentLabSession.target_ip}:${currentLabSession.target_port}` : '10.10.14.90';
+  if (targetEl) targetEl.textContent = currentLabSession?.target_ip ? `${currentLabSession.target_ip}:${currentLabSession.target_port}` : 'Assigned when lab starts';
 
   if (objList && currentRoom.learning_objectives && currentRoom.learning_objectives.length > 0) {
     objList.innerHTML = currentRoom.learning_objectives.map(obj => `
@@ -244,47 +252,36 @@ function renderConcept() {
   const title = currentRoom.title || 'Cybersecurity Operation';
   const term = c.technical_term || title;
   const desc = currentRoom.description || currentRoom.short_description || '';
+  const task = currentRoom.tasks?.find(item => !item.is_completed) || currentRoom.tasks?.[0];
+  const practicalTool = currentRoom.required_practical_skills?.[0] || 'the room workstation';
 
   // 1. What is this? (Plain-English definition avoiding heavy jargon)
-  const whatIsThis = c.what_is_this || c.overview || `${term} is a foundational cybersecurity concept focusing on ${c.cybersecurity_context || desc.toLowerCase() || 'evaluating system security posture and eliminating risk'}. In plain English, it describes how computers, services, and software interact with inputs and permissions, and what happens when those interactions are misconfigured or deliberately exploited.`;
+  const whatIsThis = c.what_is_this || c.overview || `${term}: ${desc}`;
 
   // 2. Everyday Analogy (Relatable real-world non-technical comparison)
-  const analogy = c.simple_analogy || `Think of ${term} like a security checkpoint at a private event: if security guards check names on an invitation list but never verify physical ID cards, anyone who whispers a valid guest's name can walk straight inside.`;
+  const analogy = c.simple_analogy || `Think of ${term} as a real-world version of the room objective: ${task?.title || desc}. The practical exercise shows what changes when this control is checked or missed.`;
 
   // 3. How it Works (Step-by-step breakdown of mechanics)
   let steps = c.how_it_works || [];
   if (!Array.isArray(steps) || steps.length === 0) {
-    if (c.demonstration) {
-      steps = [
-        'Reconnaissance & Vector Identification: Discover input fields, open network ports, or exposed configurations.',
-        'Crafting Interaction: Deliver targeted payloads or query parameters designed to test validation logic.',
-        'State Evaluation: Analyze responses, logs, or error codes to confirm vulnerability presence.',
-        'Execution & Verification: Confirm unauthorized command execution, data access, or defensive detection.'
-      ];
-    } else {
-      steps = [
-        'Target Enumeration: Map services, processes, and network boundaries.',
-        'Execution of Technique: Issue commands or trigger automated scenarios.',
-        'Telemetry Generation: Audit logs, network packets, or defensive alerts record the activity.',
-        'Outcome Verification: Validate defensive efficacy or offensive objective completion.'
-      ];
-    }
+    steps = (currentRoom.learning_objectives || []).slice(0, 4);
+    if (!steps.length && task) steps = [task.instructions];
   }
 
   // 4. Technical Explanation (The actual protocols, code, flags, or configurations)
-  const techDef = c.technical_definition ? `${c.technical_term ? c.technical_term + ': ' : ''}${c.technical_definition}` : `${term} operates at the protocol, process, or data layer where boundary conditions are evaluated. It involves inspecting data structures, network packets, or execution privileges.`;
+  const techDef = c.technical_definition ? `${c.technical_term ? c.technical_term + ': ' : ''}${c.technical_definition}` : c.cybersecurity_context || desc;
 
   // 5. Real-World Application & Impact (Why organizations care, CVE examples, breach history)
-  const realWorld = c.real_world_application || c.why_it_matters || `${c.cybersecurity_context || ''} Failure to address or detect ${term} has historically resulted in unauthorized privilege escalation, lateral network movement, critical data theft, or major operational disruptions across enterprise networks.`;
+  const realWorld = c.real_world_application || c.why_it_matters || c.cybersecurity_context || desc;
 
   // 6. What to Observe in this Lab (Specific signs, logs, response codes, or flags)
-  const observe = c.what_to_observe || 'Observe response payloads, HTTP status codes, command outputs, and audit logs during execution.';
+  const observe = c.what_to_observe || task?.instructions || `Use ${practicalTool} and compare the result with this room's assessment criteria.`;
 
   // 7. Common Mistakes & Gotchas (What beginners do wrong and how to avoid it)
-  const mistakes = c.common_mistakes || c.remediation_guide || 'Common pitfalls include forgetting proper escape quotes in shell/SQL commands, targeting the wrong IP or port, missing required flags, or failing to check log files.';
+  const mistakes = c.common_mistakes || c.remediation_guide || task?.hint || `Use the room's assigned target and the syntax for ${practicalTool}; verify the returned evidence before submitting.`;
 
   // 8. Key Takeaway (One-sentence summary to remember)
-  const takeaway = c.key_takeaway || `${term} demonstrates that security depends on strict input validation, least-privilege access, and continuous telemetry monitoring.`;
+  const takeaway = c.key_takeaway || currentRoom.learning_objectives?.[0] || desc;
 
   // Visual Diagram
   const diagramSvg = getConceptDiagramSvg(currentRoom);
@@ -360,6 +357,9 @@ function getConceptDiagramSvg(room) {
   const rid = (room.room_id || '').toLowerCase();
   const title = (room.title || '').toLowerCase();
   const track = (room.track || '').toLowerCase();
+  const targetLabel = currentLabSession?.status === 'RUNNING' && currentLabSession.target_ip
+    ? `${currentLabSession.target_ip} (assigned)`
+    : 'Assigned when lab starts';
 
   // 1. SQL Injection Diagram
   if (rid.includes('sql') || title.includes('sql') || title.includes('injection')) {
@@ -405,7 +405,7 @@ function getConceptDiagramSvg(room) {
         <text x="265" y="73" fill="#00FF6A" font-size="9" font-family="monospace" text-anchor="middle">&lt;&lt; TCP SYN/ACK [PORT OPEN]</text>
         <rect x="390" y="25" width="140" height="50" rx="4" fill="#0c121e" stroke="#00FF6A" stroke-width="1.5"/>
         <text x="460" y="45" fill="#00FF6A" font-size="10" font-family="monospace" font-weight="bold" text-anchor="middle">TARGET SERVER</text>
-        <text x="460" y="60" fill="#94a3b8" font-size="9" font-family="monospace" text-anchor="middle">10.10.14.90 (Active)</text>
+        <text x="460" y="60" fill="#94a3b8" font-size="9" font-family="monospace" text-anchor="middle">${targetLabel}</text>
       </svg>
     `;
   }
@@ -592,6 +592,8 @@ async function handleTaskSubmit(taskId, type) {
       }
 
       updateProgress();
+      await loadRoomData();
+      await refreshGhostGuide();
 
       if (result.room_completed) {
         setTimeout(() => {
@@ -713,21 +715,32 @@ function setupLabButtons() {
 async function checkLabStatus() {
   try {
     const res = await fetch(`/api/academy/labs/${roomId}/status`);
-    if (!res.ok) return;
+    if (res.status === 401) {
+      throw new Error('Sign in or choose Guest Access at /access, then return to this room.');
+    }
+    if (!res.ok) throw new Error(`Lab status request failed (${res.status})`);
     const data = await res.json();
     currentLabSession = data;
     updateLabUI();
   } catch (err) {
     console.error('Failed to query lab status:', err);
+    currentLabSession = {
+      status: err.message.includes('/access') ? 'AUTH_REQUIRED' : 'UNKNOWN',
+      error_message: err.message || 'Unable to retrieve authoritative lab status. Retry the status check.',
+    };
+    updateLabUI();
+    addLiveActivityLog('ERR', currentLabSession.error_message);
   }
 }
 
 async function startLabSession() {
+  if (labOperation) return;
   const btnStart = document.getElementById('btnStartLab');
-  if (btnStart) btnStart.textContent = 'SPAWNING...';
-  sound.keyClick();
-  currentLabSession = { status: 'STARTING' };
+  labOperation = 'STARTING';
+  currentLabSession = { ...(currentLabSession || {}), status: 'STARTING' };
   updateLabUI();
+  sound.keyClick();
+  addLiveActivityLog('INFO', 'Provisioning isolated Docker containers...');
 
   try {
     const res = await fetch(`/api/academy/labs/${roomId}/start`, { method: 'POST' });
@@ -735,125 +748,196 @@ async function startLabSession() {
       const errData = await res.json().catch(() => ({}));
       const detail = errData.detail || {};
       const statusTitle = detail.error || 'DOCKER_ERROR';
-      const errMsg = detail.message || 'Failed to start lab session.';
-      const guidance = detail.guidance ? `\n\nGUIDANCE: ${detail.guidance}` : '';
+      const errMsg = res.status === 401
+        ? 'Sign in or choose Guest Access at /access, then return to this room.'
+        : detail.message || 'Failed to start lab session.';
+      currentLabSession = {
+        status: 'STOPPED',
+        docker_status: res.status === 401 ? 'AUTH_REQUIRED' : statusTitle,
+        error_message: `${errMsg}${detail.guidance ? ` ${detail.guidance}` : ''}`,
+      };
 
-      currentLabSession = null;
-      updateLabUI();
       if (terminal) {
         terminal.writeln(`\r\n\x1b[31m[-] [${statusTitle}] ${errMsg}\x1b[0m`);
         if (detail.guidance) {
           terminal.writeln(`\x1b[36m[*] Guidance: ${detail.guidance}\x1b[0m\r\n`);
         }
       }
+      addLiveActivityLog('ERR', `Startup failed: ${statusTitle}`);
+      updateLabUI();
       return;
     }
     currentLabSession = await res.json();
+    if (currentLabSession.status !== 'RUNNING') {
+      throw new Error('Backend did not confirm the lab as RUNNING.');
+    }
     sound.bootHum();
+    await loadRoomData();
     updateLabUI();
+    await refreshGhostGuide();
+    addLiveActivityLog('INFO', `Lab range active at ${currentLabSession.target_ip}`);
     if (terminal) {
       terminal.clear();
     }
     reconnectTerminalWebSocket();
-    addLiveActivityLog('INFO', `Target container started: ${currentLabSession.target_ip || '10.10.15.90'}`);
   } catch (err) {
     console.error('Failed to start lab:', err);
-    currentLabSession = null;
-    updateLabUI();
+    currentLabSession = {
+      ...(currentLabSession || {}),
+      status: 'ERROR',
+      error_message: err.message || 'Lab start connection error.',
+    };
+    addLiveActivityLog('ERR', currentLabSession.error_message);
+    if (terminal) terminal.writeln(`\r\n\x1b[31m[-] ${currentLabSession.error_message}\x1b[0m`);
   } finally {
+    labOperation = null;
     if (btnStart) btnStart.innerHTML = '&#9654; START LAB';
+    updateLabUI();
   }
 }
 
 async function resetLabSession() {
+  if (labOperation) return;
   sound.keyClick();
-  if (!confirm('Are you sure you want to reset the lab database to its initial clean state?')) return;
+  if (!confirm('Are you sure you want to reset the lab database and workstation files to initial clean state?')) return;
+  labOperation = 'RESETTING';
+  currentLabSession = { ...(currentLabSession || {}), status: 'RESETTING' };
+  updateLabUI();
+  addLiveActivityLog('WARN', 'Resetting target database & operator workspace...');
   try {
     const res = await fetch(`/api/academy/labs/${roomId}/reset`, { method: 'POST' });
-    if (res.ok) {
-      currentLabSession = await res.json();
-      updateLabUI();
-      if (terminal) terminal.writeln('\r\n\x1b[33m[!] Target database wiped and re-seeded to initial clean state.\x1b[0m\r\n');
-      addLiveActivityLog('WARN', 'Target database wiped & re-seeded');
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.detail?.message || error.detail || `Lab reset failed (${res.status}).`);
     }
+    currentLabSession = await res.json();
+    if (currentLabSession.status !== 'RUNNING') throw new Error('Backend did not confirm the reset lab as RUNNING.');
+    await loadRoomData();
+    await refreshGhostGuide();
+    if (terminal) terminal.clear();
+    updateLabUI();
+    reconnectTerminalWebSocket();
+    addLiveActivityLog('INFO', 'Fresh lab environment is online.');
   } catch (err) {
     console.error('Failed to reset lab:', err);
+    currentLabSession = { ...(currentLabSession || {}), status: 'ERROR', error_message: err.message };
+    addLiveActivityLog('ERR', err.message || 'Failed to reset lab.');
+  } finally {
+    labOperation = null;
+    updateLabUI();
   }
 }
 
 async function stopLabSession() {
+  if (labOperation) return;
   sound.keyClick();
+  labOperation = 'STOPPING';
+  currentLabSession = { ...(currentLabSession || {}), status: 'STOPPING' };
+  updateLabUI();
+  addLiveActivityLog('WARN', 'Stopping lab session and dismantling containers...');
   try {
     const res = await fetch(`/api/academy/labs/${roomId}/stop`, { method: 'POST' });
-    if (res.ok) {
-      currentLabSession = null;
-      updateLabUI();
-      if (terminal) terminal.writeln('\r\n\x1b[31m[-] Lab session stopped and resources destroyed.\x1b[0m\r\n');
-      addLiveActivityLog('WARN', 'Lab session terminated');
+    if (!res.ok) {
+      const error = await res.json().catch(() => ({}));
+      throw new Error(error.detail?.message || error.detail || `Lab stop failed (${res.status}).`);
+    }
+    await checkLabStatus();
+    await loadRoomData();
+    await refreshGhostGuide();
+    if (terminal) terminal.writeln('\r\n\x1b[31m[-] Lab session stopped.\x1b[0m\r\n');
+    addLiveActivityLog('WARN', 'Lab in standby.');
+    if (termSocket) {
+      try { termSocket.close(); } catch (_) {}
+      termSocket = null;
     }
   } catch (err) {
     console.error('Failed to stop lab:', err);
+    currentLabSession = { ...(currentLabSession || {}), status: 'ERROR', error_message: err.message };
+    addLiveActivityLog('ERR', err.message || 'Failed to stop lab.');
+  } finally {
+    labOperation = null;
+    updateLabUI();
   }
 }
 
 function updateLabUI() {
   const targetIpEl = document.getElementById('labTargetIpText');
+  const attackerIpEl = document.getElementById('labAttackerIpText');
   const runnerBadge = document.getElementById('labRunnerBadge');
   const timerEl = document.getElementById('labTimerText');
   const webLink = document.getElementById('btnTargetAppWebLink');
   const termDot = document.getElementById('termDotIndicator');
   const termBadge = document.getElementById('termStatusBadge');
+  const btnStart = document.getElementById('btnStartLab');
+  const btnReset = document.getElementById('btnResetLab');
+  const btnStop = document.getElementById('btnStopLab');
+  const state = currentLabSession?.status || 'STOPPED';
+  const isDockerOnline = state === 'RUNNING' && currentLabSession.runner_mode === 'docker';
+  const isTransitioning = ['STARTING', 'STOPPING', 'RESETTING'].includes(state);
 
-  if (currentLabSession && currentLabSession.status === 'RUNNING') {
+  [btnStart, btnReset, btnStop].forEach(button => {
+    if (button) button.disabled = Boolean(labOperation);
+  });
+
+  if (isDockerOnline) {
     if (termDot) termDot.classList.add('online');
     if (termBadge) {
       termBadge.textContent = 'ONLINE';
       termBadge.className = 'term-status-badge online';
     }
     if (targetIpEl) targetIpEl.textContent = `${currentLabSession.target_ip}:${currentLabSession.target_port}`;
+    if (attackerIpEl) attackerIpEl.textContent = currentLabSession.attacker_ip || 'UNAVAILABLE';
     if (webLink) {
-      if (currentLabSession.runner_mode === 'docker') {
-        webLink.style.display = 'none';
-      } else {
-        webLink.href = currentLabSession.target_url || `http://127.0.0.1:${currentLabSession.target_port}`;
-        webLink.style.display = 'inline-flex';
-      }
+      webLink.style.display = 'none';
     }
 
     if (runnerBadge) {
-      if (currentLabSession.runner_mode === 'docker') {
-        runnerBadge.textContent = 'DOCKER CONTAINER [ISOLATED]';
-        runnerBadge.className = 'runner-badge docker';
-      } else {
-        runnerBadge.textContent = 'PROCESS EMULATION';
-        runnerBadge.className = 'runner-badge emulated';
-      }
+      runnerBadge.textContent = 'DOCKER CONTAINERS [ISOLATED]';
+      runnerBadge.className = 'runner-badge docker';
     }
 
     startTimer(currentLabSession.remaining_seconds || 3600);
   } else {
     if (termDot) termDot.classList.remove('online');
     if (termBadge) {
-      termBadge.textContent = 'STANDBY';
+      termBadge.textContent = isTransitioning ? state : state === 'RUNNING' ? 'EMULATED' : state;
       termBadge.className = 'term-status-badge standby';
     }
-    if (targetIpEl) targetIpEl.textContent = 'OFFLINE';
+    if (targetIpEl) targetIpEl.textContent = currentLabSession?.target_ip ? `${currentLabSession.target_ip}:${currentLabSession.target_port}` : 'NOT ASSIGNED';
+    if (attackerIpEl) attackerIpEl.textContent = currentLabSession?.attacker_ip || 'NOT ASSIGNED';
     if (timerEl) timerEl.textContent = '--:--';
     if (webLink) webLink.style.display = 'none';
     if (runnerBadge) {
-      if (currentLabSession && currentLabSession.docker_status === 'DOCKER_AVAILABLE') {
+      if (isTransitioning) {
+        runnerBadge.textContent = state;
+        runnerBadge.className = 'runner-badge';
+      } else if (currentLabSession && currentLabSession.error_message) {
+        runnerBadge.textContent = 'LAB ERROR';
+        runnerBadge.className = 'runner-badge emulated';
+      } else if (currentLabSession?.status === 'RUNNING' && currentLabSession.runner_mode === 'emulated') {
+        runnerBadge.textContent = 'PROCESS EMULATION';
+        runnerBadge.className = 'runner-badge emulated';
+      } else if (currentLabSession && currentLabSession.docker_status === 'DOCKER_AVAILABLE') {
         runnerBadge.textContent = 'DOCKER READY';
         runnerBadge.className = 'runner-badge docker';
       } else if (currentLabSession && currentLabSession.docker_status) {
         runnerBadge.textContent = currentLabSession.docker_status;
         runnerBadge.className = 'runner-badge emulated';
       } else {
-        runnerBadge.textContent = 'STANDBY';
+        runnerBadge.textContent = 'STOPPED';
         runnerBadge.className = 'runner-badge';
       }
     }
     if (timerInterval) clearInterval(timerInterval);
   }
+  setupQuickCommands();
+  if (termSocket && !isDockerOnline) {
+    try { termSocket.close(); } catch (_) {}
+    termSocket = null;
+  }
+  const targetEl = document.getElementById('briefingTarget');
+  if (targetEl) targetEl.textContent = isDockerOnline ? `${currentLabSession.target_ip}:${currentLabSession.target_port}` : 'Assigned when lab starts';
+  if (currentRoom) renderConcept();
   syncFullscreenWorkstationData();
 }
 
@@ -886,84 +970,30 @@ function setupEvidenceDrawer() {
   const contentPre = document.getElementById('evidenceContentPre');
   if (!filePathEl || !contentPre || !currentRoom) return;
 
-  const track = (currentRoom.track || 'blue').toLowerCase();
-  const roomNum = currentRoom.room_number || 1;
-  const numPadded = String(roomNum).padStart(2, '0');
-
-  let filePath = '';
-  let content = '';
-
-  if (track.startsWith('red')) {
-    filePath = `/home/operator/targets/room_${numPadded}/recon_telemetry.json`;
-    content = JSON.stringify({
-      target_host: "10.10.14.90",
-      active_ports: [80, 443, 8080 + (roomNum % 25)],
-      detected_os: "Linux 6.1.0-custom-hardened",
-      service_banners: {
-        http: "Apache/2.4.52 (Ubuntu)",
-        custom_daemon: "NO_ENTRY_EXPLOIT_TARGET_v1.4"
-      },
-      vulnerability_indicators: [
-        `CWE-${100 + roomNum * 12}: Potential vector detected in input validation`,
-        "Session authentication token bypass possible on /api/v1/debug"
-      ],
-      capture_timestamp: new Date().toISOString()
-    }, null, 2);
-  } else if (track.startsWith('blue')) {
-    filePath = `/var/log/telemetry/incident_capture_${numPadded}.json`;
-    content = JSON.stringify({
-      incident_id: `INC-2026-${numPadded}`,
-      sensor_source: "SOC_EDR_AGENT_PRIMARY",
-      event_type: "PROCESS_INJECTION_OR_SUSPICIOUS_EXECUTION",
-      severity: "HIGH",
-      telemetry: {
-        host: "CORP-WKS-042",
-        parent_process: "powershell.exe",
-        command_line: "-NoP -NonI -W Hidden -Exec Bypass -EncodedCommand SQBFAFgA...",
-        source_ip: "198.51.100.42",
-        destination_ip: "10.10.14.90"
-      },
-      recommended_action: "ISOLATE_HOST_AND_EXTRACT_MEMORY"
-    }, null, 2);
-  } else if (track.startsWith('purple')) {
-    filePath = `/opt/adversary_emulation/plans/apt_${numPadded}_adversary.yml`;
-    content = `# NO ENTRY PURPLE TEAM // ADVERSARY EMULATION PLAN
-technique_id: "T1059.00${roomNum % 10}"
-tactic: "Execution / Persistence"
-adversary_profile: "APT-VOLT-STORM-${numPadded}"
-emulation_steps:
-  - step: 1
-    name: "Foothold Execution"
-    command: "curl -s http://10.10.14.90:${8300 + roomNum}/api/emulate/trigger"
-    expected_telemetry: "Sysmon EventID 1"
-  - step: 2
-    name: "Detection Validation"
-    endpoint: "http://10.10.14.90:${8300 + roomNum}/api/converge/metrics"
-    pass_criteria: "detection_gap_rate == 0.0"`;
-  } else {
-    filePath = `/etc/detection_rules/detect_${numPadded}_sigma.yml`;
-    content = `title: "NO_ENTRY_DETECT_${numPadded}_AnomalousExecution"
-status: experimental
-description: "Detects anomalous adversary execution pattern in detection engineering lab ${roomNum}"
-logsource:
-  category: process_creation
-  product: linux
-detection:
-  selection:
-    Image|endswith:
-      - '/python3'
-      - '/bash'
-    CommandLine|contains:
-      - 'pipeline_tool.py'
-      - 'eval_rule'
-  condition: selection
-level: high
-falsepositives:
-  - Legitimate security automation pipelines`;
+  const activeTask = currentRoom.tasks?.find(task => !task.is_completed) || currentRoom.tasks?.[0];
+  const hasDockerLab = currentLabSession?.status === 'RUNNING' && currentLabSession.runner_mode === 'docker';
+  const reference = {
+    source: 'academy curriculum reference (not live lab evidence)',
+    room_id: currentRoom.room_id,
+    title: currentRoom.title,
+    lab_status: currentLabSession?.status || 'STOPPED',
+    assigned_target: hasDockerLab
+      ? `${currentLabSession.target_ip}:${currentLabSession.target_port}`
+      : null,
+    learning_objectives: currentRoom.learning_objectives || [],
+    current_task: activeTask
+      ? { title: activeTask.title, instructions: activeTask.instructions, hint: activeTask.hint }
+      : null,
+    assessment_criteria: currentRoom.assessment_criteria || [],
+    evidence_notice: 'No room-specific evidence file is supplied by this panel. Use the running lab and task instructions for evidence.',
+  };
+  filePathEl.textContent = `ACADEMY CURRICULUM // ${currentRoom.room_id}`;
+  contentPre.textContent = JSON.stringify(reference, null, 2);
+  const copyEvidenceButton = document.getElementById('btnCopyEvidenceCmd');
+  if (copyEvidenceButton) {
+    copyEvidenceButton.disabled = true;
+    copyEvidenceButton.title = 'This room does not provide an evidence file.';
   }
-
-  filePathEl.textContent = filePath;
-  contentPre.textContent = content;
 }
 
 // ---------------------------------------------------------------------------
@@ -976,16 +1006,12 @@ function initTerminal() {
 
   terminal = new window.Terminal({
     cursorBlink: true,
-    fontFamily: 'Consolas, "Courier New", monospace',
-    fontSize: 13,
-    lineHeight: 1.35,
-    letterSpacing: 0,
+    fontFamily: 'var(--font-mono, monospace)',
+    fontSize: 12,
     theme: {
-      background: 'transparent',
+      background: '#020408',
       foreground: '#e2e8f0',
       cursor: '#00E5FF',
-      cursorAccent: '#020408',
-      selectionBackground: 'rgba(0, 229, 255, 0.3)',
       black: '#000000',
       red: '#FF1F3D',
       green: '#00FF6A',
@@ -1010,10 +1036,7 @@ function initTerminal() {
   if (btnClear) {
     btnClear.addEventListener('click', () => {
       sound.keyClick();
-      if (terminal) {
-        terminal.clear();
-        terminal.write('\x1b[38;2;0;255;106moperator@noentry\x1b[0m:\x1b[38;2;0;229;255m~\x1b[0m$ ');
-      }
+      if (terminal) terminal.clear();
     });
   }
   if (btnReset) {
@@ -1026,47 +1049,28 @@ function initTerminal() {
 
   const updateSize = () => {
     if (termFitAddon) {
-      try { termFitAddon.fit(); } catch (_) {}
+      termFitAddon.fit();
     } else if (terminal && container) {
-      const cols = Math.max(40, Math.floor(container.clientWidth / 7.8));
-      const rows = Math.max(15, Math.floor(container.clientHeight / 17.5));
+      const cols = Math.max(40, Math.floor(container.clientWidth / 7.5));
+      const rows = Math.max(15, Math.floor(container.clientHeight / 17));
       terminal.resize(cols, rows);
     }
   };
   setTimeout(updateSize, 100);
 
-  // ResizeObserver for zero-lag auto-fit during container changes
-  if (window.ResizeObserver) {
-    const termObserver = new ResizeObserver(() => {
-      updateSize();
-    });
-    termObserver.observe(container);
-  }
-
-  // Buffer user keypresses for Easter Egg interception
   terminal.onData(data => {
     sound.keyClick();
-
-    if (data === '\r' || data === '\n') {
-      const trimmed = currentInputLine.trim().toLowerCase();
-      currentInputLine = '';
-
-      if (handleEasterEggCommand(trimmed)) {
-        return;
-      }
-    } else if (data === '\u007F' || data === '\b') {
-      currentInputLine = currentInputLine.slice(0, -1);
-    } else if (data.length === 1 && data >= ' ') {
-      currentInputLine += data;
-    }
-
     if (termSocket && termSocket.readyState === WebSocket.OPEN) {
       termSocket.send(JSON.stringify({ type: 'input', data: data }));
     }
   });
 
   window.addEventListener('resize', updateSize);
-  reconnectTerminalWebSocket();
+  if (currentLabSession?.status === 'RUNNING' && currentLabSession.runner_mode === 'docker') {
+    reconnectTerminalWebSocket();
+  } else {
+    terminal.writeln('\x1b[33mLab stopped. Start the Docker lab to connect to the isolated attacker container.\x1b[0m');
+  }
 }
 
 function handleEasterEggCommand(cmd) {
@@ -1134,6 +1138,9 @@ function handleEasterEggCommand(cmd) {
 }
 
 function reconnectTerminalWebSocket() {
+  if (!currentLabSession || currentLabSession.status !== 'RUNNING' || currentLabSession.runner_mode !== 'docker') {
+    return;
+  }
   if (termSocket) {
     try { termSocket.close(); } catch (_) {}
   }
@@ -1141,21 +1148,35 @@ function reconnectTerminalWebSocket() {
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   const wsUrl = `${protocol}//${window.location.host}/ws/academy/${roomId}/terminal`;
 
-  termSocket = new WebSocket(wsUrl);
+  const socket = new WebSocket(wsUrl);
+  termSocket = socket;
 
-  termSocket.onmessage = evt => {
+  socket.onmessage = evt => {
     try {
       const msg = JSON.parse(evt.data);
       if (msg.type === 'output' && terminal) {
         terminal.write(msg.data);
+      } else if (msg.type === 'exit_status') {
+        if (terminal && Number.isInteger(msg.code)) {
+          terminal.write(`\r\n\x1b[90m[exit status: ${msg.code}]\x1b[0m\r\n`);
+        }
+        refreshGhostGuide();
       }
     } catch (_) {
       if (terminal) terminal.write(evt.data);
     }
   };
 
-  termSocket.onerror = err => {
+  socket.onerror = err => {
     console.error('Terminal WebSocket error:', err);
+    if (terminal && termSocket === socket) {
+      terminal.writeln('\r\n\x1b[31m[-] Terminal WebSocket connection failed.\x1b[0m');
+    }
+  };
+  socket.onclose = () => {
+    if (terminal && termSocket === socket && currentLabSession?.status === 'RUNNING') {
+      terminal.writeln('\r\n\x1b[31m[-] Terminal connection closed. Check the lab status before reconnecting.\x1b[0m');
+    }
   };
 }
 
@@ -1167,13 +1188,12 @@ function setupQuickCommands() {
   const bar = document.getElementById('quickCmdBar');
   if (!bar || !roomId) return;
 
-  const track = (currentRoom ? currentRoom.track : 'red').toLowerCase();
-  const roomNum = currentRoom ? currentRoom.room_number : 1;
-  const port = currentLabSession ? currentLabSession.target_port : (8080 + roomNum);
-
-  let buttons = getQuickProbes(roomId, track, roomNum, port);
-
   bar.innerHTML = '<span style="font-family:var(--font-mono);font-size:10px;color:#64748b;align-self:center;">QUICK PROBES:</span>';
+  if (currentLabSession?.status !== 'RUNNING' || currentLabSession.runner_mode !== 'docker' || !currentLabSession.target_ip) {
+    bar.insertAdjacentHTML('beforeend', '<span style="font-family:var(--font-mono);font-size:10px;color:#64748b;align-self:center;">START LAB TO LOAD VERIFIED COMMANDS</span>');
+    return;
+  }
+  const buttons = getQuickProbes(currentLabSession.target_ip, currentLabSession.target_port);
   buttons.forEach(b => {
     const btnEl = document.createElement('button');
     btnEl.className = 'btn-quick-cmd';
@@ -1187,13 +1207,6 @@ function setupQuickCommands() {
       sound.keyClick();
       const cmd = btn.dataset.cmd;
       if (!cmd || !terminal) return;
-      if (cmd === 'clear') {
-        terminal.clear();
-        return;
-      }
-      if (handleEasterEggCommand(cmd)) {
-        return;
-      }
       if (termSocket && termSocket.readyState === WebSocket.OPEN) {
         termSocket.send(JSON.stringify({ type: 'command', command: cmd }));
       }
@@ -1201,54 +1214,12 @@ function setupQuickCommands() {
   });
 }
 
-function getQuickProbes(rId, track, num, port) {
-  // Check exact room overrides first
-  if (rId.startsWith('blue-01')) {
-    return [
-      { label: 'curl soc events (:8201)', cmd: 'curl -s http://10.10.14.90:8201/api/soc/events' },
-      { label: 'python soc_query.py', cmd: 'python3 /home/operator/tools/soc_query.py' },
-      { label: 'curl siem alerts', cmd: 'curl -s http://10.10.14.90:8201/api/soc/alerts' },
-      { label: 'curl post triage', cmd: "curl -s -X POST -H 'Content-Type: application/json' -d '{\"event_id\":\"EVT-1003\",\"classification\":\"TRUE_POSITIVE\",\"severity\":\"HIGH\"}' http://10.10.14.90:8201/api/soc/triage" },
-      { label: 'clear', cmd: 'clear' },
-    ];
-  }
-
-  if (rId.startsWith('purple-')) {
-    return [
-      { label: `curl status (:${port})`, cmd: `curl -s http://10.10.14.90:${port}/api/emulate/status` },
-      { label: 'python emulate_threat.py', cmd: 'python3 /home/operator/tools/emulate_threat.py' },
-      { label: 'curl trigger attack', cmd: `curl -s -X POST http://10.10.14.90:${port}/api/emulate/trigger` },
-      { label: 'curl converge metrics', cmd: `curl -s http://10.10.14.90:${port}/api/converge/metrics` },
-      { label: 'ghost --whoami', cmd: 'ghost --whoami' },
-      { label: 'clear', cmd: 'clear' },
-    ];
-  }
-
-  if (rId.startsWith('detect-')) {
-    return [
-      { label: 'python pipeline_tool.py lint', cmd: 'python3 /home/operator/tools/pipeline_tool.py lint' },
-      { label: 'python pipeline_tool.py test', cmd: 'python3 /home/operator/tools/pipeline_tool.py test' },
-      { label: `curl rules status (:${port})`, cmd: `curl -s http://10.10.14.90:${port}/api/rules/status` },
-      { label: 'ne --stats', cmd: 'ne --stats' },
-      { label: 'clear', cmd: 'clear' },
-    ];
-  }
-
-  if (rId.startsWith('red-')) {
-    return [
-      { label: `curl target (:${port})`, cmd: `curl -s http://10.10.14.90:${port}/` },
-      { label: 'whoami && id', cmd: 'whoami && id' },
-      { label: 'ls -la /home/operator', cmd: 'ls -la /home/operator/' },
-      { label: 'hack_the_planet', cmd: 'hack_the_planet' },
-      { label: 'clear', cmd: 'clear' },
-    ];
-  }
-
-  // Fallback defaults for any other room
+function getQuickProbes(targetIp, port) {
   return [
-    { label: `curl target (:${port})`, cmd: `curl -s http://10.10.14.90:${port}/` },
-    { label: 'ls /home/operator', cmd: 'ls -la /home/operator/' },
-    { label: 'ne --stats', cmd: 'ne --stats' },
+    { label: 'whoami / id', cmd: 'whoami && id' },
+    { label: 'ip -br addr', cmd: 'ip -br addr' },
+    { label: 'nmap room service', cmd: `nmap -sV --version-light -T4 --max-retries 1 -p ${port} ${targetIp}` },
+    { label: `curl target :${port}`, cmd: `curl -sS -i http://${targetIp}:${port}/` },
     { label: 'clear', cmd: 'clear' },
   ];
 }
@@ -1329,11 +1300,7 @@ function setupFullscreenWorkstation() {
   if (btnFsClear) {
     btnFsClear.addEventListener('click', () => {
       sound.keyClick();
-      if (terminal) {
-        terminal.clear();
-        writeTerminalBanner();
-        terminal.write('\x1b[38;2;0;255;106moperator@noentry\x1b[0m:\x1b[38;2;0;229;255m~\x1b[0m$ ');
-      }
+      if (terminal) terminal.clear();
       addLiveActivityLog('CMD', 'Terminal screen cleared');
     });
   }
@@ -1365,7 +1332,10 @@ function setupFullscreenWorkstation() {
   // 6. Copy Target IP
   if (btnFsCopyIp) {
     btnFsCopyIp.addEventListener('click', () => {
-      const ip = (currentLabSession && currentLabSession.target_ip) ? currentLabSession.target_ip : '10.10.15.90';
+      const ip = currentLabSession?.status === 'RUNNING' && currentLabSession.runner_mode === 'docker'
+        ? currentLabSession.target_ip
+        : null;
+      if (!ip) return;
       navigator.clipboard.writeText(ip).then(() => {
         const prev = btnFsCopyIp.textContent;
         btnFsCopyIp.textContent = '✓';
@@ -1385,35 +1355,13 @@ function setupFullscreenWorkstation() {
     });
   }
 
-  // 7b. Lab Control Buttons (Start / Stop / Reset)
-  const btnFsStartLab = document.getElementById('btnFsStartLab');
-  const btnFsStopLab = document.getElementById('btnFsStopLab');
-  const btnFsResetLab = document.getElementById('btnFsResetLab');
-
-  if (btnFsStartLab) {
-    btnFsStartLab.addEventListener('click', async () => {
-      await startLabSession();
-    });
-  }
-  if (btnFsStopLab) {
-    btnFsStopLab.addEventListener('click', async () => {
-      await stopLabSession();
-    });
-  }
-  if (btnFsResetLab) {
-    btnFsResetLab.addEventListener('click', async () => {
-      await resetLabSession();
-    });
-  }
-
-
-  // 9. Left Navigation Rail
+  // 8. Left Navigation Rail
   setupLeftRailControls();
 
-  // 10. Quick Commands in Right Panel
+  // 9. Quick Commands in Right Panel
   setupWorkstationQuickCommands();
 
-  // 11. Drawer Close
+  // 10. Drawer Close
   if (btnFsCloseDrawer) {
     btnFsCloseDrawer.addEventListener('click', () => {
       const drawer = document.getElementById('fsDrawerOverlay');
@@ -1421,18 +1369,27 @@ function setupFullscreenWorkstation() {
     });
   }
 
-  // 12. Start Countdown Timer
+  // 11. Start Countdown Timer
   startWorkstationTimer();
 }
 
 function openFullscreenWorkstation() {
   const ws = document.getElementById('fullscreenWorkstation');
-  if (!ws) return;
+  const termContainer = document.getElementById('terminalContainer');
+  const fsMount = document.getElementById('fsTerminalMount');
+  if (!ws || !termContainer || !fsMount) return;
 
   sound.bootHum();
   ws.style.display = 'flex';
   void ws.offsetWidth; // force reflow
   ws.classList.add('active');
+
+  // Reparent terminal container into workstation
+  fsMount.appendChild(termContainer);
+
+  if (document.documentElement.requestFullscreen) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
 
   syncFullscreenWorkstationData();
 
@@ -1445,12 +1402,34 @@ function openFullscreenWorkstation() {
     }
   }, 120);
 
-  addLiveActivityLog('INFO', 'Operator workstation active');
+  addLiveActivityLog('INFO', 'Operator workstation initialized in full-screen mode');
 }
 
 function closeFullscreenWorkstation() {
+  const ws = document.getElementById('fullscreenWorkstation');
+  const termContainer = document.getElementById('terminalContainer');
+  const normalMount = document.getElementById('normalTerminalMount');
+  if (!ws || !termContainer || !normalMount) return;
+
   sound.keyClick();
-  window.location.href = '/academy';
+  ws.classList.remove('active', 'terminal-focus-active');
+  ws.style.display = 'none';
+
+  // Reparent terminal container back to normal room workspace
+  normalMount.appendChild(termContainer);
+
+  if (document.fullscreenElement && document.exitFullscreen) {
+    document.exitFullscreen().catch(() => {});
+  }
+
+  setTimeout(() => {
+    if (termFitAddon) {
+      termFitAddon.fit();
+    }
+    if (terminal) {
+      terminal.focus();
+    }
+  }, 100);
 }
 
 function setTerminalFocusMode(enable) {
@@ -1470,28 +1449,15 @@ function setTerminalFocusMode(enable) {
   }, 80);
 }
 
-function writeTerminalBanner() {
-  if (!terminal) return;
-  terminal.writeln('\x1b[38;2;255;31;61m _  _   ____    \x1b[38;2;0;229;255m______ _  _ _____ ______   __\x1b[0m');
-  terminal.writeln('\x1b[38;2;255;31;61m| \\| | / __ \\  \x1b[38;2;0;229;255m|  ____| \\| |_   _|  _ \\ \\ / /\x1b[0m');
-  terminal.writeln('\x1b[38;2;255;31;61m| .` || |  | | \x1b[38;2;0;229;255m| |__  | .` | | | | |_) \\ V / \x1b[0m');
-  terminal.writeln('\x1b[38;2;255;31;61m| |\\ || |  | | \x1b[38;2;0;229;255m|  __| | |\\ | | | |  _ <  | |  \x1b[0m');
-  terminal.writeln('\x1b[38;2;255;31;61m|_| \\_| \\____/  \x1b[38;2;0;229;255m|______|_| \\_| |_| |_| \\_\\ |_|  \x1b[0m');
-  terminal.writeln('          \x1b[38;2;255;255;255m- CYBERSECURITY ACADEMY -\x1b[0m');
-  terminal.writeln('          \x1b[38;2;0;229;255m> Learn • Practice • Defend <\x1b[0m\r\n');
-}
-
 function setupLeftRailControls() {
   const btnTerm = document.getElementById('btnFsRailTerm');
   const btnConcept = document.getElementById('btnFsRailConcept');
   const btnEvidence = document.getElementById('btnFsRailEvidence');
   const btnHints = document.getElementById('btnFsRailHints');
   const btnProbes = document.getElementById('btnFsRailProbes');
-  const btnGhost = document.getElementById('btnFsRailGhost');
-  const btnStartToggle = document.getElementById('btnFsRailStartToggle');
   const btnReset = document.getElementById('btnFsRailReset');
 
-  const railBtns = [btnTerm, btnConcept, btnEvidence, btnHints, btnProbes, btnGhost];
+  const railBtns = [btnTerm, btnConcept, btnEvidence, btnHints, btnProbes];
   const setRailActive = (activeBtn) => {
     railBtns.forEach(b => { if (b) b.classList.remove('active'); });
     if (activeBtn) activeBtn.classList.add('active');
@@ -1539,28 +1505,10 @@ function setupLeftRailControls() {
     });
   }
 
-  if (btnGhost) {
-    btnGhost.addEventListener('click', () => {
-      sound.keyClick();
-      setRailActive(btnGhost);
-      openFsDrawer('ghost');
-    });
-  }
-
-  if (btnStartToggle) {
-    btnStartToggle.addEventListener('click', () => {
-      sound.keyClick();
-      if (currentLabSession && currentLabSession.status === 'RUNNING') {
-        stopLabSession();
-      } else {
-        startLabSession();
-      }
-    });
-  }
-
   if (btnReset) {
     btnReset.addEventListener('click', () => {
       sound.keyClick();
+      addLiveActivityLog('WARN', 'Triggering lab session reset...');
       resetLabSession();
     });
   }
@@ -1614,161 +1562,21 @@ function openFsDrawer(type) {
       });
     }
   } else if (type === 'hints') {
-    title.textContent = '💡 MISSION TACTICAL HINTS (4 PROGRESSIVE LEVELS)';
-    const targetIp = (currentLabSession && currentLabSession.target_ip) ? currentLabSession.target_ip : '10.10.15.90';
-    const targetPort = (currentLabSession && currentLabSession.target_port) ? currentLabSession.target_port : 8089;
-    const taskTitle = (currentRoom && currentRoom.tasks && currentRoom.tasks[0]) ? currentRoom.tasks[0].title : 'System Analysis';
-
-    body.innerHTML = `
-      <div style="display:flex;flex-direction:column;gap:12px;padding:14px;">
-        <div style="background:#050a14;border:1px solid rgba(255,230,0,0.3);border-radius:6px;padding:12px;">
-          <div style="color:#FFE600;font-weight:800;font-size:11px;font-family:var(--font-mono);margin-bottom:4px;">LEVEL 1: CONCEPTUAL DIRECTION</div>
-          <div style="color:#cbd5e1;font-size:11.5px;line-height:1.4;">Objective: ${escapeHtml(taskTitle)}. Focus on understanding how the system behaves under standard operation versus attack conditions. Determine whether anomalous behavior exceeds the baseline threshold.</div>
-        </div>
-
-        <div style="background:#050a14;border:1px solid rgba(0,229,255,0.3);border-radius:6px;padding:12px;">
-          <div style="color:#00E5FF;font-weight:800;font-size:11px;font-family:var(--font-mono);margin-bottom:4px;">LEVEL 2: TOOL SELECTION & SYNTAX</div>
-          <div style="color:#cbd5e1;font-size:11.5px;line-height:1.4;">Recommended Tool: <code>nmap</code> or <code>curl</code>. Probe the target address <code>${targetIp}:${targetPort}</code>. Use <code>-sV</code> to probe daemon versions and <code>-F</code> to scan fast ports.</div>
-        </div>
-
-        <div style="background:#050a14;border:1px solid rgba(0,255,106,0.3);border-radius:6px;padding:12px;">
-          <div style="color:#00FF6A;font-weight:800;font-size:11px;font-family:var(--font-mono);margin-bottom:4px;">LEVEL 3: ACTIONABLE COMMAND</div>
-          <div style="color:#cbd5e1;font-size:11.5px;margin-bottom:8px;">Execute this exact command in the terminal to inspect the target directly:</div>
-          <div style="display:flex;align-items:center;justify-content:space-between;background:#020408;border:1px solid #1e293b;padding:8px 12px;border-radius:4px;">
-            <code style="color:#00FF6A;font-size:11px;font-family:var(--font-mono);">nmap -sV -F ${targetIp}</code>
-            <div style="display:flex;gap:6px;">
-              <button class="fs-drawer-probe-btn" data-cmd="nmap -sV -F ${targetIp}" style="padding:4px 10px;font-size:10px;background:rgba(0,255,106,0.15);border:1px solid #00FF6A;color:#00FF6A;border-radius:3px;cursor:pointer;">RUN ▶</button>
-              <button class="fs-hint-copy-btn" data-cmd="nmap -sV -F ${targetIp}" style="padding:4px 10px;font-size:10px;background:rgba(0,229,255,0.15);border:1px solid #00E5FF;color:#00E5FF;border-radius:3px;cursor:pointer;">COPY</button>
-            </div>
-          </div>
-        </div>
-
-        <div style="background:#050a14;border:1px solid rgba(168,85,247,0.3);border-radius:6px;padding:12px;">
-          <div style="color:#A855F7;font-weight:800;font-size:11px;font-family:var(--font-mono);margin-bottom:4px;">LEVEL 4: RESULT INTERPRETATION & EVIDENCE SUBMISSION</div>
-          <div style="color:#cbd5e1;font-size:11.5px;line-height:1.4;">Examine the discovered service versions and open ports. Confirm if service responses reveal vulnerable parameters or flag tokens, then submit your findings in the task validation box.</div>
-        </div>
-      </div>`;
-
-    body.querySelectorAll('.fs-drawer-probe-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const cmd = btn.dataset.cmd;
-        overlay.style.display = 'none';
-        executeWorkstationCommand(cmd);
+    title.textContent = '💡 MISSION TACTICAL HINTS & GUIDANCE';
+    let hintsHtml = '<div style="display:flex;flex-direction:column;gap:12px;padding:12px;">';
+    if (currentRoom && currentRoom.tasks && currentRoom.tasks.length > 0) {
+      currentRoom.tasks.forEach((t, idx) => {
+        hintsHtml += `
+          <div style="background:#050a14;border:1px solid rgba(255,230,0,0.3);border-radius:6px;padding:12px;">
+            <div style="font-family:var(--font-mono);color:#FFE600;font-weight:800;font-size:11px;margin-bottom:6px;">TASK ${idx + 1}: ${escapeHtml(t.title)}</div>
+            <div style="color:#cbd5e1;font-size:12px;line-height:1.4;">${t.hint ? escapeHtml(t.hint) : 'Execute standard reconnaissance commands and inspect target responses.'}</div>
+          </div>`;
       });
-    });
-    body.querySelectorAll('.fs-hint-copy-btn').forEach(btn => {
-      btn.addEventListener('click', () => {
-        navigator.clipboard.writeText(btn.dataset.cmd).then(() => {
-          btn.textContent = '✓';
-          setTimeout(() => { btn.textContent = 'COPY'; }, 1500);
-        });
-      });
-    });
-
-  } else if (type === 'ghost') {
-    title.textContent = '🤖 GHOST AI // STEP-BY-STEP MISSION INSTRUCTOR';
-    body.innerHTML = `
-      <div style="padding:14px;display:flex;flex-direction:column;gap:14px;">
-        <div style="display:flex;align-items:center;gap:12px;background:#050a14;padding:12px;border:1px solid rgba(0,229,255,0.4);border-radius:6px;">
-          <div style="font-size:28px;">👻</div>
-          <div>
-            <div style="font-weight:800;color:#00E5FF;font-size:13px;">GHOST MENTOR // ROOM-AWARE TACTICAL GUIDANCE</div>
-            <div style="color:#94a3b8;font-size:11px;">Active Objective: ${escapeHtml(currentRoom ? currentRoom.title : 'Mission Exploration')}</div>
-          </div>
-        </div>
-        <div id="fsGhostGuideContainer" style="display:flex;flex-direction:column;gap:10px;">
-          <div style="color:#64748b;font-size:11px;text-align:center;padding:20px;">Fetching structured 6-step guided mission...</div>
-        </div>
-        <div style="background:#050a14;border:1px solid rgba(0,255,106,0.3);border-radius:6px;padding:12px;margin-top:6px;">
-          <div style="color:#00FF6A;font-weight:700;font-size:11px;margin-bottom:6px;">ASK GHOST A QUESTION ABOUT THIS ROOM</div>
-          <div style="display:flex;gap:8px;">
-            <input type="text" id="fsGhostInput" placeholder="e.g. How do I test the target service? What does the nmap output mean?" style="flex:1;background:#020408;border:1px solid #334155;color:#f8fafc;padding:8px 12px;border-radius:4px;font-size:11px;font-family:var(--font-mono);">
-            <button id="btnFsGhostAsk" style="background:rgba(0,255,106,0.2);border:1px solid #00FF6A;color:#00FF6A;padding:8px 14px;border-radius:4px;font-weight:800;font-size:11px;cursor:pointer;">ASK</button>
-          </div>
-          <div id="fsGhostReply" style="margin-top:10px;font-size:11.5px;color:#cbd5e1;line-height:1.5;display:none;background:#020408;padding:10px;border-radius:4px;border-left:3px solid #00FF6A;"></div>
-        </div>
-      </div>`;
-
-    fetch(`/api/ghost/room/${roomId}/guide`)
-      .then(res => res.json())
-      .then(data => {
-        const container = document.getElementById('fsGhostGuideContainer');
-        if (!container) return;
-        if (data.steps && data.steps.length > 0) {
-          let html = '';
-          data.steps.forEach(s => {
-            html += `
-              <div style="background:#050a14;border:1px solid rgba(0,229,255,0.2);border-radius:6px;padding:12px;">
-                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
-                  <span style="font-weight:800;color:#00E5FF;font-size:11px;font-family:var(--font-mono);">STEP ${s.step}: ${escapeHtml(s.title)}</span>
-                  <span style="font-size:10px;color:#64748b;font-family:var(--font-mono);">${escapeHtml(s.tool)}</span>
-                </div>
-                <div style="color:#cbd5e1;font-size:11px;margin-bottom:8px;">${escapeHtml(s.goal)}</div>
-                <div style="display:flex;align-items:center;justify-content:space-between;background:#020408;border:1px solid #1e293b;padding:6px 10px;border-radius:4px;">
-                  <code style="color:#00FF6A;font-size:11px;font-family:var(--font-mono);">${escapeHtml(s.command)}</code>
-                  <div style="display:flex;gap:6px;">
-                    <button class="fs-run-cmd-btn" data-cmd="${escapeHtml(s.command)}" style="padding:3px 8px;font-size:9.5px;background:rgba(0,255,106,0.15);border:1px solid #00FF6A;color:#00FF6A;border-radius:3px;cursor:pointer;">RUN ▶</button>
-                    <button class="fs-copy-cmd-btn" data-cmd="${escapeHtml(s.command)}" style="padding:3px 8px;font-size:9.5px;background:rgba(0,229,255,0.15);border:1px solid #00E5FF;color:#00E5FF;border-radius:3px;cursor:pointer;">COPY</button>
-                  </div>
-                </div>
-                <div style="color:#94a3b8;font-size:10.5px;margin-top:6px;line-height:1.4;">${escapeHtml(s.explanation)}</div>
-              </div>`;
-          });
-          container.innerHTML = html;
-
-          container.querySelectorAll('.fs-run-cmd-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-              const cmd = btn.dataset.cmd;
-              overlay.style.display = 'none';
-              executeWorkstationCommand(cmd);
-            });
-          });
-          container.querySelectorAll('.fs-copy-cmd-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-              navigator.clipboard.writeText(btn.dataset.cmd).then(() => {
-                btn.textContent = '✓';
-                setTimeout(() => { btn.textContent = 'COPY'; }, 1500);
-              });
-            });
-          });
-        }
-      })
-      .catch(err => {
-        const container = document.getElementById('fsGhostGuideContainer');
-        if (container) container.innerHTML = '<div style="color:#ef4444;font-size:11px;padding:12px;">Failed to load dynamic guide. Check backend connection.</div>';
-      });
-
-    const btnAsk = document.getElementById('btnFsGhostAsk');
-    const inputAsk = document.getElementById('fsGhostInput');
-    const replyEl = document.getElementById('fsGhostReply');
-    if (btnAsk && inputAsk && replyEl) {
-      const doAsk = () => {
-        const q = inputAsk.value.trim();
-        if (!q) return;
-        btnAsk.disabled = true;
-        btnAsk.textContent = '...';
-        replyEl.style.display = 'block';
-        replyEl.innerHTML = '<span style="color:#64748b;">GHOST is analyzing room telemetry and curriculum...</span>';
-        fetch(`/api/ghost/room/${roomId}/ask`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ question: q }),
-        })
-          .then(res => res.json())
-          .then(data => {
-            replyEl.innerHTML = `<strong>GHOST:</strong> ${escapeHtml(data.answer)}`;
-          })
-          .catch(err => {
-            replyEl.innerHTML = '<span style="color:#ef4444;">Unable to reach GHOST mentor.</span>';
-          })
-          .finally(() => {
-            btnAsk.disabled = false;
-            btnAsk.textContent = 'ASK';
-          });
-      };
-      btnAsk.addEventListener('click', doAsk);
-      inputAsk.addEventListener('keydown', e => { if (e.key === 'Enter') doAsk(); });
+    } else {
+      hintsHtml += '<p style="color:#94a3b8;">Execute network probes and inspect system processes to reveal vulnerabilities.</p>';
     }
+    hintsHtml += '</div>';
+    body.innerHTML = hintsHtml;
   } else if (type === 'probes') {
     title.textContent = '⚡ QUICK PROBES & TACTICAL INJECTIONS';
     const track = (currentRoom ? currentRoom.track : 'red').toLowerCase();
@@ -1811,40 +1619,18 @@ function setupWorkstationQuickCommands() {
 
 function executeWorkstationCommand(cmd) {
   if (!cmd || !terminal) return;
+  if (currentLabSession?.status !== 'RUNNING' || currentLabSession.runner_mode !== 'docker') {
+    terminal.writeln('\r\n\x1b[31m[-] Start the Docker lab before running commands.\x1b[0m');
+    return;
+  }
+  if (!termSocket || termSocket.readyState !== WebSocket.OPEN) {
+    terminal.writeln('\r\n\x1b[31m[-] No active Docker terminal connection. The command was not sent.\x1b[0m');
+    return;
+  }
   sound.keyClick();
-
-  if (cmd === 'clear') {
-    terminal.clear();
-    writeTerminalBanner();
-    terminal.write('\x1b[38;2;0;229;255moperator@noentry\x1b[0m:\x1b[34m~\x1b[0m$ ');
-    addLiveActivityLog('CMD', 'Executed: clear');
-    return;
-  }
-
-  if (handleEasterEggCommand(cmd)) {
-    addLiveActivityLog('CMD', `Executed easter egg: ${cmd}`);
-    return;
-  }
-
-  addLiveActivityLog('CMD', `Executed: ${cmd}`);
-
-  if (termSocket && termSocket.readyState === WebSocket.OPEN) {
-    terminal.write(cmd + '\r\n');
-    termSocket.send(JSON.stringify({ type: 'command', command: cmd }));
-  } else {
-    terminal.write(cmd + '\r\n');
-    reconnectTerminalWebSocket();
-    setTimeout(() => {
-      if (termSocket && termSocket.readyState === WebSocket.OPEN) {
-        termSocket.send(JSON.stringify({ type: 'command', command: cmd }));
-      } else {
-        terminal.writeln('\r\n\x1b[31m[-] Lab session is not active. Please click \'START LAB\' to launch.\x1b[0m');
-        terminal.write('\x1b[38;2;0;255;106moperator@noentry\x1b[0m:\x1b[38;2;0;229;255m~\x1b[0m$ ');
-      }
-    }, 250);
-  }
+  termSocket.send(JSON.stringify({ type: 'command', command: cmd }));
+  addLiveActivityLog('CMD', `Sent to Docker terminal: ${cmd}`);
 }
-window.executeWorkstationCommand = executeWorkstationCommand;
 
 function addLiveActivityLog(tag, msg) {
   const feed = document.getElementById('fsActivityFeed');
@@ -1864,10 +1650,7 @@ function addLiveActivityLog(tag, msg) {
   feed.scrollTop = feed.scrollHeight;
 }
 
-function startWorkstationTimer(seconds) {
-  if (seconds !== undefined) {
-    wsTimerCountdown = seconds;
-  }
+function startWorkstationTimer() {
   if (wsCountdownInterval) clearInterval(wsCountdownInterval);
   wsCountdownInterval = setInterval(() => {
     if (wsTimerCountdown > 0) {
@@ -1878,10 +1661,6 @@ function startWorkstationTimer(seconds) {
       if (timerVal) {
         timerVal.textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
       }
-    } else {
-      if (wsCountdownInterval) clearInterval(wsCountdownInterval);
-      const timerVal = document.getElementById('fsTimerVal');
-      if (timerVal) timerVal.textContent = 'EXPIRED';
     }
   }, 1000);
 }
@@ -1890,7 +1669,7 @@ function syncFullscreenWorkstationData() {
   if (!currentRoom) return;
 
   // Header & Info
-  const roomNum = currentRoom.room_number || 13;
+  const roomNum = currentRoom.room_number || 0;
   const badge = document.getElementById('fsRoomBadge');
   const title = document.getElementById('fsRoomTitle');
   const xp = document.getElementById('fsXpText');
@@ -1902,161 +1681,94 @@ function syncFullscreenWorkstationData() {
 
   if (badge) badge.textContent = `ROOM ${roomNum}`;
   if (title) title.textContent = (currentRoom.title || '').toUpperCase();
-  if (xp) xp.textContent = `XP ${currentRoom.xp_reward || 350}`;
-  if (desc) desc.textContent = currentRoom.description || 'Profile system behavior and set effective thresholds to detect anomalous activity.';
+  if (xp) xp.textContent = `XP ${currentRoom.total_xp || 0}`;
+  if (desc) desc.textContent = currentRoom.concept?.overview || currentRoom.short_description || '';
   if (chipTrack) chipTrack.textContent = `🛡️ ${(currentRoom.track || 'Red').toUpperCase()} TEAM`;
   if (chipDiff) chipDiff.textContent = `📶 ${currentRoom.difficulty || 'Medium'}`;
-  if (chipDuration) chipDuration.textContent = `⏱ ~ ${currentRoom.estimated_minutes || 30} min`;
-  if (chipXp) chipXp.textContent = `★ ${currentRoom.xp_reward || 350} XP`;
+  if (chipDuration) chipDuration.textContent = `⏱ ~ ${currentRoom.estimated_duration || '—'}`;
+  if (chipXp) chipXp.textContent = `★ ${currentRoom.total_xp || 0} XP`;
 
-  // Lab Intel Authoritative State
-  const isRunning = currentLabSession && currentLabSession.status === 'RUNNING';
-  const isStarting = currentLabSession && currentLabSession.status === 'STARTING';
-  const ip = (isRunning && currentLabSession.target_ip) ? currentLabSession.target_ip : (isStarting ? '10.10.15.90' : 'OFFLINE');
-  const attackerIp = (isRunning && currentLabSession.attacker_ip) ? currentLabSession.attacker_ip : (isStarting ? '10.10.14.10' : 'Standby');
-  const port = (isRunning && currentLabSession.target_port) ? currentLabSession.target_port : (8080 + roomNum);
+  // Lab Intel
+  const isRunning = currentLabSession?.status === 'RUNNING' && currentLabSession.runner_mode === 'docker';
+  const ip = isRunning ? currentLabSession.target_ip : 'NOT ASSIGNED';
+  const attackerIp = isRunning ? currentLabSession.attacker_ip : 'NOT ASSIGNED';
+  const port = isRunning ? currentLabSession.target_port : null;
+  const openPorts = isRunning && Array.isArray(currentLabSession.open_ports)
+    ? currentLabSession.open_ports
+    : [];
+  const statusStr = isRunning
+    ? 'ONLINE'
+    : currentLabSession?.status === 'RUNNING' && currentLabSession.runner_mode === 'emulated'
+      ? 'EMULATED'
+      : currentLabSession?.status || 'STOPPED';
 
-  // 1. Top Header Status Pill
-  const statusPill = document.getElementById('fsStatusPill');
-  const statusText = document.getElementById('fsStatusText');
-  if (statusPill && statusText) {
-    if (isRunning) {
-      statusPill.className = 'fs-status-pill online';
-      statusText.textContent = 'ONLINE';
-    } else if (isStarting) {
-      statusPill.className = 'fs-status-pill starting';
-      statusText.textContent = 'STARTING...';
-    } else {
-      statusPill.className = 'fs-status-pill offline';
-      statusText.textContent = 'STOPPED';
-    }
-  }
-
-  // 2. Terminal Titlebar Ready Badge
-  const termBadge = document.getElementById('fsTermReadyBadge');
-  if (termBadge) {
-    if (isRunning) {
-      termBadge.className = 'fs-term-ready-badge';
-      termBadge.textContent = '▶ READY';
-    } else if (isStarting) {
-      termBadge.className = 'fs-term-ready-badge starting';
-      termBadge.textContent = '⏳ SPAWNING';
-    } else {
-      termBadge.className = 'fs-term-ready-badge standby';
-      termBadge.textContent = '⏸ STANDBY';
-    }
-  }
-
-  // 3. Lab Intelligence Rows
   const intelIp = document.getElementById('fsIntelIp');
   const intelOperatorIp = document.getElementById('fsIntelOperatorIp');
   const intelStatus = document.getElementById('fsIntelStatus');
   const intelPorts = document.getElementById('fsIntelPorts');
   const intelContainer = document.getElementById('fsIntelContainer');
   const sessionIp = document.getElementById('fsSessionIp');
-
-  if (intelIp) {
-    if (isRunning) {
-      intelIp.innerHTML = `${ip} <button id="btnFsCopyIp" class="fs-copy-inline" title="Copy Target IP">📋</button>`;
-    } else {
-      intelIp.textContent = 'OFFLINE';
-    }
-  }
-
-  if (intelOperatorIp) {
-    if (isRunning) {
-      intelOperatorIp.textContent = attackerIp;
-      intelOperatorIp.style.color = '#00ff66';
-    } else if (isStarting) {
-      intelOperatorIp.textContent = 'PROVISIONING...';
-      intelOperatorIp.style.color = '#00e5ff';
-    } else {
-      intelOperatorIp.textContent = 'OFFLINE';
-      intelOperatorIp.style.color = '#94a3b8';
-    }
-  }
-
-  // Active Sessions must display the operator IP, NOT the target IP
-  if (sessionIp) sessionIp.textContent = attackerIp;
-
-  if (intelStatus) {
-    if (isRunning) {
-      intelStatus.className = 'fs-intel-val online';
-      intelStatus.innerHTML = '<span class="dot green"></span> ONLINE';
-    } else if (isStarting) {
-      intelStatus.className = 'fs-intel-val starting';
-      intelStatus.innerHTML = '<span class="dot cyan"></span> STARTING';
-    } else {
-      intelStatus.className = 'fs-intel-val stopped';
-      intelStatus.innerHTML = '<span class="dot amber"></span> STOPPED';
-    }
-  }
-
-  if (intelPorts) {
-    if (isRunning) {
-      intelPorts.innerHTML = `<span class="dot green"></span> 22, 80, 443`;
-    } else {
-      intelPorts.innerHTML = `<span class="dot amber"></span> closed`;
-    }
-  }
-
-  if (intelContainer) {
-    if (isRunning) {
-      intelContainer.innerHTML = `<span class="dot green"></span> running`;
-    } else if (isStarting) {
-      intelContainer.innerHTML = `<span class="dot cyan"></span> booting...`;
-    } else {
-      intelContainer.innerHTML = `<span class="dot amber"></span> stopped`;
-    }
-  }
-
-  // 4. Lab Action Controls (Start / Stop / Reset)
-  const btnFsStartLab = document.getElementById('btnFsStartLab');
-  const btnFsStopLab = document.getElementById('btnFsStopLab');
-  const btnFsResetLab = document.getElementById('btnFsResetLab');
-  if (btnFsStartLab && btnFsStopLab && btnFsResetLab) {
-    if (isRunning) {
-      btnFsStartLab.style.display = 'none';
-      btnFsStopLab.style.display = 'inline-block';
-      btnFsResetLab.style.display = 'inline-block';
-    } else if (isStarting) {
-      btnFsStartLab.style.display = 'inline-block';
-      btnFsStartLab.disabled = true;
-      btnFsStartLab.innerHTML = '⏳ SPAWNING...';
-      btnFsStopLab.style.display = 'none';
-      btnFsResetLab.style.display = 'none';
-    } else {
-      btnFsStartLab.style.display = 'inline-block';
-      btnFsStartLab.disabled = false;
-      btnFsStartLab.innerHTML = '▶ START LAB';
-      btnFsStopLab.style.display = 'none';
-      btnFsResetLab.style.display = 'none';
-    }
-  }
-
-  // 5. Active Sessions Panel
+  const fsStatusPill = document.getElementById('fsStatusPill');
+  const fsStatusText = document.getElementById('fsStatusText');
+  const fsTermReadyBadge = document.getElementById('fsTermReadyBadge');
   const sessionCount = document.getElementById('fsSessionCount');
-  const sessionStatus = document.querySelector('.fs-session-status');
-  if (sessionCount) {
-    sessionCount.textContent = isRunning ? '1 / 1' : '0 / 1';
-  }
+  const sessionDot = document.getElementById('fsSessionDot');
+  const sessionStatus = document.getElementById('fsSessionStatus');
+
+  if (intelIp) intelIp.innerHTML = `${ip} <button id="btnFsCopyIp" class="fs-copy-inline" title="Copy Target IP" ${isRunning ? '' : 'disabled'}>📋</button>`;
+  if (intelOperatorIp) intelOperatorIp.textContent = attackerIp;
+  if (sessionIp) sessionIp.textContent = ip;
+  if (sessionCount) sessionCount.textContent = String(isRunning ? currentLabSession.active_sessions_count || 1 : 0);
+  if (sessionDot) sessionDot.className = `dot ${isRunning ? 'green' : 'red'}`;
   if (sessionStatus) {
-    if (isRunning) {
-      sessionStatus.className = 'fs-session-status badge-active';
-      sessionStatus.textContent = 'Active';
-    } else if (isStarting) {
-      sessionStatus.className = 'fs-session-status badge-starting';
-      sessionStatus.textContent = 'Connecting';
-    } else {
-      sessionStatus.className = 'fs-session-status badge-standby';
-      sessionStatus.textContent = 'Offline';
+    sessionStatus.textContent = isRunning ? 'Active' : statusStr === 'EXPIRED' ? 'Expired' : 'Standby';
+    sessionStatus.className = `fs-session-status${isRunning ? ' badge-active' : ''}`;
+  }
+
+  if (isRunning) {
+    if (intelStatus) intelStatus.innerHTML = `<span class="dot green"></span> ONLINE`;
+    if (intelPorts) intelPorts.innerHTML = `<span class="dot green"></span> ${openPorts.join(', ') || 'No ports reported'}`;
+    if (intelContainer) intelContainer.innerHTML = `<span class="dot green"></span> ${currentLabSession.running_containers?.length || 0} containers running`;
+    if (fsStatusPill) fsStatusPill.className = 'fs-status-pill online';
+    if (fsStatusText) fsStatusText.textContent = 'ONLINE';
+    if (fsTermReadyBadge) {
+      fsTermReadyBadge.textContent = '▶ READY';
+      fsTermReadyBadge.style.color = '#00FF6A';
+    }
+  } else {
+    if (intelStatus) intelStatus.innerHTML = `<span class="dot red"></span> ${statusStr}`;
+    if (intelPorts) intelPorts.innerHTML = `<span class="dot red"></span> OFFLINE`;
+    if (intelContainer) intelContainer.innerHTML = `<span class="dot red"></span> stopped`;
+    if (fsStatusPill) fsStatusPill.className = 'fs-status-pill offline';
+    if (fsStatusText) fsStatusText.textContent = statusStr;
+    if (fsTermReadyBadge) {
+      fsTermReadyBadge.textContent = '⏸ STANDBY';
+      fsTermReadyBadge.style.color = '#ef4444';
     }
   }
+
+  // Update quick command buttons target IP dynamically
+  const quickBtns = document.querySelectorAll('#fsQuickCmdGrid .fs-cmd-btn');
+  quickBtns.forEach(btn => {
+    const rawCmd = btn.dataset.cmd;
+    btn.disabled = !isRunning;
+    if (!isRunning || !ip || !port) {
+      return;
+    } else if (rawCmd && rawCmd.includes('nmap')) {
+      btn.disabled = false;
+      btn.dataset.cmd = `nmap -sV --version-light -T4 --max-retries 1 -F ${ip}`;
+    } else if (rawCmd && rawCmd.startsWith('curl')) {
+      btn.disabled = false;
+      btn.dataset.cmd = `curl -s http://${ip}:${port}/`;
+    }
+  });
 
   // Re-bind copy button if recreated
   const newCopyIp = document.getElementById('btnFsCopyIp');
   if (newCopyIp) {
+    newCopyIp.disabled = !isRunning;
     newCopyIp.addEventListener('click', () => {
+      if (!isRunning || !currentLabSession?.target_ip) return;
       navigator.clipboard.writeText(ip).then(() => {
         newCopyIp.textContent = '✓';
         sound.alertBlip();
@@ -2065,22 +1777,10 @@ function syncFullscreenWorkstationData() {
     });
   }
 
-  // Workstation Timer & Rail Controls Sync
-  const fsRailStartText = document.getElementById('fsRailStartText');
-  const fsRailStartIcon = document.getElementById('fsRailStartIcon');
-  if (fsRailStartText) fsRailStartText.textContent = isRunning ? 'STOP LAB' : 'START LAB';
-  if (fsRailStartIcon) fsRailStartIcon.textContent = isRunning ? '⏹' : '▶';
-
-  if (isRunning) {
-    startWorkstationTimer(currentLabSession.remaining_seconds || 3600);
-  } else {
-    const timerVal = document.getElementById('fsTimerVal');
-    if (timerVal) timerVal.textContent = '--:--';
-    if (wsCountdownInterval) clearInterval(wsCountdownInterval);
-  }
-
   // Track Progress Gauge
-  const pct = Math.min(100, Math.round((roomNum / 20) * 100));
+  const totalTasks = currentRoom.tasks?.length || 0;
+  const completedTasks = currentRoom.tasks?.filter(task => task.is_completed).length || 0;
+  const pct = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
   const gaugeBar = document.getElementById('fsGaugeBar');
   const gaugeVal = document.getElementById('fsGaugeVal');
   const progRooms = document.getElementById('fsProgressRooms');
@@ -2091,12 +1791,9 @@ function syncFullscreenWorkstationData() {
     gaugeBar.style.strokeDashoffset = offset;
   }
   if (gaugeVal) gaugeVal.textContent = `${pct}%`;
-  if (progRooms) progRooms.textContent = `${roomNum} / 20 Rooms`;
+  if (progRooms) progRooms.textContent = `${completedTasks} / ${totalTasks} Tasks`;
 
   // Mission Objectives & Timeline
-  const totalTasks = currentRoom.tasks ? currentRoom.tasks.length : 4;
-  const completedTasks = currentRoom.tasks ? currentRoom.tasks.filter(t => t.is_completed).length : 1;
-
   const objCount = document.getElementById('fsObjCount');
   const objFill = document.getElementById('fsObjBarFill');
   if (objCount) objCount.textContent = `${completedTasks} / ${totalTasks}`;
@@ -2108,7 +1805,9 @@ function syncFullscreenWorkstationData() {
   // Step 3: Find Vulnerabilities
   // Step 4: Exploit (Optional)
   // Step 5: Report Findings
-  const activePhase = Math.min(5, Math.max(1, completedTasks + 1));
+  const activePhase = currentRoom.user_status === 'COMPLETED'
+    ? 6
+    : Math.min(5, Math.max(1, completedTasks + 1));
   for (let i = 1; i <= 5; i++) {
     const stepEl = document.getElementById(`fsStep${i}`);
     if (!stepEl) continue;
@@ -2274,11 +1973,15 @@ async function initGhostMentor() {
     });
   }
 
-  // Load guide data from API
+  await refreshGhostGuide();
+}
+
+async function refreshGhostGuide() {
   try {
     const res = await fetch(`/api/ghost/room/${roomId}/guide`);
     if (!res.ok) return;
     ghostGuideData = await res.json();
+    currentGhostStep = ghostGuideData.active_step || 1;
     renderGhostSteps();
   } catch (err) {
     console.error('Failed to load GHOST guide:', err);
@@ -2294,9 +1997,10 @@ function renderGhostSteps() {
   ghostGuideData.steps.forEach((step) => {
     const btn = document.createElement('button');
     btn.className = `btn-hud-action ${step.step === currentGhostStep ? 'highlight' : ''}`;
+    if (step.completed) btn.classList.add('completed');
     btn.style.fontSize = '10px';
     btn.style.padding = '3px 8px';
-    btn.textContent = `[0${step.step}] ${step.title.split(' ')[0]}`;
+    btn.textContent = `${step.completed ? '✓ ' : ''}[0${step.step}] ${step.title.split(' ')[0]}`;
     btn.title = `${step.title}: ${step.goal}`;
     btn.addEventListener('click', () => {
       sound.keyClick();
@@ -2326,11 +2030,13 @@ function updateGhostActiveStep() {
   if (badge) badge.textContent = `STEP ${step.step} / 6: ${step.title.toUpperCase()}`;
   if (tool) tool.textContent = `TOOL: ${step.tool}`;
   if (goal) goal.textContent = step.goal;
-  if (cmd) cmd.textContent = step.command;
+  if (cmd) cmd.textContent = step.command || 'Start the Docker lab to receive a verified command for this step.';
   if (expl) expl.textContent = step.explanation;
 
   if (btnCopy) {
+    btnCopy.disabled = !step.command;
     btnCopy.onclick = () => {
+      if (!step.command) return;
       navigator.clipboard.writeText(step.command).then(() => {
         btnCopy.textContent = '✓ COPIED';
         sound.alertBlip();
@@ -2340,8 +2046,9 @@ function updateGhostActiveStep() {
   }
 
   if (btnRun) {
+    btnRun.disabled = !step.command || currentLabSession?.status !== 'RUNNING' || currentLabSession?.runner_mode !== 'docker';
     btnRun.onclick = () => {
-      executeWorkstationCommand(step.command);
+      if (step.command) executeWorkstationCommand(step.command);
     };
   }
 }

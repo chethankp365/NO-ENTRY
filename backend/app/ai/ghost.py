@@ -183,6 +183,7 @@ def _load_mission_context(
     mission: Optional[MissionDefinition] = get_mission(mission_id) if mission_id else None
     room: Optional[RoomDefinition] = curriculum_registry.get_room(mission_id) if mission_id and not mission else None
     progress: Optional[MissionProgress] = None
+    academy_context: Optional[Dict[str, Any]] = None
     if mission:
         progress = session.exec(
             select(MissionProgress).where(
@@ -197,6 +198,49 @@ def _load_mission_context(
     if mission and mission.steps:
         clamped_idx = max(0, min(step_idx, len(mission.steps) - 1))
         current_step = mission.steps[clamped_idx]
+    if room:
+        from backend.app.academy.service import academy_service
+        from backend.app.labs.manager import lab_manager
+
+        room_detail = academy_service.get_room_detail_for_user(session, user.operator_id, room.room_id)
+        room_tasks = room_detail["tasks"] if room_detail else []
+        current_task = next(
+            (item for item in room_tasks if not item.get("is_completed")),
+            room_tasks[-1] if room_tasks else None,
+        )
+        lab_session = lab_manager.get_user_session(user.operator_id, room.room_id)
+        active_lab = (
+            lab_session
+            if lab_session and lab_session.status == "RUNNING" and lab_session.runner_mode == "docker"
+            else None
+        )
+        lab_status = (
+            "EMULATED"
+            if lab_session and lab_session.status == "RUNNING" and lab_session.runner_mode != "docker"
+            else lab_session.status if lab_session else "STOPPED"
+        )
+        task_hint = next(
+            (task.hint for task in room.tasks if current_task and task.task_id == current_task["task_id"]),
+            None,
+        )
+        target_reference = active_lab.target_ip if active_lab else "<target-ip>"
+        task_context = dict(current_task) if current_task else None
+        if task_context:
+            for key in ("instructions", "hint"):
+                if isinstance(task_context.get(key), str):
+                    task_context[key] = task_context[key].replace("10.10.14.90", target_reference)
+        if task_hint:
+            task_hint = task_hint.replace("10.10.14.90", target_reference)
+        academy_context = {
+            "task": task_context,
+            "task_hint": task_hint,
+            "completed_tasks": [item["task_id"] for item in room_tasks if item.get("is_completed")],
+            "lab_status": lab_status,
+            "target_ip": active_lab.target_ip if active_lab else None,
+            "target_port": active_lab.target_port if active_lab else None,
+            "required_tools": room.required_practical_skills,
+            "assessment_criteria": room.assessment_criteria,
+        }
 
     # Collect simulated logs (caller selection -> DB mission logs -> step generated logs -> recent SOC stream)
     logs: List[str] = [str(l) for l in (payload.get("logs") or []) if str(l).strip()]
@@ -234,6 +278,7 @@ def _load_mission_context(
     return {
         "mission": mission,
         "room": room,
+        "academy_context": academy_context,
         "progress": progress,
         "stage": stage or "command_center",
         "screen": (payload.get("screen") or ("academy" if room else "")).strip(),
@@ -252,6 +297,8 @@ def _build_user_prompt(
     ctx: Dict[str, Any],
 ) -> str:
     mission: Optional[MissionDefinition] = ctx["mission"]
+    room: Optional[RoomDefinition] = ctx["room"]
+    academy: Optional[Dict[str, Any]] = ctx.get("academy_context")
     step = ctx["current_step"]
     rule_eval = ctx["rule_eval"]
 
@@ -269,6 +316,25 @@ def _build_user_prompt(
         safe_hints = step.hints[:2] if action != "answer" else step.hints
         hints_block = " / ".join(safe_hints)
 
+    academy_block = "(No academy room active)"
+    if room and academy:
+        active_task = academy["task"]
+        task_block = (
+            f"{active_task['title']}: {active_task['instructions']} "
+            f"Completed: {active_task.get('is_completed', False)}. "
+            f"Task hint: {academy['task_hint'] or '(none supplied)'}"
+            if active_task
+            else "No curriculum tasks are defined."
+        )
+        academy_block = (
+            f"Room: {room.title} ({room.room_id}) | Track: {room.track.value} | "
+            f"Lab: {academy['lab_status']} | Actual target: "
+            f"{academy['target_ip']}:{academy['target_port']}"
+            if academy["target_ip"]
+            else f"Room: {room.title} ({room.room_id}) | Lab: STOPPED | No target address is assigned."
+        ) + f"\nTask: {task_block}\nTools: {', '.join(academy['required_tools']) or '(none listed)'}"
+    academy_block = neutralize_untrusted_text(academy_block, max_len=2200)
+
     rule_block = neutralize_untrusted_text(ctx["rule_yaml"] or "(none submitted yet)", max_len=1500)
     rule_eval_block = json.dumps(rule_eval, ensure_ascii=True)
     term_block = format_untrusted_lines(ctx["terminal_output"], limit=8)
@@ -279,6 +345,7 @@ def _build_user_prompt(
 MISSION_CONTEXT: {mission_header}
 CURRENT_STEP: {step_block}
 MISSION_NUDGE_HINTS: {hints_block}
+ACADEMY_ROOM_CONTEXT: {academy_block}
 BACKEND_RULE_EVALUATION: {rule_eval_block}
 
 <UNTRUSTED_TELEMETRY>
@@ -346,6 +413,21 @@ def build_scripted_response(action: str, intent: str, message: str, ctx: Dict[st
         return f"[SCRIPTED BRIEFING // {mission.title}] {mission.story[:220]}"
 
     room: Optional[RoomDefinition] = ctx.get("room")
+    academy: Optional[Dict[str, Any]] = ctx.get("academy_context")
+    if room and academy:
+        task = academy["task"]
+        if task:
+            if not academy["target_ip"]:
+                return (
+                    f"[SCRIPTED ACADEMY MENTOR // {room.title}] Start the lab to receive a real target address. "
+                    f"Your current task is “{task['title']}”: {task['instructions']}"
+                )
+            hint = academy["task_hint"] or "Use the task instructions to plan your investigation."
+            return (
+                f"[SCRIPTED ACADEMY MENTOR // {room.title}] Current task: {task['title']}. "
+                f"{task['instructions']} Tools: {', '.join(academy['required_tools']) or 'see room instructions'}. "
+                f"Task guidance: {hint}"
+            )
     if room and room.concept:
         if effective == "hint":
             task_hint = room.tasks[0].hint if room.tasks and room.tasks[0].hint else "Inspect how the application concatenates parameters into dynamic queries."

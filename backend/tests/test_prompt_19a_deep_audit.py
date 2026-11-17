@@ -23,6 +23,7 @@ Prompt 19A Audit Suite:
 import asyncio
 import json
 import pytest
+from conftest import drain_terminal_until_prompt, execute_terminal_command
 from starlette.testclient import TestClient
 
 from backend.app.labs.docker_runner import DockerLabRunner
@@ -310,10 +311,7 @@ async def test_browser_terminal_websocket_workflow_e2e(
     try:
         # Step 1: WebSocket terminal connection
         with client.websocket_connect(f"/ws/academy/{room_id}/terminal") as ws:
-            # Drain banner chunks
-            for _ in range(8):
-                msg = ws.receive_json()
-                assert msg["type"] == "output"
+            drain_terminal_until_prompt(ws)
 
             # Step 2: In Room 16, execute eradication prerequisite first
             if room_id == "blue-16-incident-response":
@@ -322,22 +320,16 @@ async def test_browser_terminal_websocket_workflow_e2e(
                     f'-d \'{{"terminate_pid":3912,"remove_service":"svc_winupdater","block_egress_ip":"198.51.100.77"}}\' '
                     f'http://{target_ip}:{port}/api/response/eradicate'
                 )
-                ws.send_json({"type": "command", "command": erad_cmd})
-                erad_resp = ws.receive_json()
+                erad_resp = execute_terminal_command(ws, erad_cmd)
                 assert "RESPONSE_ERADICATION_COMPLETE" in erad_resp["data"]
-                # Prompt
-                ws.receive_json()
 
             # Step 3: Execute rule/containment command over WebSocket
             cmd_rule = (
                 f'curl -s -X POST -H "Content-Type: application/json" '
                 f'-d \'{rule_payload}\' http://{target_ip}:{port}{rule_endpoint}'
             )
-            ws.send_json({"type": "command", "command": cmd_rule})
-            rule_resp = ws.receive_json()
+            rule_resp = execute_terminal_command(ws, cmd_rule)
             assert rule_token in rule_resp["data"]
-            # Prompt
-            ws.receive_json()
 
             # Verify action was recorded on session_info
             assert info.has_action(rule_action)
@@ -347,11 +339,8 @@ async def test_browser_terminal_websocket_workflow_e2e(
                 f'curl -s -X POST -H "Content-Type: application/json" '
                 f'-d \'{chal_payload}\' http://{target_ip}:{port}{chal_endpoint}'
             )
-            ws.send_json({"type": "command", "command": cmd_chal})
-            chal_resp = ws.receive_json()
+            chal_resp = execute_terminal_command(ws, cmd_chal)
             assert chal_token in chal_resp["data"]
-            # Prompt
-            ws.receive_json()
 
             # Verify challenge action recorded
             assert info.has_action(chal_action)
@@ -530,4 +519,3 @@ def test_flag_and_completion_security_audits():
             assert "NOENTRY{" not in t.instructions
             assert "NOENTRY{" not in (t.question or "")
             assert "NOENTRY{" not in (t.hint or "")
-
