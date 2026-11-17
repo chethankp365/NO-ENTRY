@@ -299,7 +299,7 @@ pip install -r requirements.txt
 cp .env.example .env
 
 # 4 · launch
-uvicorn app.main:app --reload
+python -m uvicorn backend.app.main:app --reload
 ```
 
 Open **http://127.0.0.1:8000** and request access. You can also *continue as guest operator*.
